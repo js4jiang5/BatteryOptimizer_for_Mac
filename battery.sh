@@ -626,6 +626,7 @@ if [[ "$action" == "visudo" ]]; then
 			sudo chmod 440 $visudo_file
 		fi
 
+		sudo rm $visudo_tmpfile 2>/dev/null
 		# exit because no changes are needed
 		exit 0
 
@@ -655,6 +656,7 @@ if [[ "$action" == "visudo" ]]; then
 		sudo visudo -c -f $visudo_tmpfile
 	fi
 
+	sudo rm $visudo_tmpfile 2>/dev/null
 	exit 0
 fi
 
