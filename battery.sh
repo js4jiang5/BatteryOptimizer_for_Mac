@@ -1070,7 +1070,9 @@ if [[ "$action" == "maintain" ]]; then
 		log "Killing running maintain daemons & enabling charging as default state" >> $logfile
 		rm $pidfile 2>/dev/null
 		rm $state_file 2>/dev/null
+		rm $schedule_tracker_file 2>/dev/null
 		$battery_binary disable_daemon
+		$battery_binary schedule disable
 		enable_charging
 		$battery_binary status
 		exit 0
