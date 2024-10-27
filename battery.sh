@@ -71,7 +71,7 @@ Usage:
 	notification will be received when each step is completed or error occurs till the end of calibration
 	if you prefer the notifications to stay on until you dismiss it, setup notifications as follows
 		system settings > notifications > applications > Script Editor > Choose "Alerts"
-	when external monitor is used, you must setup notifications as follws in order to receive notification successfully
+	when external monitor is used, you must setup notifications as follows in order to receive notification successfully
 		system settings > notifications > check 'Allow notifications when mirroring or sharing the display'
 	eg: battery calibrate   # start calibration
 	eg: battery calibrate stop # stop calibration
@@ -105,7 +105,7 @@ Usage:
     output battery SMC status, capacity, temperature, health, and cycle count 
 
   battery dailylog
-	output daily log and show daily log store location
+    output daily log and show daily log store location
 
   battery logs LINES[integer, optional]
     output logs of the battery CLI and GUI
@@ -612,7 +612,7 @@ if [[ "$action" == "visudo" ]]; then
 
 	# Write the visudo file to a tempfile
 	visudo_tmpfile="$configfolder/visudo.tmp"
-	sudo rm visudo_tmpfile 2>/dev/null
+	sudo rm $visudo_tmpfile 2>/dev/null
 	echo -e "$visudoconfig" >$visudo_tmpfile
 
 	# If the visudo file is the same (no error, exit code 0), set the permissions just

@@ -77,7 +77,7 @@ Usage:
   - notification will be received when each step is completed or error occurs till the end of calibration
   - if you prefer the notifications to stay on until you dismiss it, setup notifications as follows
     system settings > notifications > applications > Script Editor > Choose "Alerts"
-  - when external monitor is used, you must setup notifications as follws in order to receive notification successfully
+  - when external monitor is used, you must setup notifications as follows in order to receive notification successfully
     system settings > notifications > check 'Allow notifications when mirroring or sharing the display'
     eg: battery calibrate   # start calibration
     eg: battery calibrate stop # stop calibration
@@ -111,7 +111,7 @@ Usage:
     output battery SMC status, capacity, temperature, health, and cycle count 
 
   battery dailylog
-	  output daily log and show daily log store location
+    output daily log and show daily log store location
 
   battery logs LINES[integer, optional]
     output logs of the battery CLI and GUI
