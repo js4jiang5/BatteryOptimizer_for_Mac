@@ -1120,7 +1120,8 @@ if [[ "$action" == "maintain" ]]; then
 			# Ask user if discharging right now unless this action is invoked by setup.sh
 			answer="$(osascript -e 'display dialog "'"Do you want to discharge battery to $setting% now?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
 			if [[ "$answer" == "Yes" ]] || [ -z $answer ]; then
-				$battery_binary discharge $setting
+				log "Start discharging to $setting%"
+				$battery_binary discharge $setting &
 			fi
 		fi
 	fi
