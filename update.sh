@@ -16,7 +16,7 @@ echo -e "🔋 Starting battery update\n"
 echo "[ 1 ] Downloading latest battery version"
 rm -rf $batteryfolder
 mkdir -p $batteryfolder
-curl -sS -o $batteryfolder/battery.sh https://raw.githubusercontent.com/actuallymentor/battery/main/battery.sh
+curl -sS -o $batteryfolder/battery.sh https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/battery.sh
 
 echo "[ 2 ] Writing script to $binfolder/battery"
 cp $batteryfolder/battery.sh $binfolder/battery

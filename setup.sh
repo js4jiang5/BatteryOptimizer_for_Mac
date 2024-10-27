@@ -16,19 +16,27 @@ calling_user=${1:-"$USER"}
 configfolder=/Users/$calling_user/.battery
 pidfile=$configfolder/battery.pid
 logfile=$configfolder/battery.log
+sleepwatcher_log=$configfolder/sleepwatcher.log
 
 # Ask for sudo once, in most systems this will cache the permissions for a bit
 sudo echo "🔋 Starting battery installation"
 echo -e "[ 1 ] Superuser permissions acquired."
 
+# check CPU type
+if [[ $(sysctl -n machdep.cpu.brand_string) == *"Intel"* ]]; then
+    cpu_type="intel"
+else
+    cpu_type="apple"
+fi
+
 # Note: github names zips by <reponame>-<branchname>.replace( '/', '-' )
 update_branch="main"
-in_zip_folder_name="battery-$update_branch"
+in_zip_folder_name="BatteryOptimizer_for_MAC-$update_branch"
 batteryfolder="$tempfolder/battery"
 echo "[ 2 ] Downloading latest version of battery CLI"
 rm -rf $batteryfolder
 mkdir -p $batteryfolder
-curl -sSL -o $batteryfolder/repo.zip "https://github.com/actuallymentor/battery/archive/refs/heads/$update_branch.zip"
+curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/heads/$update_branch.zip"
 unzip -qq $batteryfolder/repo.zip -d $batteryfolder
 cp -r $batteryfolder/$in_zip_folder_name/* $batteryfolder
 rm $batteryfolder/repo.zip
@@ -36,7 +44,11 @@ rm $batteryfolder/repo.zip
 # Move built file to bin folder
 echo "[ 3 ] Move smc to executable folder"
 sudo mkdir -p $binfolder
-sudo cp $batteryfolder/dist/smc $binfolder
+if [[ $cpu_type == "apple" ]]; then
+	sudo cp $batteryfolder/dist/smc $binfolder/smc
+else
+	sudo cp $batteryfolder/dist/smc_intel $binfolder/smc
+fi
 sudo chown $calling_user $binfolder/smc
 sudo chmod 755 $binfolder/smc
 sudo chmod +x $binfolder/smc
@@ -72,5 +84,83 @@ sudo chown -R $calling_user $configfolder
 cd ../..
 echo "[ 7 ] Removing temp folder $tempfolder"
 rm -rf $tempfolder
+
+# Run battery maintain with default percentage 80
+echo "[ 8 ] Set default battery maintain percentage to 80%, can be changed afterwards"
+$binfolder/battery maintain 80 >/dev/null &
+
+if [[ $(smc -k BCLM -r) == *"no data"* ]]; then # sleepwatcher only required for Apple CPU Macbook
+	# Install homebrew
+	if [[ -z $(which brew 2>&1) ]]; then
+		echo "[ 9 ] Install homebrew"
+		curl -s https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash
+		if [[ -z $(which brew 2>&1) ]]; then
+			echo "Error: brew installation fail"
+			brew_installed=false
+		else
+			echo "brew installation completed"
+			brew_installed=true
+		fi
+	else
+		echo "[ 9 ] Homebrew installed"
+		brew_installed=true
+	fi
+
+	# Install sleepwatcher
+	if ! $brew_installed; then
+		sleepwatcher_installed=false
+	else
+		if [[ -z $(which sleepwatcher 2>&1) ]]; then
+			echo "[ 10 ] Install sleepwatcher"
+			HOMEBREW_NO_INSTALL_FROM_API=1 brew reinstall sleepwatcher
+			if [[ -z $(which sleepwatcher 2>&1) ]]; then
+				echo "Error: sleepwatcher installation fail"
+				sleepwatcher_installed=false
+			else
+				echo "sleepwatcher installation completed"
+				sleepwatcher_installed=true
+				brew services restart sleepwatcher
+			fi
+		else
+			echo "[ 10 ] Sleepwatcher installed"
+			sleepwatcher_installed=true
+		fi
+	fi
+
+	if $sleepwatcher_installed; then
+		echo "[ 11 ] Generate ~/.sleep and ~/.wakeup"
+		sleep_file=$HOME/.sleep
+		wakeup_file=$HOME/.wakeup
+		# .sleep
+		sleep_code="#!/bin/bash
+if [[ \$(smc -k CHWA -r) == *\"no data\"* ]]; then
+	chwa_has_data=false
+else
+	chwa_has_data=true
+fi
+
+if \$chwa_has_data; then
+	sudo smc -k CHWA -w 01 # limit at 80% before sleep
+	echo \"\`date +%Y/%m/%d-%T\` sleep\"  >> $sleepwatcher_log
+fi"
+		echo "$sleep_code" > "$sleep_file"
+		chmod +x "$sleep_file"
+
+		# .wakeup
+		wakeup_code="#!/bin/bash
+if [[ \$(smc -k CHWA -r) == *\"no data\"* ]]; then
+	chwa_has_data=false
+else
+	chwa_has_data=true
+fi
+
+if \$chwa_has_data; then
+	sudo smc -k CHWA -w 00 # allow full charge to 100%
+	echo \"\`date +%Y/%m/%d-%T\` wakeup\"  >> $sleepwatcher_log
+fi"
+		echo "$wakeup_code" > "$wakeup_file"
+		chmod +x "$wakeup_file"
+	fi
+fi
 
 echo -e "\n🎉 Battery tool installed. Type \"battery help\" for instructions.\n"
