@@ -741,7 +741,7 @@ if [[ "$action" == "charge" ]]; then
 	change_magsafe_led_color "green" # LED orange for not charging
 	log "Charging completed at $battery_percentage%"
 
-	exit 2
+	exit 0
 
 fi
 
@@ -791,7 +791,7 @@ if [[ "$action" == "discharge" ]]; then
 	
 	log "Discharging completed at $battery_percentage%"
 
-	exit 2
+	exit 0
 
 fi
 
