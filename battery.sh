@@ -549,24 +549,20 @@ function calibrate_exit() {
 	kill 0 # kill all child processes
 }
 
-function charge_exit() {
-	exit_code=$?
-	if [[ $exit_code != 2 ]]; then # EXIT 0 or EXIT 1
-		disable_charging
-		if [[ $(maintain_is_running) ]] && [[ "$(cat $state_file 2>/dev/null)" == "suspended" ]]; then
-			$battery_binary maintain recover
-		fi
+function charge_interrupted() {
+	disable_charging
+	if [[ $(maintain_is_running) ]] && [[ "$(cat $state_file 2>/dev/null)" == "suspended" ]]; then
+		$battery_binary maintain recover
 	fi
+	exit 1
 }
 
-function discharge_exit() {
-	exit_code=$?
-	if [[ $exit_code != 2 ]]; then # EXIT 0 or EXIT 1
-		disable_discharging
-		if [[ $(maintain_is_running) ]] && [[ "$(cat $state_file 2>/dev/null)" == "suspended" ]]; then
-			$battery_binary maintain recover
-		fi
+function discharge_interrupted() {
+	disable_discharging
+	if [[ $(maintain_is_running) ]] && [[ "$(cat $state_file 2>/dev/null)" == "suspended" ]]; then
+		$battery_binary maintain recover
 	fi
+	exit 1
 }
 
 function maintain_is_running() {
@@ -709,7 +705,7 @@ fi
 # Charging on/off controller
 if [[ "$action" == "charge" ]]; then
 
-	trap charge_exit EXIT
+	trap charge_interrupted SIGINT SIGTERM
 
 	if ! valid_percentage "$setting"; then
 		log "Error: $setting is not a valid setting for battery charge. Please use a number between 0 and 100"
@@ -748,7 +744,7 @@ fi
 # Discharging on/off controller
 if [[ "$action" == "discharge" ]]; then
 
-	trap discharge_exit EXIT
+	trap discharge_interrupted SIGINT SIGTERM
 
 	if ! valid_percentage "$setting"; then
 		log "Error: $setting is not a valid setting for battery discharge. Please use a number between 0 and 100"
