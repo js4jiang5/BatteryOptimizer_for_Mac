@@ -518,8 +518,8 @@ function lid_closed() { # 20241013 by JS
 
 function confirm_SIG() {
 	ack_received=1
-	echo
 	break
+	echo
 }
 
 function ack_SIG() {

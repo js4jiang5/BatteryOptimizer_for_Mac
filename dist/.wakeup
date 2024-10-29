@@ -1,0 +1,11 @@
+#!/bin/bash
+if [[ $(smc -k CHWA -r) == *"no data"* ]]; then
+	chwa_has_data=false
+else
+	chwa_has_data=true
+fi
+
+if $chwa_has_data; then
+	sudo smc -k CHWA -w 00 # allow full charge to 100%
+	echo "`date +%Y/%m/%d-%T` wakeup"  >> $HOME/.battery/sleepwatcher.log
+fi

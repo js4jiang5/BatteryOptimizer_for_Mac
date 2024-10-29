@@ -80,16 +80,20 @@ echo "[ 6 ] Setting up visudo declarations"
 sudo $batteryfolder/battery.sh visudo $USER
 sudo chown -R $calling_user $configfolder
 
-# Remove tempfiles
-cd ../..
-echo "[ 7 ] Removing temp folder $tempfolder"
-rm -rf $tempfolder
-
 # Run battery maintain with default percentage 80
-echo "[ 8 ] Set default battery maintain percentage to 80%, can be changed afterwards"
+echo "[ 7 ] Set default battery maintain percentage to 80%, can be changed afterwards"
 $binfolder/battery maintain 80 >/dev/null &
 
 if [[ $(smc -k BCLM -r) == *"no data"* ]]; then # sleepwatcher only required for Apple CPU Macbook
+	echo "[ 8 ] Setup for power limit when Macs shutdown"
+	sudo cp $batteryfolder/dist/.reboot $HOME/.reboot
+	sudo cp $batteryfolder/dist/.shutdown $HOME/.shutdown
+	sudo cp $batteryfolder/dist/shutdown.sh $binfolder/shutdown.sh
+	sodo cp $batteryfolder/dist/battery_shutdown.plist $HOME/Library/LaunchAgents/battery_shutdown.plist
+	launchctl enable "gui/$(id -u $USER)/com.battery_shutdown.app"
+	launchctl unload "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
+	launchctl load "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
+
 	# Install homebrew
 	if [[ -z $(which brew 2>&1) ]]; then
 		echo "[ 9 ] Install homebrew"
@@ -129,38 +133,46 @@ if [[ $(smc -k BCLM -r) == *"no data"* ]]; then # sleepwatcher only required for
 
 	if $sleepwatcher_installed; then
 		echo "[ 11 ] Generate ~/.sleep and ~/.wakeup"
-		sleep_file=$HOME/.sleep
-		wakeup_file=$HOME/.wakeup
-		# .sleep
-		sleep_code="#!/bin/bash
-if [[ \$(smc -k CHWA -r) == *\"no data\"* ]]; then
-	chwa_has_data=false
-else
-	chwa_has_data=true
-fi
+		sudo cp $batteryfolder/dist/.sleep $HOME/.sleep
+		sudo cp $batteryfolder/dist/.wakeup $HOME/.wakeup
 
-if \$chwa_has_data; then
-	sudo smc -k CHWA -w 01 # limit at 80% before sleep
-	echo \"\`date +%Y/%m/%d-%T\` sleep\"  >> $sleepwatcher_log
-fi"
-		echo "$sleep_code" > "$sleep_file"
-		chmod +x "$sleep_file"
+#		sleep_file=$HOME/.sleep
+#		wakeup_file=$HOME/.wakeup
+#		# .sleep
+#		sleep_code="#!/bin/bash
+#if [[ \$(smc -k CHWA -r) == *\"no data\"* ]]; then
+#	chwa_has_data=false
+#else
+#	chwa_has_data=true
+#fi
 
-		# .wakeup
-		wakeup_code="#!/bin/bash
-if [[ \$(smc -k CHWA -r) == *\"no data\"* ]]; then
-	chwa_has_data=false
-else
-	chwa_has_data=true
-fi
+#if \$chwa_has_data; then
+#	sudo smc -k CHWA -w 01 # limit at 80% before sleep
+#	echo \"\`date +%Y/%m/%d-%T\` sleep\"  >> $sleepwatcher_log
+#fi"
+#		echo "$sleep_code" > "$sleep_file"
+#		chmod +x "$sleep_file"
 
-if \$chwa_has_data; then
-	sudo smc -k CHWA -w 00 # allow full charge to 100%
-	echo \"\`date +%Y/%m/%d-%T\` wakeup\"  >> $sleepwatcher_log
-fi"
-		echo "$wakeup_code" > "$wakeup_file"
-		chmod +x "$wakeup_file"
+#		# .wakeup
+#		wakeup_code="#!/bin/bash
+#if [[ \$(smc -k CHWA -r) == *\"no data\"* ]]; then
+#	chwa_has_data=false
+#else
+#	chwa_has_data=true
+#fi
+
+#if \$chwa_has_data; then
+#	sudo smc -k CHWA -w 00 # allow full charge to 100%
+#	echo \"\`date +%Y/%m/%d-%T\` wakeup\"  >> $sleepwatcher_log
+#fi"
+#		echo "$wakeup_code" > "$wakeup_file"
+#		chmod +x "$wakeup_file"
 	fi
 fi
+
+# Remove tempfiles
+cd ../..
+echo "[ Final ] Removing temp folder $tempfolder"
+rm -rf $tempfolder
 
 echo -e "\n🎉 Battery tool installed. Type \"battery help\" for instructions.\n"

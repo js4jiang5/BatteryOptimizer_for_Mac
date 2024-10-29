@@ -1,0 +1,11 @@
+#!/bin/bash
+if [[ $(smc -k CHWA -r) == *"no data"* ]]; then
+	chwa_has_data=false
+else
+	chwa_has_data=true
+fi
+
+if $chwa_has_data; then
+	sudo smc -k CHWA -w 01 # limit at 80% before sleep
+	echo "`date +%Y/%m/%d-%T` sleep"  >> $HOME/.battery/sleepwatcher.log
+fi
