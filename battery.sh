@@ -796,7 +796,10 @@ fi
 
 # Maintain at level
 if [[ "$action" == "maintain_synchronous" ]]; then
-	
+	if [[ $(get_cpu_type) == "apple" ]]; then # reset to default when reboot
+		sudo smc -k CHWA -w 00
+	fi
+
 	# Recover old maintain status if old setting is found
 	if [[ "$setting" == "recover" ]]; then
 
