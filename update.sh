@@ -39,12 +39,12 @@ if [[ $(smc -k BCLM -r) == *"no data"* ]]; then # power limit during shutdown on
 	launchctl enable "gui/$(id -u $USER)/com.battery_shutdown.app"
 	launchctl unload "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
 	launchctl load "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
-	chown $USER $HOME/.reboot
-	chmod 755 $HOME/.reboot
-	chmod u+x $HOME/.reboot
-	chown $USER $HOME/.shutdown
-	chmod 755 $HOME/.shutdown
-	chmod u+x $HOME/.shutdown
+	sudo chown $USER $HOME/.reboot
+	sudo chmod 755 $HOME/.reboot
+	sudo chmod u+x $HOME/.reboot
+	sudo chown $USER $HOME/.shutdown
+	sudo chmod 755 $HOME/.shutdown
+	sudo chmod u+x $HOME/.shutdown
 	sudo chown $USER $binfolder/shutdown.sh
 	sudo chmod 755 $binfolder/shutdown.sh
 	sudo chmod u+x $binfolder/shutdown.sh

@@ -93,12 +93,12 @@ if [[ $(smc -k BCLM -r) == *"no data"* ]]; then # sleepwatcher only required for
 	launchctl enable "gui/$(id -u $USER)/com.battery_shutdown.app"
 	launchctl unload "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
 	launchctl load "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
-	chown -R $calling_user $HOME/.reboot
-	chmod 755 $HOME/.reboot
-	chmod +x $HOME/.reboot
-	chown -R $calling_user $HOME/.shutdown
-	chmod 755 $HOME/.shutdown
-	chmod +x $HOME/.shutdown
+	sudo chown -R $calling_user $HOME/.reboot
+	sudo chmod 755 $HOME/.reboot
+	sudo chmod +x $HOME/.reboot
+	sudo chown -R $calling_user $HOME/.shutdown
+	sudo chmod 755 $HOME/.shutdown
+	sudo chmod +x $HOME/.shutdown
 	sudo chown -R $calling_user $binfolder/shutdown.sh
 	sudo chmod 755 $binfolder/shutdown.sh
 	sudo chmod +x $binfolder/shutdown.sh
@@ -144,12 +144,12 @@ if [[ $(smc -k BCLM -r) == *"no data"* ]]; then # sleepwatcher only required for
 		echo "[ 11 ] Generate ~/.sleep and ~/.wakeup"
 		sudo cp $batteryfolder/dist/.sleep $HOME/.sleep
 		sudo cp $batteryfolder/dist/.wakeup $HOME/.wakeup
-		chown -R $calling_user $HOME/.sleep
-		chmod 755 $HOME/.sleep
-		chmod +x $HOME/.sleep
-		chown -R $calling_user $HOME/.wakeup
-		chmod 755 $HOME/.wakeup
-		chmod +x $HOME/.wakeup
+		sudo chown -R $calling_user $HOME/.sleep
+		sudo chmod 755 $HOME/.sleep
+		sudo chmod +x $HOME/.sleep
+		sudo chown -R $calling_user $HOME/.wakeup
+		sudo chmod 755 $HOME/.wakeup
+		sudo chmod +x $HOME/.wakeup
 
 #		sleep_file=$HOME/.sleep
 #		wakeup_file=$HOME/.wakeup
