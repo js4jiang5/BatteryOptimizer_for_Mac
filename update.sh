@@ -29,7 +29,7 @@ if [[ $(smc -k BCLM -r) == *"no data"* ]]; then # power limit during shutdown on
 	sudo cp $batteryfolder/dist/.reboot $HOME/.reboot
 	sudo cp $batteryfolder/dist/.shutdown $HOME/.shutdown
 	sudo cp $batteryfolder/dist/shutdown.sh $binfolder/shutdown.sh
-	sodo cp $batteryfolder/dist/battery_shutdown.plist $HOME/Library/LaunchAgents/battery_shutdown.plist
+	sudo cp $batteryfolder/dist/battery_shutdown.plist $HOME/Library/LaunchAgents/battery_shutdown.plist
 	launchctl enable "gui/$(id -u $USER)/com.battery_shutdown.app"
 	launchctl unload "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
 	launchctl load "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
