@@ -540,13 +540,13 @@ function ack_SIG() {
 	kill -s USR1 $sigpid 2> /dev/null;
 }
 
-function calibrate_exit() {
-	exit_code=$?
-	if [[ $exit_code < 2 ]]; then # EXIT 0 or EXIT 1
-		rm $calibrate_pidfile 2>/dev/null
-		$battery_binary maintain recover # Recover old maintain status
+function calibrate_interrupted() {
+	rm $calibrate_pidfile 2>/dev/null
+	if [[ $(maintain_is_running) ]] && [[ "$(cat $state_file 2>/dev/null)" == "suspended" ]]; then
+		$battery_binary maintain recover
 	fi
 	kill 0 # kill all child processes
+	exit 1
 }
 
 function charge_interrupted() {
@@ -726,10 +726,12 @@ if [[ "$action" == "charge" ]]; then
 	while [[ "$battery_percentage" -lt "$setting" ]]; do
 
 		if [[ "$battery_percentage" -ge "$((setting - 3))" ]]; then
-			sleep 5
+			sleep 5 &
 		else
-			caffeinate -is sleep 60
+			caffeinate -is sleep 60 &
 		fi
+		wait $!
+		battery_percentage=$(get_battery_percentage)
 
 	done
 
@@ -770,7 +772,8 @@ if [[ "$action" == "discharge" ]]; then
 	while [[ "$battery_percentage" -gt "$setting" ]]; do
 
 		log "Battery at $battery_percentage% (target $setting%)"
-		caffeinate -is sleep 60
+		caffeinate -is sleep 60 &
+		wait $!
 		battery_percentage=$(get_battery_percentage)
 
 	done
@@ -924,10 +927,12 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 				sleep_duration=5 # reduce monitoring period to 5 seconds during charging
 			fi
 			
-			sleep $sleep_duration
+			sleep $sleep_duration &
+			wait $!
 		else
 			sleep_duration=5
-			sleep $sleep_duration
+			sleep $sleep_duration &
+			wait $!
 
 			ac_connection=$(get_charger_connection) # update ac connection state
 
@@ -1133,7 +1138,7 @@ fi
 # Battery calibration
 if [[ "$action" == "calibrate" ]]; then
 
-	trap calibrate_exit EXIT
+	trap calibrate_interrupted SIGINT SIGTERM
 
 	if ! [[ -t 0 ]]; then # if the command is not entered from stdin (terminal) by a person, meaning it is a scheduled calibration
 		# check schedule to see if this week should calibrate
@@ -1169,7 +1174,7 @@ if [[ "$action" == "calibrate" ]]; then
 			if [[ $(($week_diff % $week_period)) == 0 ]]; then
 				log "Calibrate on Week `date +%V` of Year `date +%Y`"
 			else
-				exit 2
+				exit 0
 			fi
 		fi
 	fi
@@ -1182,7 +1187,7 @@ if [[ "$action" == "calibrate" ]]; then
 
 	if [[ "$setting" == "stop" ]]; then
 		log "Killing running calibration daemon"
-		exit 2 # use exit 2 instead of 0 to avoid running battery maintain recover 
+		exit 0
 	fi
 
 	# make sure battery maintain is running
@@ -1209,7 +1214,7 @@ if [[ "$action" == "calibrate" ]]; then
 	if [ "$(maintain_is_running)" == "0" ]; then
 		osascript -e 'display notification "Battery maintain need to run before calibration" with title "Battery Calibration Error" sound name "Blow"'
 		log "Calibration Error: Battery maintain need to run before calibration"
-		exit 2
+		exit 1
 	fi
 
 	# if lid is closed or AC is not connected, notify the user and wait until lid is open with AC or 1 day timeout
@@ -1232,7 +1237,7 @@ if [[ "$action" == "calibrate" ]]; then
 		ha_webhook "err_lid_closed"
 		osascript -e 'display notification "Macbook lid is not open or no AC power!" with title "Battery Calibration Error" sound name "Blow"'
 		log "Calibration Error: Macbook lid is not open or no AC power!"
-		exit 2
+		exit 1
 	fi
 
 	# Store pid of calibration process
@@ -1258,11 +1263,14 @@ if [[ "$action" == "calibrate" ]]; then
 
 		# Discharge battery to 15%
 		ha_webhook "discharge15_start"
-		$battery_binary discharge 15
+		$battery_binary discharge 15 &
+		wait $!
 		if [ $? != 0 ] ; then
 			ha_webhook "err_discharge15"
 			osascript -e 'display notification "Discharge to 15% fail" with title "Battery Calibration Error" sound name "Blow"'
 			log "Calibration Error: Discharge to 15% fail"
+			rm $calibrate_pidfile 2>/dev/null
+			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
 		ha_webhook "discharge15_end"
@@ -1279,6 +1287,8 @@ if [[ "$action" == "calibrate" ]]; then
 				ha_webhook "err_charge100"
 				osascript -e 'display notification "Failed to charge to 100% after 6 hours" with title "Battery Calibration Error" sound name "Blow"'
 				log "Calibration Error: Charge to 100% fail"
+				rm $calibrate_pidfile 2>/dev/null
+				$battery_binary maintain recover # Recover old maintain status
 				exit 1
 			fi
 
@@ -1287,7 +1297,8 @@ if [[ "$action" == "calibrate" ]]; then
 			if [ $(get_battery_percentage) == 100 ] ; then
 				break
 			else
-				sleep 300
+				sleep 300 &
+				wait $!
 				continue
 			fi
 		done
@@ -1296,7 +1307,8 @@ if [[ "$action" == "calibrate" ]]; then
 		log "Calibration: Calibration has charged to 100%. Waiting for one hour"
 
 		# Wait before discharging to target level
-		sleep 3600 
+		sleep 3600 &
+		wait $!
 		ha_webhook "wait_1hr_done"
 		osascript -e 'display notification "Battery has been maintained at 100% for one hour \nStart discharging to maintain percentage" with title "Battery Calibration" sound name "Blow"'
 		log "Calibration: Battery has been maintained at 100% for one hour"
@@ -1308,12 +1320,15 @@ if [[ "$action" == "calibrate" ]]; then
 		if [[ $maintain_percentage ]]; then
 			setting=$(echo $maintain_percentage | awk '{print $1}')
 		fi
-		$battery_binary discharge $setting
+		$battery_binary discharge $setting &
+		wait $!
 
 		if [ $? != 0 ] ; then
 			ha_webhook "err_discharge_target"
 			osascript -e 'display notification "Discharge to target maintain percentage fail" with title "Battery Calibration Error" sound name "Blow"'
 			log "Calibration Error: Discharge to $setting% fail"
+			rm $calibrate_pidfile 2>/dev/null
+			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
 	else
@@ -1337,6 +1352,8 @@ if [[ "$action" == "calibrate" ]]; then
 				ha_webhook "err_charge100"
 				osascript -e 'display notification "Failed to charge to 100% after 6 hours" with title "Battery Calibration Error" sound name "Blow"'
 				log "Calibration Error: Charge to 100% fail"
+				rm $calibrate_pidfile 2>/dev/null
+				$battery_binary maintain recover # Recover old maintain status
 				exit 1
 			fi
 
@@ -1345,7 +1362,8 @@ if [[ "$action" == "calibrate" ]]; then
 			if [ $(get_battery_percentage) == 100 ] ; then
 				break
 			else
-				sleep 300
+				sleep 300 &
+				wait $!
 				continue
 			fi
 		done
@@ -1354,7 +1372,8 @@ if [[ "$action" == "calibrate" ]]; then
 		log "Calibration: Calibration has charged to 100%. Waiting for one hour"
 
 		# Wait before discharging to 15%
-		sleep 3600
+		sleep 3600 &
+		wait $!
 		ha_webhook "wait_1hr_done"
 		osascript -e 'display notification "Battery has been maintained at 100% for one hour \nStart discharging to 15%" with title "Battery Calibration" sound name "Blow"'
 		log "Calibration: Battery has been maintained at 100% for one hour"
@@ -1367,6 +1386,8 @@ if [[ "$action" == "calibrate" ]]; then
 			ha_webhook "err_discharge15"
 			osascript -e 'display notification "Discharge to 15% fail" with title "Battery Calibration Error" sound name "Blow"'
 			log "Calibration Error: Discharge to 15% fail"
+			rm $calibrate_pidfile 2>/dev/null
+			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
 		ha_webhook "discharge15_end"
@@ -1386,6 +1407,8 @@ if [[ "$action" == "calibrate" ]]; then
 			ha_webhook "err_charge_target"
 			osascript -e 'display notification "'"Charge to $setting% fail"'" with title "Battery Calibration Error" sound name "Blow"'
 			log "Calibration Error: Charge to $setting% fail"
+			rm $calibrate_pidfile 2>/dev/null
+			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
 	fi
@@ -1396,6 +1419,8 @@ if [[ "$action" == "calibrate" ]]; then
 	log "Battery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C"
 	log "Health $(get_battery_health)%, Cycle $(get_cycle)"	
 	
+	rm $calibrate_pidfile 2>/dev/null
+	$battery_binary maintain recover # Recover old maintain status
 	exit 0
 fi
 
