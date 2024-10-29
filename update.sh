@@ -14,9 +14,15 @@ echo -e "🔋 Starting battery update\n"
 # Write battery function as executable
 
 echo "[ 1 ] Downloading latest battery version"
+update_branch="main"
+in_zip_folder_name="BatteryOptimizer_for_MAC-$update_branch"
+batteryfolder="$tempfolder/battery"
 rm -rf $batteryfolder
 mkdir -p $batteryfolder
-curl -sS -o $batteryfolder/battery.sh https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/battery.sh
+curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/heads/$update_branch.zip"
+unzip -qq $batteryfolder/repo.zip -d $batteryfolder
+cp -r $batteryfolder/$in_zip_folder_name/* $batteryfolder
+rm $batteryfolder/repo.zip
 
 echo "[ 2 ] Writing script to $binfolder/battery"
 cp $batteryfolder/battery.sh $binfolder/battery
@@ -33,6 +39,15 @@ if [[ $(smc -k BCLM -r) == *"no data"* ]]; then # power limit during shutdown on
 	launchctl enable "gui/$(id -u $USER)/com.battery_shutdown.app"
 	launchctl unload "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
 	launchctl load "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
+	chown $USER $HOME/.reboot
+	chmod 755 $HOME/.reboot
+	chmod u+x $HOME/.reboot
+	chown $USER $HOME/.shutdown
+	chmod 755 $HOME/.shutdown
+	chmod u+x $HOME/.shutdown
+	sudo chown $USER $binfolder/shutdown.sh
+	sudo chmod 755 $binfolder/shutdown.sh
+	sudo chmod u+x $binfolder/shutdown.sh
 fi
 
 # Remove tempfiles
