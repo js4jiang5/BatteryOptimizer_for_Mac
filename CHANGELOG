@@ -1,3 +1,6 @@
+v2.0.3
+- simply change version number for user to update successfully
+
 v2.0.2
 - notify user when new version is available for update
 - add "battery schedule enable" and "battery version" command
