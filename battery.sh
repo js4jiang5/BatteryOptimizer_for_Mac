@@ -809,7 +809,11 @@ if [[ "$action" == "update" ]]; then
 
 	# Check if we have the most recent version
 	if curl -sS https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/battery.sh | grep -q "$BATTERY_CLI_VERSION"; then
-		echo "No need to update, offline version number $BATTERY_CLI_VERSION matches remote version number"
+		if $is_TW; then
+			echo "$BATTERY_CLI_VERSION 已是最新版，不需要更新"
+		else
+			echo "No need to update, offline version number $BATTERY_CLI_VERSION matches remote version number"
+		fi
 	else
 		echo "This will run curl -sS https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/update.sh | bash"
 		if [[ ! "$setting" == "silent" ]]; then
