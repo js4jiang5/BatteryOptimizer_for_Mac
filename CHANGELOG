@@ -1,0 +1,21 @@
+v2.0.2
+- notify user when new version is available for update
+- add "battery schedule enable" and "battery version" command
+- show status and notification in traditional Chinese if language default is zh_TW
+- show next calibration date when running "battery status" or "battery schedule" command
+- disable schedule when maintain stop and enable schedule when maintain start
+- simplify the codes that check if this week should run calibration
+
+v2.0.1
+- fix the bug that report error after successfully discharging to 15% in calilbration
+- add control for shutdown
+- reduce wait time for battery maintain suspend and recover
+
+v2.0.0
+The first version modified from battery app v1.2.7.
+Main additional features include
+- support both Apple and Intel Silicon Macs
+- add sail mode
+- add scheduled calibration with notifications
+- add daily report
+- charge limiter still works when Macs sleep and shutdown
