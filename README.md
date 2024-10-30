@@ -20,6 +20,8 @@
 - report calibration schedule in "battery status"
 - include battery health and temperature in status report
 - set LED to none (no light) during discharging
+- add a command to show current version
+- notify user when new version is available to update
 
 ### Fixed bugs of [Battery APP v1.2.7](https://github.com/actuallymentor/battery)
 - Calibrate fail and hang at 10%
