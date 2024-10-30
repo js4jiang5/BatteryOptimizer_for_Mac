@@ -91,6 +91,7 @@ Usage:
     battery schedule day 6 16 26 hour 18 minute 30    # calibrate on Day 6, 16, 26 at 18:30
     battery schedule weekday 0 week_period 2 hour 21 minute 30 # calibrate on Sunday every 2 weeks at 21:30
     battery schedule disable    # disable periodic calibration
+    battery schedule enable    # enable periodic calibration
     Restrictions:
       1. at most 4 days per month are allowed
       2. valid day range [1-28]
@@ -119,6 +120,9 @@ Usage:
 
   battery update
     update the battery utility to the latest version
+
+  battery version
+    show current version
 
   battery reinstall
     reinstall the battery utility to the latest version (reruns the installation script)
