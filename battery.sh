@@ -1051,6 +1051,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 		if [[ $(date +%s) -gt $check_update_timeout ]]; then
 			updated="$(curl -sS https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/battery.sh | grep "$informed_version")"
 			new_version="$(curl -sS https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/battery.sh | grep "BATTERY_CLI_VERSION=")"
+			new_version="$(echo $new_version | awk '{print $1}')"
 			new_version=$(echo ${new_version/"BATTERY_CLI_VERSION="} | tr -d \")
 			
 			if [[ -z $updated ]]; then
