@@ -1388,7 +1388,11 @@ if [[ "$action" == "maintain" ]]; then
 	if [[ $(get_battery_percentage) > $setting ]]; then # if current battery percentage is higher than maintain percentage
 		if ! [[ $(ps aux | grep $PPID) =~ "setup.sh" ]]; then 
 			# Ask user if discharging right now unless this action is invoked by setup.sh
-			answer="$(osascript -e 'display dialog "'"Do you want to discharge battery to $setting% now?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+			if $is_TW; then
+				answer="$(osascript -e 'display dialog "'"你要現在就放電到 $setting% 嗎?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+			else
+				answer="$(osascript -e 'display dialog "'"Do you want to discharge battery to $setting% now?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+			fi
 			if [[ "$answer" == "Yes" ]] || [ -z $answer ]; then
 				log "Start discharging to $setting%"
 				$battery_binary discharge $setting 
