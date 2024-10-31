@@ -30,6 +30,7 @@ schedule_tracker_file="$configfolder/calibrate_schedule"
 webhookid_file=$configfolder/ha_webhook.id
 daily_log=$configfolder/daily.log
 informed_version_file=$configfolder/informed.version
+language_file=$configfolder/language.code
 
 ## ###############
 ## Housekeeping
@@ -75,16 +76,17 @@ Usage:
 	when external monitor is used, you must setup notifications as follows in order to receive notification successfully
 		system settings > notifications > check 'Allow notifications when mirroring or sharing the display'
 	eg: battery calibrate   # start calibration
-	eg: battery calibrate stop # stop calibration
+	eg: battery calibrate stop # stop calibration and resume maintain
 	
   battery schedule
-	schedule periodic calibration at most 4 separate days per month. default is one day per month on Day 1 at 9am.
+	schedule periodic calibration at most 4 separate days per month, or specified weekday every 1~12 weeks, or specified one day every 1~3 month. default is one day per month on Day 1 at 9am.
 	Examples:
 	battery schedule    # calibrate on Day 1 at 9am
 	battery schedule day 1 8 15 22    # calibrate on Day 1, 8, 15, 22 at 9am.
 	battery schedule day 3 18 hour 13    # calibrate on Day 3, 18 at 13:00
 	battery schedule day 6 16 26 hour 18 minute 30    # calibrate on Day 6, 16, 26 at 18:30
     battery schedule weekday 0 week_period 2 hour 21 minute 30 # calibrate on Sunday every 2 weeks at 21:30
+	battery schedule day 5 month_period 3 hour 21 minute 30 # calibrate every 3 month on Day 5 at 21:00
     battery schedule disable    # disable periodic calibration
 	battery schedule enable    # enable periodic calibration
 	Restrictions:
@@ -93,7 +95,8 @@ Usage:
 		3. valid hour range [0-23]
 		4. valid minute range [0-59]
     	5. valid weekday range [0-6] 0:Sunday, 1:Monday, ...
-    	6. valid week_period range [1-4]
+    	6. valid week_period range [1-12]
+		7. valid month_period range [1-3]
 
   battery charge LEVEL[1-100]
     charge the battery to a certain percentage, and disable charging when that percentage is reached
@@ -112,6 +115,10 @@ Usage:
   battery logs LINES[integer, optional]
     output logs of the battery CLI and GUI
 	eg: battery logs 100
+
+  battery language LANG[tw,us]
+    eg: battery language tw  # show status and notification in traditional Chinese if available
+	eg: battery language us  # show status and notification in English
 
   battery update
     update the battery utility to the latest version
@@ -160,10 +167,19 @@ setting=$2
 subsetting=$3
 thirdsetting=$4
 lang=$(defaults read -g AppleLocale)
-if [[ $lang =~ "zh_TW" ]]; then
-	is_TW=true
+if test -f $language_file; then
+	language=$(cat "$language_file" 2>/dev/null)
+	if [[ "$language" == "tw" ]]; then
+		is_TW=true
+	else
+		is_TW=false
+	fi
 else
-	is_TW=false
+	if [[ $lang =~ "zh_TW" ]]; then
+		is_TW=true
+	else
+		is_TW=false
+	fi
 fi
 
 ## ###############
@@ -213,44 +229,63 @@ function valid_percentage() {
 	fi
 }
 
+function valid_month_period() {
+	if ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -lt 1 ]] || [[ "$1" -gt 3 ]]; then
+		return 1
+	else
+		return 0
+	fi
+}
+
 function valid_day() {
-        if ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -lt 1 ]] || [[ "$1" -gt 28 ]]; then
-			return 1
-		else
-			return 0
-        fi
+	if ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -lt 1 ]] || [[ "$1" -gt 28 ]]; then
+		return 1
+	else
+		return 0
+	fi
 }
 
 function valid_hour() {
-        if ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -lt 0 ]] || [[ "$1" -gt 23 ]]; then
-			return 1
-		else
-			return 0
-        fi
+	if ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -lt 0 ]] || [[ "$1" -gt 23 ]]; then
+		return 1
+	else
+		return 0
+	fi
 }
 
 function valid_minute() {
-        if ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -lt 0 ]] || [[ "$1" -gt 59 ]]; then
-			return 1
-		else
-			return 0
-        fi
+	if ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -lt 0 ]] || [[ "$1" -gt 59 ]]; then
+		return 1
+	else
+		return 0
+	fi
 }
 
 function valid_weekday() {
-        if ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -lt 0 ]] || [[ "$1" -gt 6 ]]; then
-			return 1
-		else
-			return 0
-        fi
+	if ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -lt 0 ]] || [[ "$1" -gt 6 ]]; then
+		return 1
+	else
+		return 0
+	fi
 }
 
 function valid_week_period() {
-        if ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -lt 1 ]] || [[ "$1" -gt 4 ]]; then
-			return 1
-		else
-			return 0
-        fi
+	if ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -lt 1 ]] || [[ "$1" -gt 12 ]]; then
+		return 1
+	else
+		return 0
+	fi
+}
+
+function format00() {
+	value=$1
+	if [ $value -lt 10 ]; then
+		value=0$(echo $value | tr -d '0')
+		if [ "$value" == "0" ]; then
+			value="00"
+		fi
+	fi
+	echo $value
 }
 
 function check_next_calibration_date() {
@@ -273,45 +308,93 @@ function check_next_calibration_date() {
             [[ $schedule =~ "SUN" ]]; then weekday=7;
         fi
         start_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$year-$week-$weekday $hour:$minute:00" +%s`)"
-        schedule_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$(date +%Y)-$(date +%V)-$(date +%u) $hour:$minute:00" +%s`)"
+        schedule_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$(date +%Y)-$(date +%V)-$weekday $hour:$minute:00" +%s`)"
         now=`date +%s`
-        for i in {0..31} ; do
-            schedule_diff_sec=$((schedule_sec + i*86400 -start_sec))
-            now_diff_sec=$((schedule_sec + i*86400 -now))
-            if [[ $((schedule_diff_sec % (week_period*7*24*60*60))) == 0 ]] && [[ $schedule_diff_sec -ge 0 ]] && [[ $now_diff_sec -gt 0 ]]; then
-                calibrate_date="$(echo `date -v+${i}d +%Y/%m/%d`)";
-				next_s=$((schedule_sec + i*86400))
-                break
-            fi
-        done
+		for i in {0..12}; do # at most 12 weeks
+			schedule_diff_sec=$((schedule_sec - start_sec))
+			if [[ $((schedule_diff_sec % (week_period*7*24*60*60))) == 0 ]] && [[ $schedule_sec -gt $now ]]; then
+				next_s=$schedule_sec
+				break;
+			else
+				schedule_sec=$((schedule_sec+ (7*24*60*60)))
+			fi
+		done
+        #for i in {0..31} ; do
+        #    schedule_diff_sec=$((schedule_sec + i*86400 -start_sec))
+        #    now_diff_sec=$((schedule_sec + i*86400 -now))
+        #    if [[ $((schedule_diff_sec % (week_period*7*24*60*60))) == 0 ]] && [[ $schedule_diff_sec -ge 0 ]] && [[ $now_diff_sec -gt 0 ]]; then
+        #        calibrate_date="$(echo `date -v+${i}d +%Y/%m/%d`)";
+		#		next_s=$((schedule_sec + i*86400))
+        #        break
+        #    fi
+        #done
 	else
-    	day=${schedule%" at"*}
-        day=${day#*"day "} 
-        days[0]=$(echo $day | awk '{print $1}')
-        days[1]=$(echo $day | awk '{print $2}')
-        days[2]=$(echo $day | awk '{print $3}')
-        days[3]=$(echo $day | awk '{print $4}')
+		n_days=0
+		days[0]=
+		days[1]=
+		days[2]=
+		days[3]=
+		day_loc=$(echo "$schedule" | tr " " "\n" | grep -n "day" | cut -d: -f1)
+		if [[ $day_loc ]]; then
+			for i_day in {1..4}; do
+				value=$(echo $schedule | awk '{print $"'"$((day_loc+i_day))"'"}')
+				if valid_day $value; then
+					days[$n_days]=$(format00 $value)
+					n_days=$(($n_days+1))
+				else
+					break
+				fi
+			done 
+		fi
+
         time=${schedule#*" at "}
+		time=${time%" starting"*}
         hour=${time%:*}
         minute=${time#*:}
+
+		month_loc=$(echo "$schedule" | tr " " "\n" | grep -n "Month" | cut -d: -f1)
+		if [[ $month_loc ]]; then
+			month=$(echo $schedule | awk '{print $"'"$((month_loc+1))"'"}');
+			month=$(format00 $month)
+		fi
+
+		year_loc=$(echo "$schedule" | tr " " "\n" | grep -n "Year" | cut -d: -f1)
+		if [[ $year_loc ]]; then
+			year=$(echo $schedule | awk '{print $"'"$((year_loc+1))"'"}');
+		fi
+
+		month_period_loc=$(echo "$schedule" | tr " " "\n" | grep -n "every" | cut -d: -f1)
+
+		if [[ $month_period_loc ]]; then
+			month_period=$(echo $schedule | awk '{print $"'"$((month_period_loc+1))"'"}');
+			month_diff=$(((`date +%Y` - $year)*12 + `date +%m` - $month))
+		else # calibrate every month case
+			month_period=1 
+			month_diff=0
+		fi
+
         now=`date +%s`
-        diff_min=$((86400*80)) # need to find the min in case users put larger day in front
-        for i_month in {0..1}; do
-            for i_day in {0..3}; do # check this month
-                if [[ ${days[$i_day]} ]]; then
-                    if [[ `date -v+${i_month}m +%m` -eq 01 ]] && [[ $i_month -eq 1 ]]; then # cross year
+
+        diff_min=$((86400*100)) # need to find the min in case users put larger day in front
+        for i_month in {0..3}; do # at most 3 months
+			if [[ $((($month_diff + $i_month) % $month_period)) -eq 0 ]]; then
+				for i_day in $(seq 0 $((n_days-1))); do # check this month
+					if [[ $((`date +%m` + i_month)) -gt 12 ]]; then # cross year
 						year=$(date -v+1y +%Y)
-                    else
+					else
 						year=$(date +%Y)
-                    fi
+					fi
+					#echo "$year $(date -v+${i_month}m +%m) ${days[$i_day]}"
 					schedule_sec="$(echo `date -j -f "%Y-%m-%d %H:%M:%S" "$year-$(date -v+${i_month}m +%m)-${days[$i_day]} $hour:$minute:00" +%s`)"
-                    diff=$((schedule_sec - now))
-                    if [[ $diff -gt 0 ]] && [[ $diff -lt $diff_min ]]; then
+					diff=$((schedule_sec - now))
+					#echo "$diff $diff_min"
+					if [[ $diff -gt 0 ]] && [[ $diff -lt $diff_min ]]; then
 						next_s=$schedule_sec
-                        diff_min=$diff
-                    fi
-                fi
-            done
+						diff_min=$diff
+						#echo "diff_min = $diff_min"
+					fi
+				done
+			fi
         done
 	fi
 	echo $next_s
@@ -331,8 +414,15 @@ function show_schedule() {
 		if [[ $schedule_txt ]]; then
 			if $is_TW; then
 				if ! [[ $schedule_txt =~ "week" ]]; then
-					schedule_txt=${schedule_txt/"Schedule calibration on day"/"電池自動校正時程安排在"}
-					schedule_txt=${schedule_txt/"at"/"日"}
+					if ! [[ $schedule_txt =~ "month" ]]; then
+						schedule_txt=${schedule_txt/"Schedule calibration on day"/"電池自動校正時程安排在"}
+						schedule_txt=${schedule_txt/"at"/"日"}
+					else
+						schedule_txt=${schedule_txt/"Schedule calibration on day"/"電池自動校正時程安排在"}
+						schedule_txt=${schedule_txt/"every "/"日每"}
+						schedule_txt=${schedule_txt/"month at"/"個月"}
+						schedule_txt=${schedule_txt%" starting"*}
+					fi
 				else
 					schedule_txt=${schedule_txt/"Schedule calibration on"/"電池自動校正時程安排在"}		
 					schedule_txt=${schedule_txt/"SUN"/"星期日"} 
@@ -348,11 +438,13 @@ function show_schedule() {
 
 				fi
 				log "$schedule_txt 開始"
-				log "下次校正日期是 `date -j -f "%s" "$(check_next_calibration_date)" +%Y/%m/%d`"
+				#check_next_calibration_date
+				log "下次校正日期是 `date -j -f "%s" "$(echo $(check_next_calibration_date) | awk '{print $NF}')" +%Y/%m/%d`"
+			
 			else
 				schedule_txt=${schedule_txt%" starting"*}
 				log "$schedule_txt"
-				log "Next calibration date is `date -j -f "%s" "$(check_next_calibration_date)" +%Y/%m/%d`"
+				log "Next calibration date is `date -j -f "%s" "$(echo $(check_next_calibration_date) | awk '{print $NF}')" +%Y/%m/%d`"
 			fi
 		else
 			if $is_TW; then
@@ -714,7 +806,7 @@ function maintain_is_running() {
 	#		break
 	#	fi
 	#done
-	if [[ $(pgrep -f $battery_binary) == *"$pid"* ]]; then
+	if [[ $(pgrep -f $battery_binary) == *"$pid"* ]] && [[ $pid ]]; then
 		echo 1
 	else
 		echo 0
@@ -1111,9 +1203,9 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 
 			# check if calibrate is running
 			calibrate_is_running=false
-			if test -f "$calibrate_pidfile"; then # if calibration is not ongoing
+			if test -f "$calibrate_pidfile"; then # if calibration is ongoing
 				pid_calibrate=$(cat "$calibrate_pidfile" 2>/dev/null)
-				if [[ $(pgrep -f $battery_binary) == *"$pid_calibrate"* ]]; then
+				if [[ $(pgrep -f $battery_binary) == *"$pid_calibrate"* ]] && [[ $pid_calibrate ]]; then
 					calibrate_is_running=true
 				fi
 			fi
@@ -1321,8 +1413,13 @@ if [[ "$action" == "calibrate" ]]; then
 			week=$(echo $schedule | awk '{print $13}')
 			year=$(echo $schedule | awk '{print $16}')
 
-			week_diff=$(((`date +%Y` - $year)*24 + `date +%V` - $week))
-			if [[ $(($week_diff % $week_period)) == 0 ]]; then
+        	start_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$year-$week-1 00:00:00" +%s`)"
+        	schedule_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$(date +%Y)-$(date +%V)-1 00:00:00" +%s`)"
+			week_diff=$(( (schedule_sec - start_sec) % (week_period*7*24*60*60) ))
+
+			#week_diff=$(((`date +%Y` - $year)*24 + `date +%V` - $week))
+			#if [[ $(($week_diff % $week_period)) == 0 ]]; then
+			if [[ $(( (schedule_sec - start_sec) % (week_period*7*24*60*60) )) -eq 0 ]]; then
 				log "Calibrate on Week `date +%V` of Year `date +%Y`"
 			else
 				exit 0
@@ -1675,7 +1772,7 @@ if [[ "$action" == "status" ]]; then
 				lower_limit=$(echo $maintain_percentage | awk '{print $2}')
 				if [[ $upper_limit ]]; then
 					if ! valid_percentage "$lower_limit"; then
-						lower_liimit=$((upper_limit-5))
+						lower_limit=$((upper_limit-5))
 					fi
 					if $is_TW; then
 						maintain_level=$(echo "$upper_limit"% 滑行至 "$lower_limit"%)
@@ -1799,16 +1896,18 @@ fi
 if [[ "$action" == "schedule" ]]; then
 	n_days=0
 	day_start=0
-	is_weekday=0 
-	is_week_period=0
-	is_hour=0
-	is_minute=0
+	#is_weekday=0 
+	#is_week_period=0
+	#is_month_period=0
+	#is_hour=0
+	#is_minute=0
 	days[0]=1
 	days[1]=
 	days[2]=
 	days[3]=
 	weekday=
 	week_period=4
+	month_period=1
 	hour=9
 	minute=0
 
@@ -1845,90 +1944,155 @@ if [[ "$action" == "schedule" ]]; then
 		exit 0
 	fi
 
-	for arg in $@; do
-		# set day
-		if [[ $day_start -eq 1 ]] && [[ $n_days < 4 ]]; then
-			if valid_day $arg; then
-				days[$n_days]=$arg
+    day_loc=$(echo "$@" | tr " " "\n" | grep -n "day" | cut -d: -f1)
+	weekday_loc=$(echo "$@" | tr " " "\n" | grep -n "weekday" | cut -d: -f1)
+    month_period_loc=$(echo "$@" | tr " " "\n" | grep -n "month_period" | cut -d: -f1)
+	week_period_loc=$(echo "$@" | tr " " "\n" | grep -n "week_period" | cut -d: -f1)
+    hour_loc=$(echo "$@" | tr " " "\n" | grep -n "hour" | cut -d: -f1)
+    minute_loc=$(echo "$@" | tr " " "\n" | grep -n "minute" | cut -d: -f1)
+    n_words=$(echo "$@" | awk '{print NF}')
+
+	if [[ $weekday_loc ]]; then
+		weekday=$(echo $@ | awk '{print $"'"$((weekday_loc+1))"'"}');
+		valid_weekday $weekday || { log "Error: weekday must be in [0..6]"; exit 1;}
+	fi
+
+	if [[ $month_period_loc ]]; then
+		month_period=$(echo $@ | awk '{print $"'"$((month_period_loc+1))"'"}');
+		valid_month_period $month_period || { log "Error: month_period must be in [1..3]"; exit 1;}
+	fi
+
+	if [[ $week_period_loc ]]; then
+		week_period=$(echo $@ | awk '{print $"'"$((week_period_loc+1))"'"}');
+		valid_week_period $week_period || { log "Error: week_period must be in [1..12]"; exit 1;}
+	fi
+
+	if [[ $hour_loc ]]; then
+		hour=$(echo $@ | awk '{print $"'"$((hour_loc+1))"'"}');
+		valid_hour $hour || { log "Error: hour must be in [0..23]"; exit 1;}
+	fi
+
+	if [[ $minute_loc ]]; then
+		minute=$(echo $@ | awk '{print $"'"$((minute_loc+1))"'"}');
+		valid_minute $minute || { log "Error: minute must be in [0..59]"; exit 1;}
+	fi
+	
+	if [[ $day_loc ]]; then
+		for i_day in {1..4}; do
+			value=$(echo $@ | awk '{print $"'"$((day_loc+i_day))"'"}')
+			if valid_day $value; then
+				days[$n_days]=$value
 				n_days=$(($n_days+1))
-			else # not valid days
-				day_start=0 
-			fi
-		fi
-
-		# search "day"
-		if [ $arg == "day" ]; then
-			day_start=1
-		fi
-
-		# set weekday
-		if [ $is_weekday == 1 ]; then
-			if valid_weekday $arg; then		
-				weekday=$arg
-				is_weekday=0
 			else
-				log "Error: weekday must be in [0..6]"
-				exit 1
+				if [[ $value -eq 29 ]] || [[ $value -eq 30 ]] || [[ $value -eq 31 ]]; then
+					log "Error: day must be in [1..28]"
+					exit 1
+				fi
+				break
 			fi
-		fi
+		done 
+	fi
 
-		# search "weekday"
-		if [ $arg == "weekday" ]; then
-			is_weekday=1
-		fi
+	#for arg in $@; do
+	#	# set day
+	#	if [[ $day_start -eq 1 ]] && [[ $n_days < 4 ]]; then
+	#		if valid_day $arg; then
+	#			days[$n_days]=$arg
+	#			n_days=$(($n_days+1))
+	#		else # not valid days
+	#			day_start=0 
+	#		fi
+	#	fi
 
-		# set week_period
-		if [ $is_week_period == 1 ]; then
-			if valid_week_period $arg; then		
-				week_period=$arg
-				is_week_period=0
-			else
-				log "Error: week_period must be in [1..4]"
-				exit 1
-			fi
-		fi
+	#	# search "day"
+	#	if [ $arg == "day" ]; then
+	#		day_start=1
+	#	fi
 
-		# search "week_period"
-		if [ $arg == "week_period" ]; then
-			is_week_period=1
-		fi
+	#	# set weekday
+	#	if [ $is_weekday == 1 ]; then
+	#		if valid_weekday $arg; then		
+	#			weekday=$arg
+	#			is_weekday=0
+	#		else
+	#			log "Error: weekday must be in [0..6]"
+	#			exit 1
+	#		fi
+	#	fi
 
-		# set hour
-		if [ $is_hour == 1 ]; then
-			if valid_hour $arg; then		
-				hour=$arg
-				is_hour=0
-			else
-				log "Error: hour must be in [0..23]"
-				exit 1
-			fi
-		fi
+	#	# search "weekday"
+	#	if [ $arg == "weekday" ]; then
+	#		is_weekday=1
+	#	fi
 
-		# search "hour"
-		if [ $arg == "hour" ]; then
-			is_hour=1
-		fi
+	#	# set week_period
+	#	if [ $is_week_period == 1 ]; then
+	#		if valid_week_period $arg; then		
+	#			week_period=$arg
+	#			is_week_period=0
+	#		else
+	#			log "Error: week_period must be in [1..4]"
+	#			exit 1
+	#		fi
+	#	fi
 
-		# set minute
-		if [ $is_minute == 1 ]; then
-			if valid_minute $arg; then
-				minute=$arg
-				is_minute=0
-			else
-				log "Error: minute must be in [0..59]"
-				exit 1
-			fi
-		fi
+	#	# search "week_period"
+	#	if [ $arg == "week_period" ]; then
+	#		is_week_period=1
+	#	fi
 
-		# search "minute"
-		if [ $arg == "minute" ]; then
-			is_minute=1
-		fi
-	done
+	#	# set month_period
+	#	if [ $is_week_period == 1 ]; then
+	#		if valid_week_period $arg; then		
+	#			week_period=$arg
+	#			is_week_period=0
+	#		else
+	#			log "Error: week_period must be in [1..4]"
+	#			exit 1
+	#		fi
+	#	fi
+
+	#	# search "week_period"
+	#	if [ $arg == "week_period" ]; then
+	#		is_week_period=1
+	#	fi
+
+	#	# set hour
+	#	if [ $is_hour == 1 ]; then
+	#		if valid_hour $arg; then		
+	#			hour=$arg
+	#			is_hour=0
+	#		else
+	#			log "Error: hour must be in [0..23]"
+	#			exit 1
+	#		fi
+	#	fi
+
+	#	# search "hour"
+	#	if [ $arg == "hour" ]; then
+	#		is_hour=1
+	#	fi
+
+	#	# set minute
+	#	if [ $is_minute == 1 ]; then
+	#		if valid_minute $arg; then
+	#			minute=$arg
+	#			is_minute=0
+	#		else
+	#			log "Error: minute must be in [0..59]"
+	#			exit 1
+	#		fi
+	#	fi
+
+	#	# search "minute"
+	#	if [ $arg == "minute" ]; then
+	#		is_minute=1
+	#	fi
+	#done
 
 	if [[ $n_days == 0 ]] && [[ -z $weekday ]]; then # default is calibrate 1 day per month if day and weekday is not specified
 		n_days=1
-	else # weekday
+	elif [[ $weekday ]]; then # weekday
 		case $weekday in 
 			0) weekday_name=SUN ;;
 			1) weekday_name=MON ;;
@@ -1949,9 +2113,14 @@ if [[ "$action" == "schedule" ]]; then
 		minute00=$minute
 	fi
 
-	if [[ $n_days > 0 ]]; then
-		log "Schedule calibration on day ${days[*]} at $hour:$minute00" >> $logfile
-		echo "Schedule calibration on day ${days[*]} at $hour:$minute00" > $schedule_tracker_file
+	if [[ $n_days > 0 ]] && [[ -z $weekday ]]; then
+		if [[ $month_period -eq 1 ]]; then
+			log "Schedule calibration on day ${days[*]} at $hour:$minute00" >> $logfile
+			echo "Schedule calibration on day ${days[*]} at $hour:$minute00" > $schedule_tracker_file
+		else
+			log "Schedule calibration on day ${days[0]} every $month_period month at $hour:$minute00 starting from Month `date +%m` of Year `date +%Y`" >> $logfile
+			echo "Schedule calibration on day ${days[0]} every $month_period month at $hour:$minute00 starting from Month `date +%m` of Year `date +%Y`" > $schedule_tracker_file
+		fi
 	else
 		log "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week `date +%V` of Year `date +%Y`" >> $logfile
 		echo "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week `date +%V` of Year `date +%Y`" > $schedule_tracker_file
@@ -2098,5 +2267,19 @@ fi
 # Show version
 if [[ "$action"  == "version" ]]; then
 	echo -e "$BATTERY_CLI_VERSION"
+	exit 0
+fi
+
+# Set language
+if [[ "$action"  == "language" ]]; then
+	if [[ "$2" == "tw" ]]; then
+		echo $2 > $language_file
+		log "顯示語言改為繁體中文"
+	elif [[ "$2" == "us" ]]; then
+		echo $2 > $language_file
+		log "Change language to English"
+	else
+		log "Specified language is not recognized. Only [tw, us] are allowed"
+	fi
 	exit 0
 fi

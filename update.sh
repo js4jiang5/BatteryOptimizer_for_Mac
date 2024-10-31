@@ -56,3 +56,14 @@ rm -rf $tempfolder
 echo "[ Final ] Removed temporary folder"
 
 echo -e "\n🎉 Battery tool updated.\n"
+
+# Restart battery maintain process
+echo -e "Restarting battery maintain.\n"
+battery maintain stop >> /dev/null
+sleep 1
+battery maintain_synchronous recover >> $HOME/.battery/battery.log &
+battery create_daemon >> /dev/null
+battery schedule enable >> /dev/null
+battery status 
+
+echo -e "You're running the latest version now.\n"
