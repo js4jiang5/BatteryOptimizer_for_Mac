@@ -5,7 +5,7 @@
 ### New features
 - support both Apple and Intel CPU Macs
 - sail mode, allowing the battery to sail from maintain percentage to sail target without charging
-- scheduled calibration, starting automatic calibration on specified days per month (at most four days) or specified weekday every 1~4 weeks
+- scheduled calibration, starting automatic calibration on specified days per month (at most four days), or specified one day every 1~3 month, or specified weekday every 1~12 weeks
 - new command "suspend", suspending maintain temporarily allowing charging to 100%, and automatically resume maintain when AC adapter is reconnected
 - charging limiter still works even when macbook sleep or shutdown
   - Intel CPU: limit is at maintain percentage
@@ -85,7 +85,7 @@ Usage:
     eg: battery calibrate stop # stop calibration
 
   battery schedule
-    schedule periodic calibration at most 4 separate days per month or specified weekday every 1~4 weeks. default is one day per month on Day 1 at 9am.
+    schedule periodic calibration at most 4 separate days per month, or specified weekday every 1~12 weeks, or specified one day every 1~3 month. default is one day per month on Day 1 at 9am.
     Examples:
     battery schedule    # calibrate on Day 1 at 9am
     battery schedule day 1 8 15 22    # calibrate on Day 1, 8, 15, 22 at 9am.
@@ -100,7 +100,8 @@ Usage:
       3. valid hour range [0-23]
       4. valid minute range [0-59]
       5. valid weekday range [0-6] 0:Sunday, 1:Monday, ...
-      6. valid week_period range [1-4]
+      6. valid week_period range [1-12]
+      7. valid month_period range [1-3]
 
   battery charge LEVEL[1-100]
     charge the battery to a certain percentage, and disable charging when that percentage is reached
@@ -120,6 +121,10 @@ Usage:
     output logs of the battery CLI and GUI
     eg: battery logs 100
 
+  battery language LANG[tw,us]
+    eg: battery language tw  # show status and notification in traditional Chinese if available
+    eg: battery language us  # show status and notification in English
+  
   battery update
     update the battery utility to the latest version
 

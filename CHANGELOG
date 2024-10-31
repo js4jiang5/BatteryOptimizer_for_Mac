@@ -1,3 +1,10 @@
+v2.0.4
+- Extend allowed week period to 12. User can schedule calibration on specified weekday every 1~12 weeks now
+- Add month_period for schedule, allowing schedule calibration on one specified day every 1~3 months
+- Add support of showing status and notification in traditional chinese with command "battery language [tw,us]"
+- fix a bug in calculation of next calibration date
+- restart battery maintain at the end of "battery update"
+
 v2.0.3
 - simply change version number for user to update successfully
 
