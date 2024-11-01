@@ -1,3 +1,6 @@
+v2.0.5
+- add discharge to be used for some Intel Macs
+
 v2.0.4
 - Extend allowed week period to 12. User can schedule calibration on specified weekday every 1~12 weeks now
 - Add month_period for schedule, allowing schedule calibration on one specified day every 1~3 months
