@@ -182,9 +182,46 @@ else
 	fi
 fi
 
+# Validate action
+if ! valid_action "$action"; then
+    exit 1
+fi
+
 ## ###############
 ## Helpers
 ## ###############
+
+
+valid_action() {
+    local action=$1
+    
+	# List of valid actions
+	VALID_ACTIONS=("help" "maintain" "calibrate" "schedule" "charge" "discharge" "status" "dailylog" "logs" "language" "update" "version" "reinstall" "uninstall") 
+    
+    # Check if action is valid
+    local action_valid=false
+    for valid_action in "${VALID_ACTIONS[@]}"; do
+        if [[ "$action" == "$valid_action" ]]; then
+            action_valid=true
+            break
+        fi
+    done
+    
+    if ! $action_valid; then
+        echo "Error: Unknown command '$action'"
+        # Find similar commands
+        echo "Did you mean one of these?"
+        for valid_action in "${VALID_ACTIONS[@]}"; do
+            if [[ "$valid_action" == *"${action:0:3}"* ]]; then
+                echo "  - $valid_action"
+            fi
+        done
+        echo "Run 'battery' without parameters, for list of valid commands."
+        return 1
+    fi
+    
+    return 0
+}
 
 function ha_webhook() {
 	DST=http://homeassistant.local:8123
