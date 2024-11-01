@@ -771,7 +771,7 @@ function ack_SIG() {
 
 function calibrate_interrupted() {
 	rm $calibrate_pidfile 2>/dev/null
-	if [[ $(maintain_is_running) ]] && [[ "$(cat $state_file 2>/dev/null)" == "suspended" ]]; then
+	if [[ "$(maintain_is_running)" == "1" ]] && [[ "$(cat $state_file 2>/dev/null)" == "suspended" ]]; then
 		$battery_binary maintain recover
 	fi
 	kill 0 # kill all child processes
@@ -780,7 +780,7 @@ function calibrate_interrupted() {
 
 function charge_interrupted() {
 	disable_charging
-	if [[ $(maintain_is_running) ]] && [[ "$(cat $state_file 2>/dev/null)" == "suspended" ]]; then
+	if [[ "$(maintain_is_running)" == "1" ]] && [[ "$(cat $state_file 2>/dev/null)" == "suspended" ]]; then
 		$battery_binary maintain recover
 	fi
 	exit 1
@@ -788,7 +788,7 @@ function charge_interrupted() {
 
 function discharge_interrupted() {
 	disable_discharging
-	if [[ $(maintain_is_running) ]] && [[ "$(cat $state_file 2>/dev/null)" == "suspended" ]]; then
+	if [[ "$(maintain_is_running)" == "1" ]] && [[ "$(cat $state_file 2>/dev/null)" == "suspended" ]]; then
 		$battery_binary maintain recover
 	fi
 	exit 1

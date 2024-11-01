@@ -50,6 +50,21 @@ if [[ $(smc -k BCLM -r) == *"no data"* ]]; then # power limit during shutdown on
 	sudo chmod u+x $binfolder/shutdown.sh
 fi
 
+# Check if smc works
+check_smc=$(smc 2>&1)
+if [[ $check_smc =~ " Bad " ]] || [[ $check_smc =~ " bad " ]] ; then # current is not a right version
+	sudo cp $batteryfolder/dist/smc_intel $binfolder/smc
+	sudo chown $USER $binfolder/smc
+	sudo chmod 755 $binfolder/smc
+	sudo chmod +x $binfolder/smc
+	# check again
+	check_smc=$(smc 2>&1)
+	if [[ $check_smc =~ " Bad " ]] || [[ $check_smc =~ " bad " ]] ; then # current is not a right version
+		echo "Error: BatteryOptimizer seems not compatible with your MAC yet"
+		exit
+	fi
+fi
+
 # Remove tempfiles
 cd
 rm -rf $tempfolder
