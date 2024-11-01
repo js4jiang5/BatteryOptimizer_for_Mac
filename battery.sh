@@ -192,11 +192,11 @@ fi
 ## ###############
 
 
-valid_action() {
+function valid_action() {
     local action=$1
     
-	# List of valid actions
-	VALID_ACTIONS=("help" "maintain" "calibrate" "schedule" "charge" "discharge" "status" "dailylog" "logs" "language" "update" "version" "reinstall" "uninstall") 
+    # List of valid actions
+    VALID_ACTIONS=("help" "maintain" "calibrate" "schedule" "charge" "discharge" "status" "dailylog" "logs" "language" "update" "version" "reinstall" "uninstall") 
     
     # Check if action is valid
     local action_valid=false
