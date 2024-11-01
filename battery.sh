@@ -701,10 +701,16 @@ function get_battery_health() {
 
 function get_battery_temperature() {
 	temperature=$(ioreg -l -n AppleSmartBattery -r | grep "\"VirtualTemperature\" =" | awk '{ print $3 }' | tr ',' '.')
-	if [ -z $temperature ]; then
-		temperature=$(ioreg -l -n AppleSmartBattery -r | grep "\"Temperature\" =" | awk '{ print $3 }' | tr ',' '.')
+	
+	if [ $temperature ]; then
+		temperature=$(echo "scale=1; ($temperature+5)/100" | bc)
+	else
+		#temperature=$(ioreg -l -n AppleSmartBattery -r | grep "\"Temperature\" =" | awk '{ print $3 }' | tr ',' '.')
+		#temperature=$(echo "scale=1; ($temperature+5)/100" | bc)
+		temperature=$(echo $(smc -k TB0T -r) | awk '{print $3}') # this value is closer to coconutBattery and AlDente
+		temperature=$(echo "scale=1; ($temperature*1000+50)/1000" | bc)
 	fi
-    temperature=$(echo "scale=1; $temperature/100" | bc)
+    
     echo $temperature
 }
 
