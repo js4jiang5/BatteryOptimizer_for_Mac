@@ -140,8 +140,8 @@ visudoconfig="
 # intended to be placed in $visudo_file on a mac
 Cmnd_Alias      BATTERYOFF = $binfolder/smc -k CH0B -w 02, $binfolder/smc -k CH0C -w 02, $binfolder/smc -k CH0B -r, $binfolder/smc -k CH0C -r
 Cmnd_Alias      BATTERYON = $binfolder/smc -k CH0B -w 00, $binfolder/smc -k CH0C -w 00
-Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r
-Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01
+Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r, $binfolder/smc -k CH0K -w 00, $binfolder/smc -k CH0K -r
+Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01, $binfolder/smc -k CH0K -w 01
 Cmnd_Alias      LEDCONTROL = $binfolder/smc -k ACLC -w 04, $binfolder/smc -k ACLC -w 03, $binfolder/smc -k ACLC -w 02, $binfolder/smc -k ACLC -w 01, $binfolder/smc -k ACLC -w 00, $binfolder/smc -k ACLC -r
 Cmnd_Alias      BATTERYBCLM = $binfolder/smc -k BCLM -w 0a, $binfolder/smc -k BCLM -w 64, $binfolder/smc -k BCLM -r
 Cmnd_Alias      BATTERYCHWA = $binfolder/smc -k CHWA -w 00, $binfolder/smc -k CHWA -w 01, $binfolder/smc -k CHWA -r
@@ -518,6 +518,7 @@ function enable_discharging() {
 	else
 		sudo smc -k BCLM -w 0a
 		sudo smc -k ACEN -w 00
+		sudo smc -k CH0K -w 01
 	fi
 	sleep 1
 }
@@ -528,6 +529,7 @@ function disable_discharging() {
 		sudo smc -k CH0I -w 00
 	else
 		sudo smc -k ACEN -w 01
+		sudo smc -k CH0K -w 00
 	fi
 	sleep 1
 

@@ -65,6 +65,9 @@ if [[ $check_smc =~ " Bad " ]] || [[ $check_smc =~ " bad " ]] ; then # current i
 	fi
 fi
 
+echo "[ 3 ] Setting up visudo declarations"
+sudo $batteryfolder/battery.sh visudo $USER
+
 # Remove tempfiles
 cd
 rm -rf $tempfolder
