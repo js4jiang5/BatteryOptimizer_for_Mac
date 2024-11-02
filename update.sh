@@ -1,5 +1,13 @@
 #!/bin/bash
 
+function valid_day() {
+	if ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -lt 1 ]] || [[ "$1" -gt 28 ]]; then
+		return 1
+	else
+		return 0
+	fi
+}
+
 # Force-set path to include sbin
 PATH="$PATH:/usr/sbin"
 
@@ -141,14 +149,15 @@ echo -e "\n🎉 Battery tool updated.\n"
 
 # Restart battery maintain process
 echo -e "Restarting battery maintain.\n"
+version=$(echo $(battery version)) #update informed version first
+informed_version_file=$configfolder/informed.version
+echo "$version" > $informed_version_file
+
 battery maintain stop >> /dev/null
 sleep 1
 battery maintain_synchronous recover >> $HOME/.battery/battery.log &
 battery create_daemon >> /dev/null
 battery schedule enable >> /dev/null
 battery status 
-version=$(echo $(battery version))
-#update informed version after update
-informed_version_file=$configfolder/informed.version
-echo "$version" > $informed_version_file
+
 echo -e "You're running the latest version $version now.\n"
