@@ -83,5 +83,5 @@ battery maintain_synchronous recover >> $HOME/.battery/battery.log &
 battery create_daemon >> /dev/null
 battery schedule enable >> /dev/null
 battery status 
-
-echo -e "You're running the latest version now.\n"
+version=$(echo $(battery version))
+echo -e "You're running the latest version $version now.\n"

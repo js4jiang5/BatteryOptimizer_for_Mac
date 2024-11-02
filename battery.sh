@@ -4,7 +4,8 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.5"
+BATTERY_CLI_VERSION="v2.0.6"
+BATTERY_CLI_BETA_VERSION="intel_v001"
 
 # Path fixes for unexpected environments
 PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
@@ -140,8 +141,8 @@ visudoconfig="
 # intended to be placed in $visudo_file on a mac
 Cmnd_Alias      BATTERYOFF = $binfolder/smc -k CH0B -w 02, $binfolder/smc -k CH0C -w 02, $binfolder/smc -k CH0B -r, $binfolder/smc -k CH0C -r
 Cmnd_Alias      BATTERYON = $binfolder/smc -k CH0B -w 00, $binfolder/smc -k CH0C -w 00
-Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r, $binfolder/smc -k CH0K -w 00, $binfolder/smc -k CH0K -r
-Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01, $binfolder/smc -k CH0K -w 01
+Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r, $binfolder/smc -k CH0J -w 00, $binfolder/smc -k CH0J -r, $binfolder/smc -k CH0K -w 00, $binfolder/smc -k CH0K -r
+Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01, $binfolder/smc -k CH0J -w 01, $binfolder/smc -k CH0K -w 01
 Cmnd_Alias      LEDCONTROL = $binfolder/smc -k ACLC -w 04, $binfolder/smc -k ACLC -w 03, $binfolder/smc -k ACLC -w 02, $binfolder/smc -k ACLC -w 01, $binfolder/smc -k ACLC -w 00, $binfolder/smc -k ACLC -r
 Cmnd_Alias      BATTERYBCLM = $binfolder/smc -k BCLM -w 0a, $binfolder/smc -k BCLM -w 64, $binfolder/smc -k BCLM -r
 Cmnd_Alias      BATTERYCHWA = $binfolder/smc -k CHWA -w 00, $binfolder/smc -k CHWA -w 01, $binfolder/smc -k CHWA -r
@@ -181,6 +182,17 @@ else
 		is_TW=false
 	fi
 fi
+
+# check the availability of SMC keys
+[[ $(smc -k BCLM -r) =~ "no data" ]] && has_BCLM=false || has_BCLM=true;
+[[ $(smc -k CH0B -r) =~ "no data" ]] && has_CH0B=false || has_CH0B=true;
+[[ $(smc -k CH0C -r) =~ "no data" ]] && has_CH0C=false || has_CH0C=true;
+[[ $(smc -k CH0I -r) =~ "no data" ]] && has_CH0I=false || has_CH0I=true;
+[[ $(smc -k CH0J -r) =~ "no data" ]] && has_CH0J=false || has_CH0J=true;
+[[ $(smc -k CH0K -r) =~ "no data" ]] && has_CH0K=false || has_CH0K=true;
+[[ $(smc -k ACEN -r) =~ "no data" ]] && has_ACEN=false || has_ACEN=true;
+[[ $(smc -k ACLC -r) =~ "no data" ]] && has_ACLC=false || has_ACLC=true;
+[[ $(smc -k CHWA -r) =~ "no data" ]] && has_CHWA=false || has_CHWA=true;
 
 ## ###############
 ## Helpers
@@ -511,26 +523,32 @@ function change_magsafe_led_color() {
 # CH0I seems to be the "disable the adapter" key
 function enable_discharging() {
 	log "🔽🪫 Enabling battery discharging"
-	if [[ $(get_cpu_type) == "apple" ]]; then
+	#if [[ $(get_cpu_type) == "apple" ]]; then
 		disable_charging
-		sudo smc -k CH0I -w 01
-		sudo smc -k ACLC -w 01
-	else
-		sudo smc -k BCLM -w 0a
-		sudo smc -k ACEN -w 00
-		sudo smc -k CH0K -w 01
-	fi
+		if $has_CH0I; then sudo smc -k CH0I -w 01; fi
+		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
+	#else
+		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
+		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
+		if $has_CH0J; then sudo smc -k CH0J -w 01; fi
+		if $has_CH0K; then sudo smc -k CH0K -w 01; fi
+		sleep 1
+		if $has_CH0K; then sudo smc -k CH0K -w 01; fi
+	#fi
 	sleep 1
 }
 
 function disable_discharging() {
 	log "🔼🪫 Disabling battery discharging"
-	if [[ $(get_cpu_type) == "apple" ]]; then
-		sudo smc -k CH0I -w 00
-	else
-		sudo smc -k ACEN -w 01
-		sudo smc -k CH0K -w 00
-	fi
+	#if [[ $(get_cpu_type) == "apple" ]]; then
+		if $has_CH0I; then sudo smc -k CH0I -w 00; fi
+	#else
+		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+		if $has_CH0J; then sudo smc -k CH0J -w 00; fi
+		if $has_CH0K; then sudo smc -k CH0K -w 00; fi
+		sleep 1
+		if $has_CH0K; then sudo smc -k CH0K -w 00; fi
+	#fi
 	sleep 1
 
 	## Keep track of status
@@ -566,26 +584,26 @@ function disable_discharging() {
 # so I'm using both since with only CH0B I noticed sometimes during sleep it does trigger charging
 function enable_charging() {
 	log "🔌🔋 Enabling battery charging"
-	if [[ $(get_cpu_type) == "apple" ]]; then
+	#if [[ $(get_cpu_type) == "apple" ]]; then
 		disable_discharging
-		sudo smc -k CH0B -w 00
-		sudo smc -k CH0C -w 00
-	else
-		sudo smc -k BCLM -w 64
-		sudo smc -k ACEN -w 01
-	fi
+		if $has_CH0B; then sudo smc -k CH0B -w 00; fi
+		if $has_CH0C; then sudo smc -k CH0C -w 00; fi
+	#else
+		if $has_BCLM; then sudo smc -k BCLM -w 64; fi
+		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+	#fi
 	sleep 1
 }
 
 function disable_charging() {
 	log "🔌🪫 Disabling battery charging"
-	if [[ $(get_cpu_type) == "apple" ]]; then
-		sudo smc -k CH0B -w 02
-		sudo smc -k CH0C -w 02
-	else
-		sudo smc -k BCLM -w 0a
-		sudo smc -k ACEN -w 01
-	fi
+	#if [[ $(get_cpu_type) == "apple" ]]; then
+		if $has_CH0B; then sudo smc -k CH0B -w 02; fi
+		if $has_CH0C; then sudo smc -k CH0C -w 02; fi
+	#else
+		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
+		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+	#fi
 	sleep 1
 }
 
@@ -657,10 +675,10 @@ function get_charger_state() {
 }
 
 function get_charging_status() {
-	if [[ $(get_cpu_type) == "apple" ]]; then
-		is_charging=$(pmset -g batt | tail -n1 | awk '{ x=match($0, /; charging;/) > 0; print x }')
-		is_discharging=$(pmset -g batt | tail -n1 | awk '{ x=match($0, /; discharging;/) > 0; print x }')
-	else
+	#if [[ $(get_cpu_type) == "apple" ]]; then
+	#	is_charging=$(pmset -g batt | tail -n1 | awk '{ x=match($0, /; charging;/) > 0; print x }')
+	#	is_discharging=$(pmset -g batt | tail -n1 | awk '{ x=match($0, /; discharging;/) > 0; print x }')
+	#else
 		charge_current=$(smc -k CHBI -r | awk '{print $3}' | sed s:\)::)
 		discharge_current=$(smc -k B0AC -r | awk '{print $3}' | sed s:\)::)
 		if [[ $charge_current == "0" ]]; then
@@ -673,7 +691,7 @@ function get_charging_status() {
 		else
 			is_discharging=1
 		fi
-	fi
+	#fi
 
 	if [ "$is_charging" == "1" ]; then # charging
 		echo "1"
@@ -804,18 +822,36 @@ function discharge_interrupted() {
 
 function maintain_is_running() {
 	# check if battery maintain is running
-	pid=$(cat "$pidfile" 2>/dev/null)
-	#n_pid=$(pgrep -f $battery_binary | awk 'END{print NR}')
-	#pid_found=0
-	#for ((i = 1; i <= n_pid; i++)); do
-	#	pid_running=$(pgrep -f $battery_binary | head -n$i | tail -n1 | awk '{print $1}')
-	#	if [ "$pid" == "$pid_running" ]; then # battery maintain is running
-	#		pid_found=1
-	#		break
-	#	fi
-	#done
-	if [[ $(pgrep -f $battery_binary) == *"$pid"* ]] && [[ $pid ]]; then
-		echo 1
+	if test -f "$pidfile"; then # if maintain is ongoing
+		pid=$(cat "$pidfile" 2>/dev/null)
+		#n_pid=$(pgrep -f $battery_binary | awk 'END{print NR}')
+		#pid_found=0
+		#for ((i = 1; i <= n_pid; i++)); do
+		#	pid_running=$(pgrep -f $battery_binary | head -n$i | tail -n1 | awk '{print $1}')
+		#	if [ "$pid" == "$pid_running" ]; then # battery maintain is running
+		#		pid_found=1
+		#		break
+		#	fi
+		#done
+		if [[ $(pgrep -f $battery_binary) == *"$pid"* ]] && [[ $pid ]]; then
+			echo 1
+		else
+			echo 0
+		fi
+	else
+		echo 0
+	fi
+}
+
+function calibrate_is_running() {
+	# check if battery calibrate is running
+	if test -f "$calibrate_pidfile"; then # if calibration is ongoing
+		pid_calibrate=$(cat "$calibrate_pidfile" 2>/dev/null)
+		if [[ $(pgrep -f $battery_binary) == *"$pid_calibrate"* ]] && [[ $pid_calibrate ]]; then
+			echo 1
+		else
+			echo 0
+		fi
 	else
 		echo 0
 	fi
@@ -908,7 +944,7 @@ fi
 if [[ "$action" == "update" ]]; then
 
 	# Check if we have the most recent version
-	if curl -sS https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/battery.sh | grep -q "$BATTERY_CLI_VERSION"; then
+	if curl -sS https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/battery.sh | grep -q "$BATTERY_CLI_VERSION" && [[ "$setting" != "force" ]]; then
 		if $is_TW; then
 			echo "$BATTERY_CLI_VERSION 已是最新版，不需要更新"
 		else
@@ -936,9 +972,11 @@ if [[ "$action" == "uninstall" ]]; then
 	enable_charging
 	disable_discharging
 	$battery_binary remove_daemon
-	sudo rm -v "$binfolder/smc" "$binfolder/battery" $visudo_file
+	$battery_binary schedule disable
+	rm $schedule_path 2>/dev/null
+	sudo rm -v "$binfolder/smc" "$binfolder/battery" $visudo_file "$binfolder/shutdown.sh"
 	sudo rm -v -r "$configfolder"
-	sudo rm -rf $HOME/.sleep $HOME/.wakeup
+	sudo rm -rf $HOME/.sleep $HOME/.wakeup $HOME/.shutdown $HOME/.reboot 
 	pkill -f "/usr/local/bin/battery.*"
 	exit 0
 fi
@@ -1209,16 +1247,8 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 
 			ac_connection=$(get_charger_connection) # update ac connection state
 
-			# check if calibrate is running
-			calibrate_is_running=false
-			if test -f "$calibrate_pidfile"; then # if calibration is ongoing
-				pid_calibrate=$(cat "$calibrate_pidfile" 2>/dev/null)
-				if [[ $(pgrep -f $battery_binary) == *"$pid_calibrate"* ]] && [[ $pid_calibrate ]]; then
-					calibrate_is_running=true
-				fi
-			fi
-			
-			if ! $calibrate_is_running; then # if not running
+			# check if calibrate is running to decide if resume
+			if [[ "$(calibrate_is_running)" == "0" ]]; then # if not running
 				if [[ "$ac_connection" == "1" ]] && [[ "$pre_ac_connection" == "0" ]]; then # resume maintain to active when AC adapter is reconnected
 					maintain_status="active"
 					log "Battery maintain is recovered because AC adapter is reconnected"
@@ -1517,6 +1547,12 @@ if [[ "$action" == "calibrate" ]]; then
 	echo $$ >$calibrate_pidfile
 	pid=$(cat "$calibrate_pidfile" 2>/dev/null)
 	
+	# check maintain percentage
+	setting=$(echo $(cat $maintain_percentage_tracker_file 2>/dev/null) | awk '{print $1}')
+	if [[ -z $setting ]]; then # default percentage is 80
+		setting=80
+	fi
+
 	# Select calibrate method. Method 1: Discharge first. Method 2: Charge first
 	method=1
 	if test -f "$calibrate_method_file"; then
@@ -1612,11 +1648,6 @@ if [[ "$action" == "calibrate" ]]; then
 		log "Calibration: Start discharging to maintain percentage"
 
 		# Discharge battery to maintain percentage%
-		setting=80 # set default value
-		maintain_percentage=$(cat $maintain_percentage_tracker_file 2>/dev/null)
-		if [[ $maintain_percentage ]]; then
-			setting=$(echo $maintain_percentage | awk '{print $1}')
-		fi
 		$battery_binary discharge $setting &
 		wait $!
 
@@ -1722,11 +1753,6 @@ if [[ "$action" == "calibrate" ]]; then
 		log "Calibration: Start charging to maintain percentage"
 		
 		# Charge battery to maintain percentage%
-		setting=80 # set default value
-		maintain_percentage=$(cat $maintain_percentage_tracker_file 2>/dev/null)
-		if [[ $maintain_percentage ]]; then
-			setting=$(echo $maintain_percentage | awk '{print $1}')
-		fi
 		$battery_binary charge $setting
 
 		if [[ $? != 0 ]]; then
@@ -1764,18 +1790,29 @@ if [[ "$action" == "status" ]]; then
 
 	echo
 	if $is_TW; then
-		if [[ $(get_smc_charging_status) == "disabled" ]]; then
-			log "電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, 暫停充電"
-		else
-			log "電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, 充電中"
-		fi
+		case $(get_charging_status) in
+			"0")
+				log "電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, 暫停充電";;
+			"1")
+				log "電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, 充電中";;
+			"2")
+				log "電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, 放電中";;
+		esac
+
 		log "電池健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"
 	else
-		log "Battery at $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, SMC charging $(get_smc_charging_status)"
+		case $(get_charging_status) in
+			"0")
+				log "Battery at $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, no charging";;
+			"1")
+				log "Battery at $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, charging";;
+			"2")
+				log "Battery at $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, discharging";;
+		esac
 		log "Battery health $(get_battery_health)%, Cycle $(get_cycle)"
 	fi
 
-	if test -f $pidfile; then
+	if [[ "$(maintain_is_running)" == "1" ]]; then
 		maintain_percentage=$(cat $maintain_percentage_tracker_file 2>/dev/null)
 		maintain_status=$(cat $state_file 2>/dev/null)
 		if [[ "$maintain_status" == "active" ]]; then
@@ -1800,14 +1837,22 @@ if [[ "$action" == "status" ]]; then
 			fi
 		else
 			if $is_TW; then
-				log "電池最佳化已暫停"
+				if [[ "$(calibrate_is_running)" == "1" ]]; then
+					log "校正進行中，電池最佳化已暫停"
+				else
+					log "電池最佳化已暫停"
+				fi
 			else
-				log "Battery maintain is suspended"
+				if [[ "$(calibrate_is_running)" == "1" ]]; then
+					log "Calibration ongoing, battery maintain is suspended"
+				else
+					log "Battery maintain is suspended" 
+				fi
 			fi
 		fi
 	else
 		if $is_TW; then
-			log "電池最佳化已經終止，沒有在運作"
+			log "電池最佳化已經停止運作"
 		else
 			log "Battery maintain is not running"
 		fi
@@ -2225,22 +2270,6 @@ if [[ "$action" == "schedule" ]]; then
 	exit 0
 fi
 
-# Disable daemon
-if [[ "$action" == "disable_daemon" ]]; then
-
-	log "Disabling daemon at gui/$(id -u $USER)/com.battery.app"
-	launchctl disable "gui/$(id -u $USER)/com.battery.app"
-	exit 0
-
-fi
-
-# Remove daemon
-if [[ "$action" == "remove_daemon" ]]; then
-
-	rm $daemon_path 2>/dev/null
-	exit 0
-
-fi
 
 # Display logs
 if [[ "$action" == "logs" ]]; then
@@ -2279,6 +2308,12 @@ fi
 # Show version
 if [[ "$action"  == "version" ]]; then
 	echo -e "$BATTERY_CLI_VERSION"
+	exit 0
+fi
+
+# Show beta version
+if [[ "$action"  == "beta_version" ]]; then
+	echo -e "$BATTERY_CLI_BETA_VERSION"
 	exit 0
 fi
 
