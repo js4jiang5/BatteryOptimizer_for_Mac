@@ -148,4 +148,7 @@ battery create_daemon >> /dev/null
 battery schedule enable >> /dev/null
 battery status 
 version=$(echo $(battery version))
+#update informed version after update
+informed_version_file=$configfolder/informed.version
+echo "$version" > $informed_version_file
 echo -e "You're running the latest version $version now.\n"
