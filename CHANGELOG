@@ -1,3 +1,17 @@
+v2.0.6
+- try to solve the issue that dischargings stop when less than 50% for some intel Macbook
+- write all keys in charging/discharging control no matter it is Apple or Intel, but write only when the key exists
+- modify get_charging_status() to judge solely by charge/discharge current
+- modify maintain_is_running() and add calibrate_is_running()
+- fix a bug that maintain percentage is not shown in calibrate notification
+- in "battery status", replace smc charging with real charging status
+- in "battery status", show calibration status if it is ongoing
+- remove redundant "battery disable_daemon" and "battery remove_daemon"
+- modify "battery uninstall" to clean all files and disable all daemons
+- battery update add setting "force" to force update without checking version, used to checkout beta version
+- add "battery beta_version" action to show current beta version
+- show final version number when update is finished
+
 v2.0.5
 - add discharge to be used for some Intel Macs
 
