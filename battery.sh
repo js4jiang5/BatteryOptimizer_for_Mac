@@ -346,7 +346,7 @@ function check_next_calibration_date() {
 		days[1]=
 		days[2]=
 		days[3]=
-		day_loc=$(echo "$schedule" | tr " " "\n" | grep -n "day" | cut -d: -f1)
+		day_loc=$(echo "$schedule" | tr " " "\n" | grep -n " day" | cut -d: -f1)
 		if [[ $day_loc ]]; then
 			for i_day in {1..4}; do
 				value=$(echo $schedule | awk '{print $"'"$((day_loc+i_day))"'"}')
@@ -2001,7 +2001,7 @@ if [[ "$action" == "schedule" ]]; then
 		exit 0
 	fi
 
-    day_loc=$(echo "$@" | tr " " "\n" | grep -n "day" | cut -d: -f1)
+    day_loc=$(echo "$@" | tr " " "\n" | grep -n " day" | cut -d: -f1)
 	weekday_loc=$(echo "$@" | tr " " "\n" | grep -n "weekday" | cut -d: -f1)
     month_period_loc=$(echo "$@" | tr " " "\n" | grep -n "month_period" | cut -d: -f1)
 	week_period_loc=$(echo "$@" | tr " " "\n" | grep -n "week_period" | cut -d: -f1)
