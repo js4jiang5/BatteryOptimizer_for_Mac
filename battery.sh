@@ -207,7 +207,9 @@ function valid_action() {
     local action=$1
     
     # List of valid actions
-    VALID_ACTIONS=("" "maintain" "calibrate" "schedule" "charge" "discharge" "status" "dailylog" "logs" "language" "update" "version" "beta_version" "reinstall" "uninstall") 
+    VALID_ACTIONS=("" "visudo" "maintain" "calibrate" "schedule" "charge" "discharge" 
+	"status" "dailylog" "logs" "language" "update" "version" "beta_version" "reinstall" "uninstall" 
+	"maintain_synchronous" "status_csv" "create_daemon" "disable_daemon" "remove_daemon")
     
     # Check if action is valid
     local action_valid=false
