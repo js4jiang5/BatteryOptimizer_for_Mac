@@ -121,6 +121,10 @@ Usage:
     eg: battery language tw  # show status and notification in traditional Chinese if available
 	eg: battery language us  # show status and notification in English
 
+  battery lid_open_warning STATUS[on,off]
+    eg: battery lid_open_warning on   # notify user if macbook lid is open when calibration and discharge starts. default is on
+	    battery lid_open_warning off  # proceed calibration and discharge without warning. system is forced to disable sleep in this case until calibration or discharge is completed
+
   battery update
     update the battery utility to the latest version
 
@@ -203,7 +207,7 @@ function valid_action() {
     local action=$1
     
     # List of valid actions
-    VALID_ACTIONS=("" "maintain" "calibrate" "schedule" "charge" "discharge" "status" "dailylog" "logs" "language" "update" "version" "reinstall" "uninstall") 
+    VALID_ACTIONS=("" "maintain" "calibrate" "schedule" "charge" "discharge" "status" "dailylog" "logs" "language" "update" "version" "beta_version" "reinstall" "uninstall") 
     
     # Check if action is valid
     local action_valid=false
@@ -563,10 +567,8 @@ function enable_discharging() {
 	#else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
-		if $has_CH0J; then sudo smc -k CH0J -w 01; fi
-		if $has_CH0K; then sudo smc -k CH0K -w 01; fi
-		sleep 1
-		if $has_CH0K; then sudo smc -k CH0K -w 01; fi
+		if $has_CH0J; then sudo smc -k CH0J -w 03; fi
+		if $has_CH0K; then sudo smc -k CH0K -w 03; fi
 	#fi
 	sleep 1
 }
@@ -578,8 +580,6 @@ function disable_discharging() {
 	#else
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 		if $has_CH0J; then sudo smc -k CH0J -w 00; fi
-		if $has_CH0K; then sudo smc -k CH0K -w 00; fi
-		sleep 1
 		if $has_CH0K; then sudo smc -k CH0K -w 00; fi
 	#fi
 	sleep 1
@@ -631,9 +631,9 @@ function enable_charging() {
 function disable_charging() {
 	log "🔌🪫 Disabling battery charging"
 	#if [[ $(get_cpu_type) == "apple" ]]; then
-		if $has_CH0B; then sudo smc -k CH0B -w 02; fi
-		if $has_CH0C; then sudo smc -k CH0C -w 02; fi
-	#else
+		if $has_CH0B; then sudo smc -k CH0B -w 03; fi
+		if $has_CH0C; then sudo smc -k CH0C -w 03; fi
+	#fi
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 	#fi
