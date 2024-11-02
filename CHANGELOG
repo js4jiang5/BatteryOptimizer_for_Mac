@@ -1,3 +1,7 @@
+v2.0.7
+- fix a sever bug in calibration schedule
+- merge the valid_action() function contributed by RaymondJSu
+
 v2.0.6
 - try to solve the issue that dischargings stop when less than 50% for some intel Macbook
 - write all keys in charging/discharging control no matter it is Apple or Intel, but write only when the key exists
