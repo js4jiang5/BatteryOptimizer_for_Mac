@@ -6,6 +6,7 @@ PATH="$PATH:/usr/sbin"
 # Set environment variables
 tempfolder=~/.battery-tmp
 binfolder=/usr/local/bin
+configfolder=$HOME/.battery
 batteryfolder="$tempfolder/battery"
 mkdir -p $batteryfolder
 
@@ -63,6 +64,69 @@ if [[ $check_smc =~ " Bad " ]] || [[ $check_smc =~ " bad " ]] ; then # current i
 		echo "Error: BatteryOptimizer seems not compatible with your MAC yet"
 		exit
 	fi
+fi
+
+# correct the schedule plist if it is incorrect due to the bug
+schedule_tracker_file="$configfolder/calibrate_schedule"
+enable_exist="$(launchctl print gui/$(id -u $USER) | grep "=> enabled")"
+if [[ $enable_exist ]]; then # new version that replace => false with => enabled
+    schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep enabled | grep "com.battery_schedule.app")"
+else # old version that use => false
+    schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep "=> false" | grep "com.battery_schedule.app")"
+    schedule_enabled=${schedule_enabled/false/enabled}
+fi
+
+if test -f $schedule_tracker_file && [[ $schedule_enabled =~ "enabled" ]]; then
+	schedule=$(cat $schedule_tracker_file 2>/dev/null)
+
+	time=$(echo ${schedule#*" at "} | awk '{print $1}')
+	hour=${time%:*}
+	minute=${time#*:}
+
+	if [[ $schedule == *"every"* ]] && [[ $schedule == *"Week"* ]] && [[ $schedule == *"Year"* ]]; then
+        weekday=$(echo $schedule | awk '{print $4}')
+        week_period=$(echo $schedule | awk '{print $6}')
+        week=$(echo $schedule | awk '{print $13}')
+        year=$(echo $schedule | awk '{print $16}')
+        if  [[ $schedule =~ "MON" ]]; then weekday=1; elif
+            [[ $schedule =~ "TUE" ]]; then weekday=2; elif
+            [[ $schedule =~ "WED" ]]; then weekday=3; elif
+            [[ $schedule =~ "THU" ]]; then weekday=4; elif
+            [[ $schedule =~ "FRI" ]]; then weekday=5; elif
+            [[ $schedule =~ "SAT" ]]; then weekday=6; elif
+            [[ $schedule =~ "SUN" ]]; then weekday=0;
+        fi
+        schedule="weekday $weekday week_period $week_period hour $hour minute $minute"
+    else
+		n_days=0
+		days[0]=
+		days[1]=
+		days[2]=
+		days[3]=
+        schedule=${schedule/weekday}
+		day_loc=$(echo "$schedule" | tr " " "\n" | grep -n "day" | cut -d: -f1)
+		if [[ $day_loc ]]; then
+			for i_day in {1..4}; do
+				value=$(echo $schedule | awk '{print $"'"$((day_loc+i_day))"'"}')
+				if valid_day $value; then
+					days[$n_days]=$value
+					n_days=$(($n_days+1))
+				else
+					break
+				fi
+			done 
+		fi
+
+		month_period_loc=$(echo "$schedule" | tr " " "\n" | grep -n "every" | cut -d: -f1)
+
+		if [[ $month_period_loc ]]; then
+			month_period=$(echo $schedule | awk '{print $"'"$((month_period_loc+1))"'"}');
+            schedule="day ${days[*]} month_period $month_period hour $hour minute $minute"
+		else # calibrate every month case
+			schedule="day ${days[*]} $month_period hour $hour minute $minute"
+		fi
+    fi
+    battery schedule $schedule
 fi
 
 echo "[ 3 ] Setting up visudo declarations"

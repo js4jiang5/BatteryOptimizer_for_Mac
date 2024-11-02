@@ -346,7 +346,8 @@ function check_next_calibration_date() {
 		days[1]=
 		days[2]=
 		days[3]=
-		day_loc=$(echo "$schedule" | tr " " "\n" | grep -n " day" | cut -d: -f1)
+		schedule=${schedule/weekday}
+		day_loc=$(echo "$schedule" | tr " " "\n" | grep -n "day" | cut -d: -f1)
 		if [[ $day_loc ]]; then
 			for i_day in {1..4}; do
 				value=$(echo $schedule | awk '{print $"'"$((day_loc+i_day))"'"}')
@@ -2001,7 +2002,9 @@ if [[ "$action" == "schedule" ]]; then
 		exit 0
 	fi
 
-    day_loc=$(echo "$@" | tr " " "\n" | grep -n " day" | cut -d: -f1)
+	schedule_day=$@
+	schedule_day=${schedule_day/weekday}
+    day_loc=$(echo "$schedule_day" | tr " " "\n" | grep -n "day" | cut -d: -f1)
 	weekday_loc=$(echo "$@" | tr " " "\n" | grep -n "weekday" | cut -d: -f1)
     month_period_loc=$(echo "$@" | tr " " "\n" | grep -n "month_period" | cut -d: -f1)
 	week_period_loc=$(echo "$@" | tr " " "\n" | grep -n "week_period" | cut -d: -f1)
@@ -2036,7 +2039,7 @@ if [[ "$action" == "schedule" ]]; then
 	
 	if [[ $day_loc ]]; then
 		for i_day in {1..4}; do
-			value=$(echo $@ | awk '{print $"'"$((day_loc+i_day))"'"}')
+			value=$(echo $schedule_day | awk '{print $"'"$((day_loc+i_day))"'"}')
 			if valid_day $value; then
 				days[$n_days]=$value
 				n_days=$(($n_days+1))
@@ -2175,6 +2178,7 @@ if [[ "$action" == "schedule" ]]; then
 			log "Schedule calibration on day ${days[*]} at $hour:$minute00" >> $logfile
 			echo "Schedule calibration on day ${days[*]} at $hour:$minute00" > $schedule_tracker_file
 		else
+			n_days=1
 			log "Schedule calibration on day ${days[0]} every $month_period month at $hour:$minute00 starting from Month `date +%m` of Year `date +%Y`" >> $logfile
 			echo "Schedule calibration on day ${days[0]} every $month_period month at $hour:$minute00 starting from Month `date +%m` of Year `date +%Y`" > $schedule_tracker_file
 		fi
