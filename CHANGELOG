@@ -1,3 +1,6 @@
+v2.0.8
+- fix the problem that some actions are not included in valid_action list
+
 v2.0.7
 - fix a sever bug in calibration schedule
 - merge the valid_action() function contributed by RaymondJSu
