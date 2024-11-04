@@ -5,6 +5,7 @@
 ## variables are used by this binary as well at the update script
 ## ###############
 BATTERY_CLI_VERSION="v2.0.8"
+BATTERY_VISUDO_VERSION="v1.0.0"
 BATTERY_CLI_BETA_VERSION="intel_v001"
 
 # Path fixes for unexpected environments
@@ -28,6 +29,7 @@ calibrate_pidfile=$configfolder/calibrate.pid
 calibrate_method_file=$configfolder/calibrate_method
 schedule_path=$HOME/Library/LaunchAgents/battery_schedule.plist
 schedule_tracker_file="$configfolder/calibrate_schedule"
+shutdown_path=$HOME/Library/LaunchAgents/battery_shutdown.plist
 webhookid_file=$configfolder/ha_webhook.id
 daily_log=$configfolder/daily.log
 informed_version_file=$configfolder/informed.version
@@ -121,10 +123,6 @@ Usage:
     eg: battery language tw  # show status and notification in traditional Chinese if available
 	eg: battery language us  # show status and notification in English
 
-  battery lid_open_warning STATUS[on,off]
-    eg: battery lid_open_warning on   # notify user if macbook lid is open when calibration and discharge starts. default is on
-	    battery lid_open_warning off  # proceed calibration and discharge without warning. system is forced to disable sleep in this case until calibration or discharge is completed
-
   battery update
     update the battery utility to the latest version
 
@@ -209,7 +207,7 @@ function valid_action() {
     # List of valid actions
     VALID_ACTIONS=("" "visudo" "maintain" "calibrate" "schedule" "charge" "discharge" 
 	"status" "dailylog" "logs" "language" "update" "version" "beta_version" "reinstall" "uninstall" 
-	"maintain_synchronous" "status_csv" "create_daemon" "disable_daemon" "remove_daemon")
+	"maintain_synchronous" "status_csv" "create_daemon" "disable_daemon" "remove_daemon" "changelog")
     
     # Check if action is valid
     local action_valid=false
@@ -261,6 +259,10 @@ function ha_webhook() {
 
 function log() {
 	echo -e "$(date +%D-%T) - $1"
+}
+
+function logLF() {
+	echo -e "\n$(date +%D-%T) - $1"
 }
 
 function logn() {
@@ -561,16 +563,16 @@ function change_magsafe_led_color() {
 # Re:discharging, we're using keys uncovered by @howie65: https://github.com/actuallymentor/battery/issues/20#issuecomment-1364540704
 # CH0I seems to be the "disable the adapter" key
 function enable_discharging() {
-	log "🔽🪫 Enabling battery discharging"
 	#if [[ $(get_cpu_type) == "apple" ]]; then
 		disable_charging
+		log "🔽🪫 Enabling battery discharging"
 		if $has_CH0I; then sudo smc -k CH0I -w 01; fi
 		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
 	#else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
-		if $has_CH0J; then sudo smc -k CH0J -w 03; fi
-		if $has_CH0K; then sudo smc -k CH0K -w 03; fi
+		if $has_CH0J; then sudo smc -k CH0J -w 01; fi
+		if $has_CH0K; then sudo smc -k CH0K -w 01; fi
 	#fi
 	sleep 1
 }
@@ -618,9 +620,9 @@ function disable_discharging() {
 # but @joelucid uses CH0C https://github.com/davidwernhart/AlDente/issues/52#issuecomment-1019933570
 # so I'm using both since with only CH0B I noticed sometimes during sleep it does trigger charging
 function enable_charging() {
-	log "🔌🔋 Enabling battery charging"
 	#if [[ $(get_cpu_type) == "apple" ]]; then
 		disable_discharging
+		log "🔌🔋 Enabling battery charging"
 		if $has_CH0B; then sudo smc -k CH0B -w 00; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 00; fi
 	#else
@@ -633,8 +635,8 @@ function enable_charging() {
 function disable_charging() {
 	log "🔌🪫 Disabling battery charging"
 	#if [[ $(get_cpu_type) == "apple" ]]; then
-		if $has_CH0B; then sudo smc -k CH0B -w 03; fi
-		if $has_CH0C; then sudo smc -k CH0C -w 03; fi
+		if $has_CH0B; then sudo smc -k CH0B -w 02; fi
+		if $has_CH0C; then sudo smc -k CH0C -w 02; fi
 	#fi
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
@@ -739,7 +741,7 @@ function get_charging_status() {
 
 function get_maintain_percentage() {
 	maintain_percentage=$(cat $maintain_percentage_tracker_file 2>/dev/null)
-	echo "$maintain_percentage"
+	echo "$maintain_percentage" | awk '{print $1}'
 }
 
 function get_voltage() {
@@ -799,6 +801,62 @@ function get_cpu_type() {
     #else
     #    echo "apple"
     #fi
+}
+
+function get_parameter { # get parameter value from configuration file. the format is var=value or var= value or var = value
+    var_loc=$(echo $(echo "$1" | tr " " "\n" | grep -n "$2" | cut -d: -f1) | awk '{print $1}')
+    if [ -z $var_loc ]; then
+        echo
+    else
+        echo $1 | awk '{print $"'"$((var_loc))"'"}' | tr '=' ' ' | awk '{print $2}'
+    fi
+}
+
+function get_changelog { # get the latest changelog
+	if [[ -z $1 ]]; then
+		changelog=$(curl -sSL https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/CHANGELOG | sed s:\":'\\"':g 2>&1)
+	else
+		changelog=$(curl -sSL https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/$1 | sed s:\":'\\"':g 2>&1)
+	fi
+
+    n_lines=0
+	while read -r "line"; do
+		num=$(echo $line | tr '.' ' '| tr 'v' ' ') # extract number parts
+		is_version=true
+		n_num=0
+		for var in $num; do
+			if ! [[ "$var" =~ ^[0-9]+$ ]]; then
+				is_version=false
+				break
+			else
+				n_num=$((n_num+1))
+			fi
+		done
+		if [[ $line =~ "." ]] && [[ $line =~ "v" ]] && $is_version && [[ $n_num == 3 ]] && [[ $n_lines > 0 ]]; then
+			is_version=true
+		else
+			is_version=false
+		fi
+
+        if $is_version; then # found the start of 2nd version
+			break
+		fi
+        n_lines=$((n_lines+1))
+    done <<< "$changelog"
+    echo -e "$changelog" | awk 'NR>=2 && NR<='$n_lines
+}
+
+function get_version { # get the latest version number
+	if [[ -z $1 ]]; then
+		changelog=$(curl -sSL https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/CHANGELOG | sed s:\":'\\"':g 2>&1)
+	else
+		changelog=$(curl -sSL https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/$1 | sed s:\":'\\"':g 2>&1)
+	fi
+
+	while read -r "line"; do
+		break
+    done <<< "$changelog"
+	echo $line
 }
 
 function lid_closed() { # 20241013 by JS
@@ -984,19 +1042,48 @@ fi
 if [[ "$action" == "update" ]]; then
 
 	# Check if we have the most recent version
-	if curl -sS https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/battery.sh | grep -q "$BATTERY_CLI_VERSION" && [[ "$setting" != "force" ]]; then
+	# fetch latest battery.sh
+	battery_new=$(echo $(curl -sSL https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/battery.sh))
+	battery_new_version=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")
+	visudo_new_version=$(echo $(get_parameter "$battery_new" "BATTERY_VISUDO_VERSION") | tr -d \")
+	if [[ $battery_new_version == $BATTERY_CLI_VERSION ]] && [[ $visudo_new_version == $BATTERY_VISUDO_VERSION ]] && [[ "$setting" != "force" ]]; then
 		if $is_TW; then
-			echo "$BATTERY_CLI_VERSION 已是最新版，不需要更新"
+			osascript -e 'display dialog "'"$BATTERY_CLI_VERSION 已是最新版，不需要更新"'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
 		else
-			echo "No need to update, offline version number $BATTERY_CLI_VERSION matches remote version number"
-		fi
+			osascript -e 'display dialog "'"Your version $BATTERY_CLI_VERSION is already the latest. No need to update."'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+		fi		
 	else
-		echo "This will run curl -sS https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/update.sh | bash"
-		if [[ ! "$setting" == "silent" ]]; then
-			echo "Press any key to continue"
-			read
+		button_empty="                                                                                                                                                    "
+		if $is_TW; then
+			changelog=$(get_changelog CHANGELOG_TW)
+			battery_new_version=$(get_version CHANGELOG_TW)
+			osascript -e 'display dialog "'"$battery_new_version 更新內容如下\n\n$changelog"'" buttons {"'"$button_empty"'", "繼續"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+		else
+			changelog=$(get_changelog CHANGELOG)
+			battery_new_version=$(get_version CHANGELOG)
+			osascript -e 'display dialog "'"$battery_new_version changes inlude\n\n$changelog"'" buttons {"'"$button_empty"'", "Continue"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
 		fi
-		curl -sS https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/update.sh | bash
+		if $is_TW; then
+			answer="$(osascript -e 'display dialog "'"你現在要更新到$battery_new_version 嗎?"'" buttons {"立即更新", "跳過此版本"} default button 1 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+			if [[ $answer == "立即更新" ]]; then
+				answer="Yes"
+			fi	
+		else
+			answer="$(osascript -e 'display dialog "'"Do you want to update to version $battery_new_version now?"'" buttons {"Yes", "No"} default button 1 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+		fi
+		
+		if [[ $answer == "Yes" ]]; then
+			# update visudo if necessary
+			if [[ $visudo_new_version != $BATTERY_VISUDO_VERSION ]]; then
+				curl -sS -o $configfolder/battery_tmp.sh https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/battery.sh
+				chown $USER $configfolder/battery_tmp.sh
+				chmod 755 $configfolder/battery_tmp.sh
+				chmod u+x $configfolder/battery_tmp.sh
+				sudo $configfolder/battery_tmp.sh visudo $USER
+				rm -rf $configfolder/battery_tmp.sh
+			fi
+			curl -sS https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/update.sh | bash
+		fi
 	fi
 	exit 0
 fi
@@ -1014,6 +1101,7 @@ if [[ "$action" == "uninstall" ]]; then
 	$battery_binary remove_daemon
 	$battery_binary schedule disable
 	rm $schedule_path 2>/dev/null
+	rm $shutdown_path 2>/dev/null
 	sudo rm -v "$binfolder/smc" "$binfolder/battery" $visudo_file "$binfolder/shutdown.sh"
 	sudo rm -v -r "$configfolder"
 	sudo rm -rf $HOME/.sleep $HOME/.wakeup $HOME/.shutdown $HOME/.reboot 
@@ -1056,7 +1144,15 @@ if [[ "$action" == "charge" ]]; then
 
 	disable_charging
 	change_magsafe_led_color "green" # LED orange for not charging
-	log "Charging completed at $battery_percentage%"
+	if $is_TW; then
+		log "電池已充電至 $battery_percentage%"
+	else
+		log "Charging completed at $battery_percentage%"
+	fi
+
+	if [[ $battery_percentage -ge $(get_maintain_percentage) ]] && [[ "$(calibrate_is_running)" == "0" ]]; then # if charge level is higher than maintain percentage, recover maintain won't cause discharge
+		$battery_binary maintain recover
+	fi
 
 	exit 0
 
@@ -1107,7 +1203,15 @@ if [[ "$action" == "discharge" ]]; then
 		change_magsafe_led_color "green"
 	fi
 	
-	log "Discharging completed at $battery_percentage%"
+	if $is_TW; then
+		log "電池已放電至 $battery_percentage%"
+	else
+		log "Discharging completed at $battery_percentage%"
+	fi
+
+	if [[ $battery_percentage -ge $(get_maintain_percentage) ]] && [[ "$(calibrate_is_running)" == "0" ]]; then # if discharge level is higher than maintain percentage, recover maintain won't cause charge
+		$battery_binary maintain recover
+	fi
 
 	exit 0
 
@@ -1335,13 +1439,13 @@ if [[ "$action" == "maintain" ]]; then
 					sleep 1
 				done
 				if [ "$ack_received" == "1" ]; then
-					log "Battery maintain is recovered"
+					logLF "Battery maintain is recovered"
 					if [ "$notify" == "1" ]; then
 						osascript -e 'display notification "Battery maintain is recovered" with title "Battery" sound name "Blow"'
 					fi
 					exit 0
 				else
-					log "Error: Battery maintain recover failed"
+					logLF "Error: Battery maintain recover failed"
 					if [ "$notify" == "1" ]; then
 						osascript -e 'display notification "Error: Battery maintain recover failed" with title "Battery" sound name "Blow"'
 					fi
@@ -1380,13 +1484,13 @@ if [[ "$action" == "maintain" ]]; then
 					sleep 1
 				done
 				if [ "$ack_received" == "1" ]; then
-					log "Battery maintain is suspended"
+					logLF "Battery maintain is suspended"
 					if [ "$notify" == "1" ]; then
 						osascript -e 'display notification "Battery maintain is suspended" with title "Battery" sound name "Blow"'
 					fi
 					exit 0
 				else
-					log "Error: Battery maintain suspend failed"
+					logLF "Error: Battery maintain suspend failed"
 					if [ "$notify" == "1" ]; then
 						osascript -e 'display notification "Error: Battery maintain suspend failed" with title "Battery" sound name "Blow"'
 					fi
@@ -1429,7 +1533,7 @@ if [[ "$action" == "maintain" ]]; then
 	
 	# Check if setting is value between 0 and 100
 	if ! valid_percentage "$setting"; then
-		log "Called with $setting $action"
+		# log "Called with $setting $action"
 		# If non 0-100 setting is not a special keyword, exit with an error.
 		if ! { [[ "$setting" == "stop" ]] || [[ "$setting" == "recover" ]]; }; then
 			log "Error: $setting is not a valid setting for battery maintain. Please use a number between 0 and 100, or an action keyword like 'stop' or 'recover'."
@@ -1458,13 +1562,13 @@ if [[ "$action" == "maintain" ]]; then
 	$battery_binary create_daemon
 
 	# Enable schedule
-	$battery_binary schedule enable
+	$battery_binary schedule enable >> $logfile
 
 	# Report status
 	$battery_binary status
 
 	if [[ $(get_battery_percentage) > $setting ]]; then # if current battery percentage is higher than maintain percentage
-		if ! [[ $(ps aux | grep $PPID) =~ "setup.sh" ]]; then 
+		if ! [[ $(ps aux | grep $PPID) =~ "setup.sh" ]] && ! [[ $(ps aux | grep $PPID) =~ "update.sh" ]]; then 
 			# Ask user if discharging right now unless this action is invoked by setup.sh
 			if $is_TW; then
 				answer="$(osascript -e 'display dialog "'"你要現在就放電到 $setting% 嗎?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
@@ -1474,6 +1578,7 @@ if [[ "$action" == "maintain" ]]; then
 			if [[ "$answer" == "Yes" ]] || [ -z $answer ]; then
 				log "Start discharging to $setting%"
 				$battery_binary discharge $setting 
+				$battery_binary maintain recover
 			fi
 		fi
 	fi
@@ -2347,6 +2452,23 @@ if [[ "$action" == "dailylog" ]]; then
 	exit 0
 
 fi
+
+# Show changelog of the latest version
+if [[ "$action" == "changelog" ]]; then
+
+	button_empty="                                                                                                                                                    "
+	if $is_TW; then
+		changelog=$(get_changelog CHANGELOG_TW)
+		battery_new_version=$(get_version CHANGELOG_TW)
+		osascript -e 'display dialog "'"$battery_new_version 更新內容如下\n\n$changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+	else
+		changelog=$(get_changelog CHANGELOG)
+		battery_new_version=$(get_version CHANGELOG)
+		osascript -e 'display dialog "'"$battery_new_version changes inlude\n\n$changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+	fi
+	exit 0
+fi
+
 
 # Show version
 if [[ "$action"  == "version" ]]; then
