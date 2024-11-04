@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.8"
+BATTERY_CLI_VERSION="v2.0.9"
 BATTERY_VISUDO_VERSION="v1.0.0"
 BATTERY_CLI_BETA_VERSION="intel_v001"
 
