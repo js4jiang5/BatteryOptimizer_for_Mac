@@ -2,6 +2,7 @@ v2.0.9
 * fix bugs below
 - need to enter password before charging or discharging
 - maintain is suspended when choosing discharge to maintain percentage
+- uninstall didn't clean all installed files
 
 * new feature
 - recover maintain if charge/discharge target is higher than maintain percentage
