@@ -1,3 +1,12 @@
+v2.0.9
+- fix bugs below
+  - need to enter password before charging or discharging
+  - maintain is suspended when choosing discharge to maintain percentage
+- recover maintain if charge/discharge target is higher than maintain percentage
+- show what's new in the latest version when executing "battery update"
+- add new command "battery changelog" to see what's new in the latest version
+- solve the problem of needing to enter password when update
+
 v2.0.8
 - fix the problem that some actions are not included in valid_action list
 
