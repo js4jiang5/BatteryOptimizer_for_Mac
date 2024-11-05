@@ -89,6 +89,7 @@ else
 		is_TW=false
 	fi
 fi
+is_TW=false
 
 echo -e "🔋 Starting battery update\n"
 
