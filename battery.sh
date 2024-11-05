@@ -648,7 +648,7 @@ function disable_charging() {
 	#fi
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		if $has_BSAC; then sudo smc -k BSAC -w 01; fi
+		if $has_BSAC; then sudo smc -k BSAC -w 33; fi
 	#fi
 	sleep 1
 }
