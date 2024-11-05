@@ -6,7 +6,6 @@
 ## ###############
 BATTERY_CLI_VERSION="v2.0.9"
 BATTERY_VISUDO_VERSION="v1.0.0"
-BATTERY_CLI_BETA_VERSION="intel_v001"
 
 # Path fixes for unexpected environments
 PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
@@ -34,6 +33,7 @@ webhookid_file=$configfolder/ha_webhook.id
 daily_log=$configfolder/daily.log
 informed_version_file=$configfolder/informed.version
 language_file=$configfolder/language.code
+github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
 
 ## ###############
 ## Housekeeping
@@ -209,7 +209,7 @@ function valid_action() {
     
     # List of valid actions
     VALID_ACTIONS=("" "visudo" "maintain" "calibrate" "schedule" "charge" "discharge" 
-	"status" "dailylog" "logs" "language" "update" "version" "beta_version" "reinstall" "uninstall" 
+	"status" "dailylog" "logs" "language" "update" "version" "reinstall" "uninstall" 
 	"maintain_synchronous" "status_csv" "create_daemon" "disable_daemon" "remove_daemon" "changelog")
     
     # Check if action is valid
@@ -817,13 +817,14 @@ function get_parameter { # get parameter value from configuration file. the form
 
 function get_changelog { # get the latest changelog
 	if [[ -z $1 ]]; then
-		changelog=$(curl -sSL https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/CHANGELOG | sed s:\":'\\"':g 2>&1)
+		changelog=$(curl -sSL $github_link/CHANGELOG | sed s:\":'\\"':g 2>&1)
 	else
-		changelog=$(curl -sSL https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/$1 | sed s:\":'\\"':g 2>&1)
+		changelog=$(curl -sSL $github_link/$1 | sed s:\":'\\"':g 2>&1)
 	fi
 
     n_lines=0
 	while read -r "line"; do
+		line="v${line#*v}" # remove any words before v
 		num=$(echo $line | tr '.' ' '| tr 'v' ' ') # extract number parts
 		is_version=true
 		n_num=0
@@ -851,9 +852,9 @@ function get_changelog { # get the latest changelog
 
 function get_version { # get the latest version number
 	if [[ -z $1 ]]; then
-		changelog=$(curl -sSL https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/CHANGELOG | sed s:\":'\\"':g 2>&1)
+		changelog=$(curl -sSL $github_link/CHANGELOG | sed s:\":'\\"':g 2>&1)
 	else
-		changelog=$(curl -sSL https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/$1 | sed s:\":'\\"':g 2>&1)
+		changelog=$(curl -sSL $github_link/$1 | sed s:\":'\\"':g 2>&1)
 	fi
 
 	while read -r "line"; do
@@ -1032,12 +1033,12 @@ fi
 
 # Reinstall helper
 if [[ "$action" == "reinstall" ]]; then
-	echo "This will run curl -sS https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/setup.sh   | bash"
+	echo "This will run curl -sS $github_link/setup.sh   | bash"
 	if [[ ! "$setting" == "silent" ]]; then
 		echo "Press any key to continue"
 		read
 	fi
-	curl -sS https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/setup.sh | bash
+	curl -sS $github_link/setup.sh | bash
 	exit 0
 fi
 
@@ -1048,30 +1049,22 @@ if [[ "$action" == "update" ]]; then
 	# fetch latest battery.sh
 
 	if [[ "$setting" == "beta" ]]; then
-		battery_sh_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/refs/heads/$subsetting/battery.sh"
-		update_sh_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/refs/heads/$subsetting/update.sh"
-		battery_new=$(echo $(curl -sSL $battery_sh_link))
-		battery_new_version=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_BETA_VERSION") | tr -d \")
-		local_version=$BATTERY_CLI_BETA_VERSION
-	else
-		battery_sh_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/battery.sh"
-		update_sh_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/update.sh"
-		battery_new=$(echo $(curl -sSL $battery_sh_link))
-		battery_new_version=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")
-		local_version=$BATTERY_CLI_VERSION
+		github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/refs/heads/$subsetting"
 	fi
-
+	battery_new=$(echo $(curl -sSL "$github_link/battery.sh"))
+	battery_new_version=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")
+		
 	if [[ $battery_new == "404: Not Found" ]]; then
 		log "Error: the specified update file is not available"
 		exit 1
 	fi
 
 	visudo_new_version=$(echo $(get_parameter "$battery_new" "BATTERY_VISUDO_VERSION") | tr -d \")
-	if [[ $battery_new_version == $local_version ]] && [[ $visudo_new_version == $BATTERY_VISUDO_VERSION ]] && [[ "$setting" != "force" ]]; then
+	if [[ $battery_new_version == $BATTERY_CLI_VERSION ]] && [[ $visudo_new_version == $BATTERY_VISUDO_VERSION ]] && [[ "$setting" != "force" ]]; then
 		if $is_TW; then
-			osascript -e 'display dialog "'"$local_version 已是最新版，不需要更新"'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+			osascript -e 'display dialog "'"$BATTERY_CLI_VERSION 已是最新版，不需要更新"'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
 		else
-			osascript -e 'display dialog "'"Your version $local_version is already the latest. No need to update."'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+			osascript -e 'display dialog "'"Your version $BATTERY_CLI_VERSION is already the latest. No need to update."'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
 		fi		
 	else
 		button_empty="                                                                                                                                                    "
@@ -1096,14 +1089,14 @@ if [[ "$action" == "update" ]]; then
 		if [[ $answer == "Yes" ]]; then
 			# update visudo if necessary
 			if [[ $visudo_new_version != $BATTERY_VISUDO_VERSION ]]; then
-				curl -sS -o $configfolder/battery_tmp.sh $battery_sh_link
+				curl -sS -o $configfolder/battery_tmp.sh "$github_link/battery.sh"
 				chown $USER $configfolder/battery_tmp.sh
 				chmod 755 $configfolder/battery_tmp.sh
 				chmod u+x $configfolder/battery_tmp.sh
 				sudo $configfolder/battery_tmp.sh visudo $USER
 				rm -rf $configfolder/battery_tmp.sh
 			fi
-			curl -sS $update_sh_link | bash
+			curl -sS "$github_link/update.sh" | bash
 		fi
 	fi
 	exit 0
@@ -2497,11 +2490,6 @@ if [[ "$action"  == "version" ]]; then
 	exit 0
 fi
 
-# Show beta version
-if [[ "$action"  == "beta_version" ]]; then
-	echo -e "$BATTERY_CLI_BETA_VERSION"
-	exit 0
-fi
 
 # Set language
 if [[ "$action"  == "language" ]]; then

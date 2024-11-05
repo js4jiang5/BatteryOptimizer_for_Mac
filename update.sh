@@ -17,6 +17,7 @@ function get_changelog { # get the latest changelog
 
     n_lines=0
 	while read -r "line"; do
+		line="v${line#*v}" # remove any words before v
 		num=$(echo $line | tr '.' ' '| tr 'v' ' ') # extract number parts
 		is_version=true
 		n_num=0
@@ -55,6 +56,7 @@ function format00() {
 
 function version_number { # get number part of version for comparison
 	version=$1
+	version="v${version#*v}" # remove any words before v
 	num=$(echo $version | tr '.' ' '| tr 'v' ' ')
 	v1=$(echo $num | awk '{print $1}'); v2=$(echo $num | awk '{print $2}'); v3=$(echo $num | awk '{print $3}');
 	echo $(format00 $v1)$(format00 $v2)$(format00 $v3)
