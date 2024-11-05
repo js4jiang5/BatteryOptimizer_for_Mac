@@ -1056,6 +1056,8 @@ if [[ "$action" == "update" ]]; then
 
 	if [[ "$setting" == "beta" ]]; then
 		github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/refs/heads/$subsetting"
+	else
+		github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
 	fi
 	battery_new=$(echo $(curl -sSL "$github_link/battery.sh"))
 	battery_new_version=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")
