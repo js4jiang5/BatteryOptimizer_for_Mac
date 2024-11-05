@@ -188,7 +188,7 @@ else
 		is_TW=false
 	fi
 fi
-
+is_TW=false
 # check the availability of SMC keys
 [[ $(smc -k BCLM -r) =~ "no data" ]] && has_BCLM=false || has_BCLM=true;
 [[ $(smc -k CH0B -r) =~ "no data" ]] && has_CH0B=false || has_CH0B=true;
