@@ -117,6 +117,9 @@ Usage:
   battery dailylog
     output daily log and show daily log store location
 
+  battery changelog
+    show the changelog of the latest version on Github
+
   battery logs LINES[integer, optional]
     output logs of the battery CLI and GUI
     eg: battery logs 100
