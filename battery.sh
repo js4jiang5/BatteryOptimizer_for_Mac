@@ -4,8 +4,8 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.9"
-BATTERY_VISUDO_VERSION="v1.0.0"
+BATTERY_CLI_VERSION="v0.0.1"
+BATTERY_VISUDO_VERSION="v1.0.1"
 
 # Path fixes for unexpected environments
 PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
@@ -33,7 +33,7 @@ webhookid_file=$configfolder/ha_webhook.id
 daily_log=$configfolder/daily.log
 informed_version_file=$configfolder/informed.version
 language_file=$configfolder/language.code
-github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
+github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/refs/heads/intel"
 
 ## ###############
 ## Housekeeping
@@ -152,6 +152,7 @@ Cmnd_Alias      LEDCONTROL = $binfolder/smc -k ACLC -w 04, $binfolder/smc -k ACL
 Cmnd_Alias      BATTERYBCLM = $binfolder/smc -k BCLM -w 0a, $binfolder/smc -k BCLM -w 64, $binfolder/smc -k BCLM -r
 Cmnd_Alias      BATTERYCHWA = $binfolder/smc -k CHWA -w 00, $binfolder/smc -k CHWA -w 01, $binfolder/smc -k CHWA -r
 Cmnd_Alias      BATTERYACEN = $binfolder/smc -k ACEN -w 00, $binfolder/smc -k ACEN -w 01, $binfolder/smc -k ACEN -r
+Cmnd_Alias      BATTERYBSAC = $binfolder/smc -k BSAC -w 03, $binfolder/smc -k BSAC -w 13, $binfolder/smc -k BSAC -w 23, $binfolder/smc -k BSAC -w 33, $binfolder/smc -k BSAC -w 43, $binfolder/smc -k BSAC -r
 Cmnd_Alias      BATTERYCHBI = $binfolder/smc -k CHBI -r
 Cmnd_Alias      BATTERYB0AC = $binfolder/smc -k B0AC -r 
 ALL ALL = NOPASSWD: BATTERYOFF
@@ -196,6 +197,7 @@ fi
 [[ $(smc -k CH0J -r) =~ "no data" ]] && has_CH0J=false || has_CH0J=true;
 [[ $(smc -k CH0K -r) =~ "no data" ]] && has_CH0K=false || has_CH0K=true;
 [[ $(smc -k ACEN -r) =~ "no data" ]] && has_ACEN=false || has_ACEN=true;
+[[ $(smc -k BSAC -r) =~ "no data" ]] && has_BSAC=false || has_BSAC=true;
 [[ $(smc -k ACLC -r) =~ "no data" ]] && has_ACLC=false || has_ACLC=true;
 [[ $(smc -k CHWA -r) =~ "no data" ]] && has_CHWA=false || has_CHWA=true;
 
@@ -574,8 +576,9 @@ function enable_discharging() {
 	#else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
-		if $has_CH0J; then sudo smc -k CH0J -w 01; fi
-		if $has_CH0K; then sudo smc -k CH0K -w 01; fi
+		if $has_BSAC; then sudo smc -k BSAC -w 13; fi
+		#if $has_CH0J; then sudo smc -k CH0J -w 01; fi
+		#if $has_CH0K; then sudo smc -k CH0K -w 01; fi
 	#fi
 	sleep 1
 }
@@ -586,8 +589,9 @@ function disable_discharging() {
 		if $has_CH0I; then sudo smc -k CH0I -w 00; fi
 	#else
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		if $has_CH0J; then sudo smc -k CH0J -w 00; fi
-		if $has_CH0K; then sudo smc -k CH0K -w 00; fi
+		if $has_BSAC; then sudo smc -k BSAC -w 33; fi
+		#if $has_CH0J; then sudo smc -k CH0J -w 00; fi
+		#if $has_CH0K; then sudo smc -k CH0K -w 00; fi
 	#fi
 	sleep 1
 
@@ -631,6 +635,7 @@ function enable_charging() {
 	#else
 		if $has_BCLM; then sudo smc -k BCLM -w 64; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+		if $has_BSAC; then sudo smc -k BSAC -w 33; fi
 	#fi
 	sleep 1
 }
@@ -643,6 +648,7 @@ function disable_charging() {
 	#fi
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+		if $has_BSAC; then sudo smc -k BSAC -w 01; fi
 	#fi
 	sleep 1
 }
