@@ -1,2 +1,5 @@
-intel_v0.0.1
+v0.0.2
+* Try to set the SMC key twice before and after the mask
+
+v0.0.1
 * A new branch to resolve the issue that discharge cannot run down to less than 50% for some Intel models

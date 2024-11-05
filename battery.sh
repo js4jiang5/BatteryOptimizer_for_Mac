@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.1"
+BATTERY_CLI_VERSION="v0.0.2"
 BATTERY_VISUDO_VERSION="v1.0.1"
 
 # Path fixes for unexpected environments
@@ -578,6 +578,7 @@ function enable_discharging() {
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
 		if $has_BSAC; then sudo smc -k BSAC -w 13; fi
+		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
 		#if $has_CH0J; then sudo smc -k CH0J -w 01; fi
 		#if $has_CH0K; then sudo smc -k CH0K -w 01; fi
 	#fi
@@ -591,6 +592,7 @@ function disable_discharging() {
 	#else
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 		if $has_BSAC; then sudo smc -k BSAC -w 33; fi
+		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 		#if $has_CH0J; then sudo smc -k CH0J -w 00; fi
 		#if $has_CH0K; then sudo smc -k CH0K -w 00; fi
 	#fi
@@ -637,6 +639,7 @@ function enable_charging() {
 		if $has_BCLM; then sudo smc -k BCLM -w 64; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 		if $has_BSAC; then sudo smc -k BSAC -w 33; fi
+		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 	#fi
 	sleep 1
 }
@@ -650,6 +653,7 @@ function disable_charging() {
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 		if $has_BSAC; then sudo smc -k BSAC -w 33; fi
+		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 	#fi
 	sleep 1
 }
