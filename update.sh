@@ -210,7 +210,7 @@ echo "[ Final ] Removed temporary folder"
 echo -e "\n🎉 Battery tool updated.\n"
 
 # Restart battery maintain process
-echo -e "Restarting battery maintain.\n"
+#echo -e "Restarting battery maintain.\n"
 version=$(echo $(battery version)) #update informed version first
 informed_version_file=$configfolder/informed.version
 echo "$version" > $informed_version_file
