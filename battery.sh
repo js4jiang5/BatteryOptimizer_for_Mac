@@ -817,7 +817,7 @@ function get_cpu_type() {
     #fi
 }
 
-function get_parameter { # get parameter value from configuration file. the format is var=value or var= value or var = value
+function get_parameter() { # get parameter value from configuration file. the format is var=value or var= value or var = value
     var_loc=$(echo $(echo "$1" | tr " " "\n" | grep -n "$2" | cut -d: -f1) | awk '{print $1}')
     if [ -z $var_loc ]; then
         echo
@@ -826,7 +826,7 @@ function get_parameter { # get parameter value from configuration file. the form
     fi
 }
 
-function get_changelog { # get the latest changelog
+function get_changelog() { # get the latest changelog
 	if [[ -z $1 ]]; then
 		changelog=$(curl -sSL $github_link/CHANGELOG | sed s:\":'\\"':g 2>&1)
 	else
