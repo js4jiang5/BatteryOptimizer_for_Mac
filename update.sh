@@ -221,7 +221,7 @@ pkill -f "$binfolder/battery.*"
 
 
 #if [[ $(version_number $version_local) > $(version_number "v2.0.8") ]]; then
-	battery maintain recover
+	battery test_intel_discharge > $HOME/smc_result
 #else # to be removed at the beginning of 2025
 #	battery maintain_synchronous recover >> $HOME/.battery/battery.log &
 #	battery create_daemon >> /dev/null

@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.2"
+BATTERY_CLI_VERSION="v0.0.3"
 BATTERY_VISUDO_VERSION="v1.0.2"
 
 # Path fixes for unexpected environments
@@ -213,7 +213,7 @@ function valid_action() {
     # List of valid actions
     VALID_ACTIONS=("" "visudo" "maintain" "calibrate" "schedule" "charge" "discharge" 
 	"status" "dailylog" "logs" "language" "update" "version" "reinstall" "uninstall" 
-	"maintain_synchronous" "status_csv" "create_daemon" "disable_daemon" "remove_daemon" "changelog")
+	"maintain_synchronous" "status_csv" "create_daemon" "disable_daemon" "remove_daemon" "changelog" "test_intel_discharge")
     
     # Check if action is valid
     local action_valid=false
@@ -963,6 +963,12 @@ function calibrate_is_running() {
 	else
 		echo 0
 	fi
+}
+
+function read_smc() {
+	key=$1
+	line=$(echo $(smc -k $key -r))
+	echo ${line#*bytes} | tr -d ' ' | tr -d ')'
 }
 
 ## ###############
@@ -2516,4 +2522,69 @@ if [[ "$action"  == "language" ]]; then
 		log "Specified language is not recognized. Only [tw, us] are allowed"
 	fi
 	exit 0
+fi
+
+# Test intel discharge
+if [[ "$action"  == "test_intel_discharge" ]]; then
+	echo "This test might need to enter password"
+	$battery_binary maintain suspend
+	disable_charging
+	if $has_BCLM; then sudo smc -k BCLM -w 00; echo "set BCLM=00"; fi
+
+	if $has_CH0B; then sudo smc -k CH0B -w 01; echo "set CH0B=01"; fi
+	if $has_ACEN; then sudo smc -k ACEN -w 00; echo "set ACEN=00"; fi
+	if $has_CH0B; then echo "CH0B=$(read_smc CH0B)"; fi
+	sleep 3
+	b0ac=$(read_smc B0AC); echo "B0AC=$b0ac"
+	chbi=$(read_smc CHBI); echo "CHBI=$chbi"
+	acen=$(read_smc ACEN); echo "ACEN=$acen"
+	if [[ $((0x$b0ac)) > 0 ]]; then
+		echo "found B0AC = $((0x$b0ac))"
+		if $has_CH0B; then sudo smc -k CH0B -w 02; echo "set CH0B=00"; fi
+		if $has_ACEN; then sudo smc -k ACEN -w 01; echo "set ACEN=01"; fi
+		exit 0
+	fi
+
+	if $has_CH0B; then sudo smc -k CH0B -w 02; echo "set CH0B=02"; fi
+	if $has_ACEN; then sudo smc -k ACEN -w 00; echo "set ACEN=00"; fi
+	if $has_CH0B; then echo "CH0B=$(read_smc CH0B)"; fi
+	sleep 3
+	b0ac=$(read_smc B0AC); echo "B0AC=$b0ac"
+	chbi=$(read_smc CHBI); echo "CHBI=$chbi"
+	acen=$(read_smc ACEN); echo "ACEN=$acen"
+	if [[ $((0x$b0ac)) > 0 ]]; then
+		echo "found B0AC = $((0x$b0ac))"
+		if $has_CH0B; then sudo smc -k CH0B -w 02; echo "set CH0B=00"; fi
+		if $has_ACEN; then sudo smc -k ACEN -w 01; echo "set ACEN=01"; fi
+		exit 0
+	fi
+
+	if $has_CH0B; then sudo smc -k CH0B -w 03; echo "set CH0B=03"; fi
+	if $has_ACEN; then sudo smc -k ACEN -w 01; echo "set ACEN=00"; fi
+	if $has_CH0B; then echo "CH0B=$(read_smc CH0B)"; fi
+	sleep 3
+	b0ac=$(read_smc B0AC); echo "B0AC=$b0ac"
+	chbi=$(read_smc CHBI); echo "CHBI=$chbi"
+	acen=$(read_smc ACEN); echo "ACEN=$acen"
+	if [[ $((0x$b0ac)) > 0 ]]; then
+		echo "found B0AC = $((0x$b0ac))"
+		if $has_CH0B; then sudo smc -k CH0B -w 02; echo "set CH0B=00"; fi
+		if $has_ACEN; then sudo smc -k ACEN -w 01; echo "set ACEN=01"; fi
+		exit 0
+	fi
+
+	if $has_CH0B; then sudo smc -k CH0B -w 04; echo "set CH0B=04"; fi
+	if $has_ACEN; then sudo smc -k ACEN -w 00; echo "set ACEN=00"; fi
+	if $has_CH0B; then echo "CH0B=$(read_smc CH0B)"; fi
+	sleep 3
+	b0ac=$(read_smc B0AC); echo "B0AC=$b0ac"
+	chbi=$(read_smc CHBI); echo "CHBI=$chbi"
+	acen=$(read_smc ACEN); echo "ACEN=$acen"
+	if [[ $((0x$b0ac)) > 0 ]]; then
+		echo "found B0AC = $((0x$b0ac))"
+		if $has_CH0B; then sudo smc -k CH0B -w 02; echo "set CH0B=00"; fi
+		if $has_ACEN; then sudo smc -k ACEN -w 01; echo "set ACEN=01"; fi
+		exit 0
+	fi
+	
 fi
