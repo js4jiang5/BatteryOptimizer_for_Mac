@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.3"
+BATTERY_CLI_VERSION="v0.0.4"
 BATTERY_VISUDO_VERSION="v1.0.2"
 
 # Path fixes for unexpected environments
@@ -792,15 +792,16 @@ function get_cycle() {
 
 function get_charger_connection() { # 20241013 by JS
 	# AC is consider connected if battery is not discharging
-	ac_attached=$(pmset -g batt | tail -n1 | awk '{ x=match($0, /AC attached/) > 0; print x }')
-	is_charging=$(pmset -g batt | tail -n1 | awk '{ x=match($0, /; charging;/) > 0; print x }')
+	#ac_attached=$(pmset -g batt | tail -n1 | awk '{ x=match($0, /AC attached/) > 0; print x }')
+	#is_charging=$(pmset -g batt | tail -n1 | awk '{ x=match($0, /; charging;/) > 0; print x }')
+	ac_attached=$(pmset -g batt | head -n1 | awk '{ x=match($0, /AC Power/) > 0; print x }')
 	discharge_current=$(smc -k B0AC -r | awk '{print $3}' | sed s:\)::)
 	if [[ $discharge_current == "0" ]]; then
 		not_discharging=1
 	else
 		not_discharging=0
 	fi
-	ac_connected=$(($ac_attached || $is_charging || $not_discharging))
+	ac_connected=$(($ac_attached || $not_discharging))
 	echo "$ac_connected"
 }
 
@@ -969,6 +970,90 @@ function read_smc() {
 	key=$1
 	line=$(echo $(smc -k $key -r))
 	echo ${line#*bytes} | tr -d ' ' | tr -d ')'
+}
+
+function test_intel_unit() {
+	# test_intel_unit write CH0B 01 ACEN 00 read B0AC CHBI CH0B ACEN write CH0B 00 ACEN 01
+	cnt=1
+	mode="write"
+	echo
+	while true; do 
+		smc=${!cnt}; cnt=$((cnt+1))
+		if [[ "$smc" == "read" ]]; then
+			mode="read"
+			sleep 3
+			continue
+		elif [[ "$smc" == "write" ]]; then
+			mode="write"
+			continue
+		fi
+		has_smc="has_$smc"
+		if [[ "$mode" == "write" ]]; then
+			val=${!cnt}; cnt=$((cnt+1))
+			if ${!has_smc}; then 
+				sudo smc -k $smc -w $val; echo "set $smc = $val"; 
+			fi
+		else
+			val=$(read_smc $smc); echo "$smc = $val";
+			case $smc in
+				"B0AC") b0ac=$val;;
+				"CHBI") chbi=$val;;
+				"ACEN") acen=$val;:
+			esac
+		fi
+		
+		if [[ "$cnt" -gt "$#" ]]; then
+			if [[ $((0x${b0ac})) -gt 0 ]] || [[ $((0x${acen})) -eq 0 ]]; then
+				echo "found B0AC = $((0x${b0ac}))"
+				echo "found ACEN = $((0x${acen}))"
+				exit 0
+			fi
+			break
+		fi
+	done
+}
+
+function test_intel_file() {
+	# test_intel_file $smc_list replace 00 01
+	smc_list=$1
+	replace_loc=$(echo "$@" | tr " " "\n" | grep -n "replace" | cut -d: -f1)
+	bytes_old=$(echo $@ | awk '{print $"'"$((replace_loc+1))"'"}' | tr -d '_');
+	bytes_new=$(echo $@ | awk '{print $"'"$((replace_loc+2))"'"}' | tr -d '_');
+	bytes_old_space="(bytes $(echo $@ | awk '{print $"'"$((replace_loc+1))"'"}' | tr '_' ' '))";
+	#echo $bytes_old $bytes_new $bytes_old_space
+	n_lines=0
+	found=0
+	while read -r "line"; do
+		smc=$(echo $line | awk '{print $1}')
+		if [[ $smc != "DUSR" ]] && [[ $smc != "ACEN" ]] && [[ ! "$line" =~ "sp78" ]] && [[ ! "$line" =~ "sp87" ]] && [[ ! "$line" =~ "flt" ]] && [[ ! "$line" =~ "[fp" ]] && [[ ! "$line" =~ "ADC" ]]; then
+			if [[ "$line" =~ "$bytes_old_space" ]]; then
+				echo -e "\n$smc"
+				sudo smc -k $smc -w $bytes_new; echo "set $smc = $bytes_new"
+				sudo smc -k ACEN -w 00; echo "set ACEN = 00"
+				sleep 3
+				b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+				chbi=$(read_smc CHBI); echo "CHBI = $chbi"
+				acen=$(read_smc ACEN); echo "ACEN = $acen"
+				if [[ $((0x${b0ac})) -gt 0 ]] || [[ $((0x${acen})) -eq 0 ]]; then
+					echo "found B0AC = $((0x${b0ac}))"
+					echo "found ACEN = $((0x${acen}))"
+					found=1
+				fi
+				sudo smc -k $smc -w $bytes_old; echo "set $smc = $bytes_old"
+				if $has_ACEN; then sudo smc -k ACEN -w 01; echo "set ACEN = 01"; fi
+				if [[ $found == "1" ]]; then
+					break
+				fi
+			fi
+			#n_lines=$((n_lines+1))
+			#if [[ $n_lines -eq 30 ]]; then
+			#	break
+			#fi
+		fi
+	done < $smc_list
+	if [[ $found == "1" ]]; then
+		exit 0
+	fi
 }
 
 ## ###############
@@ -2529,62 +2614,59 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	echo "This test might need to enter password"
 	$battery_binary maintain suspend
 	disable_charging
-	if $has_BCLM; then sudo smc -k BCLM -w 00; echo "set BCLM=00"; fi
 
-	if $has_CH0B; then sudo smc -k CH0B -w 01; echo "set CH0B=01"; fi
-	if $has_ACEN; then sudo smc -k ACEN -w 00; echo "set ACEN=00"; fi
-	if $has_CH0B; then echo "CH0B=$(read_smc CH0B)"; fi
-	sleep 3
-	b0ac=$(read_smc B0AC); echo "B0AC=$b0ac"
-	chbi=$(read_smc CHBI); echo "CHBI=$chbi"
-	acen=$(read_smc ACEN); echo "ACEN=$acen"
-	if [[ $((0x$b0ac)) > 0 ]]; then
-		echo "found B0AC = $((0x$b0ac))"
-		if $has_CH0B; then sudo smc -k CH0B -w 02; echo "set CH0B=00"; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 01; echo "set ACEN=01"; fi
-		exit 0
+	sudo smc -k B0St -r; # in order to invoke password
+
+	#if $has_BCLM; then sudo smc -k BCLM -w 0a; echo "set BCLM = 0a"; fi
+	#test_intel_unit write CH0B 01 ACEN 01 read B0AC CHBI CH0B ACEN write CH0B 00 ACEN 01
+	#test_intel_unit write CH0B 02 ACEN 01 read B0AC CHBI CH0B ACEN write CH0B 00 ACEN 01
+	#test_intel_unit write CH0B 03 ACEN 01 read B0AC CHBI CH0B ACEN write CH0B 00 ACEN 01
+	#test_intel_unit write CH0B 04 ACEN 01 read B0AC CHBI CH0B ACEN write CH0B 00 ACEN 01
+
+	if $has_BCLM; then sudo smc -k BCLM -w 0a; echo "set BCLM = 64"; fi
+	test_intel_unit write CH0B 01 read B0AC CHBI CH0B ACEN write CH0B 00
+	test_intel_unit write CH0B 02 read B0AC CHBI CH0B ACEN write CH0B 00
+	test_intel_unit write CH0B 03 read B0AC CHBI CH0B ACEN write CH0B 00
+	test_intel_unit write CH0B 04 read B0AC CHBI CH0B ACEN write CH0B 00
+
+	[[ $(smc -k CH0H -r) =~ "no data" ]] && has_CH0H=false || has_CH0H=true;
+	if $has_CH0H; then
+		if $has_BCLM; then sudo smc -k BCLM -w 0a; echo "set BCLM = 0a"; fi
+		test_intel_unit write CH0H 00000001 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
+		test_intel_unit write CH0H 00000100 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
+		test_intel_unit write CH0H 00010000 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
+		test_intel_unit write CH0H 01000000 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
+		test_intel_unit write CH0H 01000100 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
+		test_intel_unit write CH0H 00010001 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
+		test_intel_unit write CH0H 01010101 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
 	fi
 
-	if $has_CH0B; then sudo smc -k CH0B -w 02; echo "set CH0B=02"; fi
-	if $has_ACEN; then sudo smc -k ACEN -w 00; echo "set ACEN=00"; fi
-	if $has_CH0B; then echo "CH0B=$(read_smc CH0B)"; fi
-	sleep 3
-	b0ac=$(read_smc B0AC); echo "B0AC=$b0ac"
-	chbi=$(read_smc CHBI); echo "CHBI=$chbi"
-	acen=$(read_smc ACEN); echo "ACEN=$acen"
-	if [[ $((0x$b0ac)) > 0 ]]; then
-		echo "found B0AC = $((0x$b0ac))"
-		if $has_CH0B; then sudo smc -k CH0B -w 02; echo "set CH0B=00"; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 01; echo "set ACEN=01"; fi
-		exit 0
+	# check computer type
+	mac_year=$(defaults read ~/Library/Preferences/com.apple.SystemProfiler.plist 'CPU Names' | cut -sd '"' -f 4 | uniq)
+	smc_list=$configfolder/smc_list
+	if [[ $mac_year =~ "2014" ]]; then
+		curl -sS -o $smc_list "$github_link/dist/smc_list_2014"
+	elif [[ $mac_year =~ "2016" ]]; then
+		curl -sS -o $smc_list "$github_link/dist/smc_list_2016"
+	elif [[ $mac_year =~ "2017" ]]; then
+		curl -sS -o $smc_list "$github_link/dist/smc_list_2017"
+	elif [[ $mac_year =~ "2019" ]]; then
+		curl -sS -o $smc_list "$github_link/dist/smc_list_2019"
+	elif [[ $(sysctl -n machdep.cpu.brand_string) =~ "i5" ]]; then
+		curl -sS -o $smc_list "$github_link/dist/smc_list_2016"
+	elif [[ $(sysctl -n machdep.cpu.brand_string) =~ "i7" ]]; then
+		curl -sS -o $smc_list "$github_link/dist/smc_list_2017"
+	elif [[ $(sysctl -n machdep.cpu.brand_string) =~ "i9" ]]; then
+		curl -sS -o $smc_list "$github_link/dist/smc_list_2019"
+	else
+		echo "Error: MAC model is not recognized"
+		exit 1
 	fi
 
-	if $has_CH0B; then sudo smc -k CH0B -w 03; echo "set CH0B=03"; fi
-	if $has_ACEN; then sudo smc -k ACEN -w 01; echo "set ACEN=00"; fi
-	if $has_CH0B; then echo "CH0B=$(read_smc CH0B)"; fi
-	sleep 3
-	b0ac=$(read_smc B0AC); echo "B0AC=$b0ac"
-	chbi=$(read_smc CHBI); echo "CHBI=$chbi"
-	acen=$(read_smc ACEN); echo "ACEN=$acen"
-	if [[ $((0x$b0ac)) > 0 ]]; then
-		echo "found B0AC = $((0x$b0ac))"
-		if $has_CH0B; then sudo smc -k CH0B -w 02; echo "set CH0B=00"; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 01; echo "set ACEN=01"; fi
-		exit 0
+	if test -f $smc_list; then
+		test_intel_file $smc_list replace 00 01
+		test_intel_file $smc_list replace 01 00
+		test_intel_file $smc_list replace 00_00 00_01
+		test_intel_file $smc_list replace 00_01 00_00
 	fi
-
-	if $has_CH0B; then sudo smc -k CH0B -w 04; echo "set CH0B=04"; fi
-	if $has_ACEN; then sudo smc -k ACEN -w 00; echo "set ACEN=00"; fi
-	if $has_CH0B; then echo "CH0B=$(read_smc CH0B)"; fi
-	sleep 3
-	b0ac=$(read_smc B0AC); echo "B0AC=$b0ac"
-	chbi=$(read_smc CHBI); echo "CHBI=$chbi"
-	acen=$(read_smc ACEN); echo "ACEN=$acen"
-	if [[ $((0x$b0ac)) > 0 ]]; then
-		echo "found B0AC = $((0x$b0ac))"
-		if $has_CH0B; then sudo smc -k CH0B -w 02; echo "set CH0B=00"; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 01; echo "set ACEN=01"; fi
-		exit 0
-	fi
-	
 fi
