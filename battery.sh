@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.11"
+BATTERY_CLI_VERSION="v2.0.10"
 BATTERY_VISUDO_VERSION="v1.0.0"
 
 # Path fixes for unexpected environments
