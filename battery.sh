@@ -1717,6 +1717,8 @@ if [[ "$action" == "maintain" ]]; then
 	# Report status
 	$battery_binary status
 
+	echo "setting = $setting"
+	echo $(ps aux | grep $PPID)
 	if [[ $(get_battery_percentage) -gt $setting ]]; then # if current battery percentage is higher than maintain percentage
 		if ! [[ $(ps aux | grep $PPID) =~ "setup.sh" ]] && ! [[ $(ps aux | grep $PPID) =~ "update.sh" ]]; then 
 			# Ask user if discharging right now unless this action is invoked by setup.sh
