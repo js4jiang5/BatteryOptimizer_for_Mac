@@ -10,9 +10,9 @@ function valid_day() {
 
 function get_changelog { # get the latest changelog
 	if [[ -z $1 ]]; then
-		changelog=$(curl -sSL https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/CHANGELOG | sed s:\":'\\"':g 2>&1)
+		changelog=$(curl -sSL "$github_link/CHANGELOG" | sed s:\":'\\"':g 2>&1)
 	else
-		changelog=$(curl -sSL https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/$1 | sed s:\":'\\"':g 2>&1)
+		changelog=$(curl -sSL "$github_link/$1" | sed s:\":'\\"':g 2>&1)
 	fi
 
     n_lines=0
@@ -29,7 +29,7 @@ function get_changelog { # get the latest changelog
 				n_num=$((n_num+1))
 			fi
 		done
-		if [[ $line =~ "." ]] && [[ $line =~ "v" ]] && $is_version && [[ $n_num == 3 ]] && [[ $n_lines > 0 ]]; then
+		if [[ $line =~ "." ]] && [[ $line =~ "v" ]] && $is_version && [[ $n_num == 3 ]] && [[ $n_lines -gt 0 ]]; then
 			is_version=true
 		else
 			is_version=false
@@ -71,6 +71,7 @@ binfolder=/usr/local/bin
 configfolder=$HOME/.battery
 batteryfolder="$tempfolder/battery"
 language_file=$configfolder/language.code
+github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/refs/heads/pre-release"
 mkdir -p $batteryfolder
 
 lang=$(defaults read -g AppleLocale)
@@ -94,7 +95,7 @@ echo -e "🔋 Starting battery update\n"
 version_local=$(echo $(battery version)) #update informed version first
 # Write battery function as executable
 echo "[ 1 ] Downloading latest battery version"
-update_branch="main"
+update_branch="pre-release"
 in_zip_folder_name="BatteryOptimizer_for_MAC-$update_branch"
 batteryfolder="$tempfolder/battery"
 rm -rf $batteryfolder
@@ -218,7 +219,7 @@ sleep 1
 pkill -f "$binfolder/battery.*"
 
 
-if [[ $(version_number $version_local) > $(version_number "v2.0.8") ]]; then
+if [[ $(version_number $version_local) -gt $(version_number "v2.0.8") ]]; then
 	battery maintain recover
 else # to be removed at the beginning of 2025
 	battery maintain_synchronous recover >> $HOME/.battery/battery.log &

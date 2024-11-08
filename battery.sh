@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.9"
+BATTERY_CLI_VERSION="v2.0.10"
 BATTERY_VISUDO_VERSION="v1.0.0"
 
 # Path fixes for unexpected environments
@@ -33,7 +33,7 @@ webhookid_file=$configfolder/ha_webhook.id
 daily_log=$configfolder/daily.log
 informed_version_file=$configfolder/informed.version
 language_file=$configfolder/language.code
-github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
+github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/refs/heads/pre-release"
 
 ## ###############
 ## Housekeeping
@@ -836,7 +836,7 @@ function get_changelog { # get the latest changelog
 				n_num=$((n_num+1))
 			fi
 		done
-		if [[ $line =~ "." ]] && [[ $line =~ "v" ]] && $is_version && [[ $n_num == 3 ]] && [[ $n_lines > 0 ]]; then
+		if [[ $line =~ "." ]] && [[ $line =~ "v" ]] && $is_version && [[ $n_num -eq 3 ]] && [[ $n_lines -gt 0 ]]; then
 			is_version=true
 		else
 			is_version=false
@@ -1321,7 +1321,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 	fi
 
 	now=$(date +%s)
-	check_update_timeout=$(($now + 60)) # check update one time each day
+	check_update_timeout=$((now + (3*24*60*60))) # first check update 3 days later
 	
 	if test -f $informed_version_file; then
 		informed_version=$(cat < $informed_version_file)
@@ -1363,7 +1363,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 				informed_version=$new_version
 				echo "$informed_version" > $informed_version_file
 			fi
-			check_update_timeout=$(($check_update_timeout + 24*60*60))
+			check_update_timeout=$((`date +%s` + (24*60*60))) # check update one time each day
 		fi
 
 		if [ "$maintain_status" == "active" ]; then
@@ -1581,7 +1581,7 @@ if [[ "$action" == "maintain" ]]; then
 	# Report status
 	$battery_binary status
 
-	if [[ $(get_battery_percentage) > $setting ]]; then # if current battery percentage is higher than maintain percentage
+	if [[ $(get_battery_percentage) -gt $setting ]]; then # if current battery percentage is higher than maintain percentage
 		if ! [[ $(ps aux | grep $PPID) =~ "setup.sh" ]] && ! [[ $(ps aux | grep $PPID) =~ "update.sh" ]]; then 
 			# Ask user if discharging right now unless this action is invoked by setup.sh
 			if $is_TW; then
@@ -1702,6 +1702,8 @@ if [[ "$action" == "calibrate" ]]; then
 		exit 1
 	fi
 
+	start_t=`date +%s`
+
 	# Store pid of calibration process
 	echo $$ >$calibrate_pidfile
 	pid=$(cat "$calibrate_pidfile" 2>/dev/null)
@@ -1761,9 +1763,9 @@ if [[ "$action" == "calibrate" ]]; then
 		ha_webhook "charge100_start"
 		enable_charging
 		now=$(date +%s)
-		charge100_timeout=$(($now + 6*60*60))
+		charge100_timeout=$((now + (6*60*60)))
 		while true; do
-			if [[ $(date +%s) > $charge100_timeout ]]; then
+			if [[ $(date +%s) -gt $charge100_timeout ]]; then
 				ha_webhook "err_charge100"
 				if $is_TW; then
 					osascript -e 'display notification "未成功在六小時內充電至100%" with title "電池校正錯誤" sound name "Blow"'
@@ -1843,7 +1845,7 @@ if [[ "$action" == "calibrate" ]]; then
 		now=$(date +%s)
 		charge100_timeout=$(($now + 6*60*60))
 		while true; do
-			if [[ $(date +%s) > $charge100_timeout ]]; then
+			if [[ $(date +%s) -gt $charge100_timeout ]]; then
 				ha_webhook "err_charge100"
 				if $is_TW; then
 					osascript -e 'display notification "未在六小時內成功充電至 100%" with title "電池校正錯誤" sound name "Blow"'
@@ -1929,15 +1931,29 @@ if [[ "$action" == "calibrate" ]]; then
 	fi
 
 	ha_webhook "calibration_end" $(get_accurate_battery_percentage) $(get_voltage)
+
+	end_t=`date +%s`
+	diff=$((end_t-$start_t))
 	
 	if $is_TW; then
-		osascript -e 'display notification "'"校正完成 \n電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\n健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"'" with title "電池校正" sound name "Blow"'
+	    n_days=$(echo $((diff/(24*60*60)))  | awk '{if ( $1 > 0) print $1 " 天 "}')
+		n_hours=$(echo $(((diff/(60*60)) % 24)) | awk '{print $1 " 小時"}')
+		n_minutes=$(echo $(((diff/60) % 60)) | awk '{print $1 " 分"}')
+		n_seconds=$(echo $((diff % 60)) | awk '{print $1 " 秒"}')
+		osascript -e 'display notification "'"校正完成, 共花 $n_days$n_hours $n_minutes\n電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\n健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"'" with title "電池校正" sound name "Blow"'
+		log "校正完成, 共花 $n_days$n_hours $n_minutes $n_seconds."
+		log "電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C"
+		log "健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"	
 	else
-		osascript -e 'display notification "'"Calibration completed.\nBattery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\nHealth $(get_battery_health)%, Cycle $(get_cycle)"'" with title "Battery Calibration" sound name "Blow"'
+	    n_days=$(echo $((diff/(24*60*60)))  | awk '{if ( $1 > 0) print $1 " day "}')
+    	n_hours=$(echo $(((diff/(60*60)) % 24)) | awk '{print $1 " hour"}')
+    	n_minutes=$(echo $(((diff/60) % 60)) | awk '{print $1 " min"}')
+    	n_seconds=$(echo $((diff % 60)) | awk '{print $1 " sec"}')
+		osascript -e 'display notification "'"Calibration completed in $n_days$n_hours $n_minutes.\nBattery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\nHealth $(get_battery_health)%, Cycle $(get_cycle)"'" with title "Battery Calibration" sound name "Blow"'
+		log "Calibration completed in $n_days$n_hours $n_minutes $n_seconds."
+		log "Battery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C"
+		log "Health $(get_battery_health)%, Cycle $(get_cycle)"	
 	fi
-	log "Calibration completed."
-	log "Battery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C"
-	log "Health $(get_battery_health)%, Cycle $(get_cycle)"	
 	
 	rm $calibrate_pidfile 2>/dev/null
 	$battery_binary maintain recover # Recover old maintain status
@@ -2331,7 +2347,7 @@ if [[ "$action" == "schedule" ]]; then
 		minute00=$minute
 	fi
 
-	if [[ $n_days > 0 ]] && [[ -z $weekday ]]; then
+	if [[ $n_days -gt 0 ]] && [[ -z $weekday ]]; then
 		if [[ $month_period -eq 1 ]]; then
 			log "Schedule calibration on day ${days[*]} at $hour:$minute00" >> $logfile
 			echo "Schedule calibration on day ${days[*]} at $hour:$minute00" > $schedule_tracker_file
@@ -2363,7 +2379,7 @@ if [[ "$action" == "schedule" ]]; then
 		<key>StartCalendarInterval</key>
 		<array>	
 "
-	if [[ $n_days > 0 ]]; then
+	if [[ $n_days -gt 0 ]]; then
 		for i in $(seq 1 $n_days); do
 			schedule_definition+="			<dict>
 				<key>Day</key>
