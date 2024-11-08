@@ -221,7 +221,7 @@ pkill -f "$binfolder/battery.*"
 
 
 #if [[ $(version_number $version_local) > $(version_number "v2.0.8") ]]; then
-	#battery maintain recover
+	battery maintain recover
 #else # to be removed at the beginning of 2025
 #	battery maintain_synchronous recover >> $HOME/.battery/battery.log &
 #	battery create_daemon >> /dev/null
@@ -238,5 +238,5 @@ else
 	answer="$(osascript -e 'display dialog "'"Update to $version completed"'" buttons {"'"$button_empty"'", "Finish"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
 fi
 
-echo -e "Start testing intel discharge.\n"
-battery test_intel_discharge > $HOME/smc_result
+#echo -e "Start testing intel discharge.\n"
+#battery test_intel_discharge > $HOME/smc_result

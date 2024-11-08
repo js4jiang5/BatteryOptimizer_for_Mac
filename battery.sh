@@ -4,8 +4,8 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.4"
-BATTERY_VISUDO_VERSION="v1.0.2"
+BATTERY_CLI_VERSION="v0.0.5"
+BATTERY_VISUDO_VERSION="v1.0.3"
 
 # Path fixes for unexpected environments
 PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
@@ -33,6 +33,7 @@ webhookid_file=$configfolder/ha_webhook.id
 daily_log=$configfolder/daily.log
 informed_version_file=$configfolder/informed.version
 language_file=$configfolder/language.code
+aclm_file=$configfolder/ACLM
 github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/refs/heads/intel"
 
 ## ###############
@@ -153,6 +154,7 @@ Cmnd_Alias      BATTERYBCLM = $binfolder/smc -k BCLM -w 0a, $binfolder/smc -k BC
 Cmnd_Alias      BATTERYCHWA = $binfolder/smc -k CHWA -w 00, $binfolder/smc -k CHWA -w 01, $binfolder/smc -k CHWA -r
 Cmnd_Alias      BATTERYACEN = $binfolder/smc -k ACEN -w 00, $binfolder/smc -k ACEN -w 01, $binfolder/smc -k ACEN -r
 Cmnd_Alias      BATTERYBSAC = $binfolder/smc -k BSAC -w 03, $binfolder/smc -k BSAC -w 13, $binfolder/smc -k BSAC -w 23, $binfolder/smc -k BSAC -w 33, $binfolder/smc -k BSAC -w 43, $binfolder/smc -k BSAC -r
+Cmnd_Alias      BATTERYACLM = $binfolder/smc -k ACLM -w 0000, $binfolder/smc -k ACLM -w 0b80, $binfolder/smc -k ACLM -w 0d80, $binfolder/smc -k ACLM -w 1058, $binfolder/smc -k ACLM -w 122a, $binfolder/smc -k ACLM -r
 Cmnd_Alias      BATTERYCHBI = $binfolder/smc -k CHBI -r
 Cmnd_Alias      BATTERYB0AC = $binfolder/smc -k B0AC -r 
 ALL ALL = NOPASSWD: BATTERYOFF
@@ -164,6 +166,7 @@ ALL ALL = NOPASSWD: BATTERYBCLM
 ALL ALL = NOPASSWD: BATTERYCHWA
 ALL ALL = NOPASSWD: BATTERYACEN
 ALL ALL = NOPASSWD: BATTERYBSAC
+ALL ALL = NOPASSWD: BATTERYACLM
 ALL ALL = NOPASSWD: BATTERYCHBI
 ALL ALL = NOPASSWD: BATTERYB0AC
 "
@@ -174,6 +177,20 @@ action=$1
 setting=$2
 subsetting=$3
 thirdsetting=$4
+
+# check the availability of SMC keys
+[[ $(smc -k BCLM -r) =~ "no data" ]] && has_BCLM=false || has_BCLM=true;
+[[ $(smc -k CH0B -r) =~ "no data" ]] && has_CH0B=false || has_CH0B=true;
+[[ $(smc -k CH0C -r) =~ "no data" ]] && has_CH0C=false || has_CH0C=true;
+[[ $(smc -k CH0I -r) =~ "no data" ]] && has_CH0I=false || has_CH0I=true;
+[[ $(smc -k CH0J -r) =~ "no data" ]] && has_CH0J=false || has_CH0J=true;
+[[ $(smc -k CH0K -r) =~ "no data" ]] && has_CH0K=false || has_CH0K=true;
+[[ $(smc -k ACEN -r) =~ "no data" ]] && has_ACEN=false || has_ACEN=true;
+[[ $(smc -k BSAC -r) =~ "no data" ]] && has_BSAC=false || has_BSAC=true;
+[[ $(smc -k ACLC -r) =~ "no data" ]] && has_ACLC=false || has_ACLC=true;
+[[ $(smc -k CHWA -r) =~ "no data" ]] && has_CHWA=false || has_CHWA=true;
+[[ $(smc -k ACLM -r) =~ "no data" ]] && has_ACLM=false || has_ACLM=true;
+
 lang=$(defaults read -g AppleLocale)
 if test -f $language_file; then
 	language=$(cat "$language_file" 2>/dev/null)
@@ -190,17 +207,6 @@ else
 	fi
 fi
 is_TW=false
-# check the availability of SMC keys
-[[ $(smc -k BCLM -r) =~ "no data" ]] && has_BCLM=false || has_BCLM=true;
-[[ $(smc -k CH0B -r) =~ "no data" ]] && has_CH0B=false || has_CH0B=true;
-[[ $(smc -k CH0C -r) =~ "no data" ]] && has_CH0C=false || has_CH0C=true;
-[[ $(smc -k CH0I -r) =~ "no data" ]] && has_CH0I=false || has_CH0I=true;
-[[ $(smc -k CH0J -r) =~ "no data" ]] && has_CH0J=false || has_CH0J=true;
-[[ $(smc -k CH0K -r) =~ "no data" ]] && has_CH0K=false || has_CH0K=true;
-[[ $(smc -k ACEN -r) =~ "no data" ]] && has_ACEN=false || has_ACEN=true;
-[[ $(smc -k BSAC -r) =~ "no data" ]] && has_BSAC=false || has_BSAC=true;
-[[ $(smc -k ACLC -r) =~ "no data" ]] && has_ACLC=false || has_ACLC=true;
-[[ $(smc -k CHWA -r) =~ "no data" ]] && has_CHWA=false || has_CHWA=true;
 
 ## ###############
 ## Helpers
@@ -576,11 +582,10 @@ function enable_discharging() {
 		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
 	#else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
-		if $has_BSAC; then sudo smc -k BSAC -w 13; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
-		#if $has_CH0J; then sudo smc -k CH0J -w 01; fi
-		#if $has_CH0K; then sudo smc -k CH0K -w 01; fi
+		#if $has_ACEN; then sudo smc -k ACEN -w 00; fi
+		if $has_CH0J; then sudo smc -k CH0J -w 01; fi
+		if $has_CH0K; then sudo smc -k CH0K -w 01; fi
+		if $has_ACLM; then sudo smc -k ACLM -w 0000; fi
 	#fi
 	sleep 1
 }
@@ -590,11 +595,10 @@ function disable_discharging() {
 	#if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0I; then sudo smc -k CH0I -w 00; fi
 	#else
-		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		if $has_BSAC; then sudo smc -k BSAC -w 33; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		#if $has_CH0J; then sudo smc -k CH0J -w 00; fi
-		#if $has_CH0K; then sudo smc -k CH0K -w 00; fi
+		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+		if $has_CH0J; then sudo smc -k CH0J -w 00; fi
+		if $has_CH0K; then sudo smc -k CH0K -w 00; fi
+		if $has_ACLM; then sudo smc -k ACLM -w $aclm; fi
 	#fi
 	sleep 1
 
@@ -637,9 +641,7 @@ function enable_charging() {
 		if $has_CH0C; then sudo smc -k CH0C -w 00; fi
 	#else
 		if $has_BCLM; then sudo smc -k BCLM -w 64; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		if $has_BSAC; then sudo smc -k BSAC -w 33; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 	#fi
 	sleep 1
 }
@@ -651,9 +653,7 @@ function disable_charging() {
 		if $has_CH0C; then sudo smc -k CH0C -w 02; fi
 	#fi
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		if $has_BSAC; then sudo smc -k BSAC -w 33; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 	#fi
 	sleep 1
 }
@@ -668,8 +668,10 @@ function get_smc_charging_status() {
 		fi
 	else
 		bclm_hex_status=$(smc -k BCLM -r | awk '{print $6}' | sed s:\)::)
-		acen_hex_status=$(smc -k ACEN -r | awk '{print $6}' | sed s:\)::)
-		if [[ "$bclm_hex_status" == "64" ]] && [[ "$acen_hex_status" == "01" ]]; then
+		#acen_hex_status=$(smc -k ACEN -r | awk '{print $6}' | sed s:\)::)
+		aclm_hex_status=$(read_smc ACLM)
+		#if [[ "$bclm_hex_status" == "64" ]] && [[ "$acen_hex_status" == "01" ]]; then
+		if [[ "$bclm_hex_status" == "64" ]] && [[ "$aclm_hex_status" != "0000" ]]; then
 			echo "enabled"
 		else
 			echo "disabled"
@@ -686,8 +688,10 @@ function get_smc_discharging_status() {
 			echo "discharging"
 		fi
 	else
-		acen_hex_status=$(smc -k ACEN -r | awk '{print $6}' | sed s:\)::)
-		if [[ "$acen_hex_status" == "01" ]]; then
+		#acen_hex_status=$(smc -k ACEN -r | awk '{print $6}' | sed s:\)::)
+		#if [[ "$acen_hex_status" == "01" ]]; then
+		aclm_hex_status=$(read_smc ACLM)
+		if [[ "$aclm_hex_status" != "0000" ]]; then
 			echo "not discharging"
 		else
 			echo "discharging"
@@ -848,7 +852,7 @@ function get_changelog() { # get the latest changelog
 				n_num=$((n_num+1))
 			fi
 		done
-		if [[ $line =~ "." ]] && [[ $line =~ "v" ]] && $is_version && [[ $n_num == 3 ]] && [[ $n_lines > 0 ]]; then
+		if [[ $line =~ "." ]] && [[ $line =~ "v" ]] && $is_version && [[ $n_num -eq 3 ]] && [[ $n_lines -gt 0 ]]; then
 			is_version=true
 		else
 			is_version=false
@@ -1069,6 +1073,34 @@ fi
 # Validate action
 if ! valid_action "$action"; then
     exit 1
+fi
+
+# store ACLM default value for Intel Macs
+if [[ $(get_cpu_type) == "intel" ]]; then
+	if ! test -f $aclm_file; then # store default ACLM value if it is not stored yet
+		aclm=$(read_smc ACLM)
+		if [[ $((0x${aclm})) -gt 2000 ]]; then # sanity check
+			echo $aclm > $aclm_file
+		fi
+	else
+		aclm=$(cat $aclm_file 2>/dev/null)
+	fi
+
+	# find closest value
+	if [[ $((0x${aclm})) -gt 4500 ]]; then # Intel 2019
+		aclm=122a
+	elif [[ $((0x${aclm})) -gt 4000 ]]; then # Intel 2017
+		aclm=1058
+	elif [[ $((0x${aclm})) -gt 3000 ]]; then # Intel 2014
+		aclm=0d80
+	else # Intel 2016
+		aclm=0b80
+	fi
+	has_CH0I=false
+	has_CH0J=false
+	has_CH0K=false
+else # ACLM not used for Apple Macs
+	has_ACLM=false
 fi
 
 # Visudo message
@@ -1425,7 +1457,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 	fi
 
 	now=$(date +%s)
-	check_update_timeout=$(($now + 60)) # check update one time each day
+	check_update_timeout=$((now + (3*24*60*60))) # first check update 3 days later
 	
 	if test -f $informed_version_file; then
 		informed_version=$(cat < $informed_version_file)
@@ -1467,7 +1499,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 				informed_version=$new_version
 				echo "$informed_version" > $informed_version_file
 			fi
-			check_update_timeout=$(($check_update_timeout + 24*60*60))
+			check_update_timeout=$((`date +%s` + (24*60*60))) # check update one time each day
 		fi
 
 		if [ "$maintain_status" == "active" ]; then
@@ -1685,7 +1717,7 @@ if [[ "$action" == "maintain" ]]; then
 	# Report status
 	$battery_binary status
 
-	if [[ $(get_battery_percentage) > $setting ]]; then # if current battery percentage is higher than maintain percentage
+	if [[ $(get_battery_percentage) -gt $setting ]]; then # if current battery percentage is higher than maintain percentage
 		if ! [[ $(ps aux | grep $PPID) =~ "setup.sh" ]] && ! [[ $(ps aux | grep $PPID) =~ "update.sh" ]]; then 
 			# Ask user if discharging right now unless this action is invoked by setup.sh
 			if $is_TW; then
@@ -1806,6 +1838,8 @@ if [[ "$action" == "calibrate" ]]; then
 		exit 1
 	fi
 
+	start_t=`date +%s`
+
 	# Store pid of calibration process
 	echo $$ >$calibrate_pidfile
 	pid=$(cat "$calibrate_pidfile" 2>/dev/null)
@@ -1865,9 +1899,9 @@ if [[ "$action" == "calibrate" ]]; then
 		ha_webhook "charge100_start"
 		enable_charging
 		now=$(date +%s)
-		charge100_timeout=$(($now + 6*60*60))
+		charge100_timeout=$((now + (6*60*60)))
 		while true; do
-			if [[ $(date +%s) > $charge100_timeout ]]; then
+			if [[ $(date +%s) -gt $charge100_timeout ]]; then
 				ha_webhook "err_charge100"
 				if $is_TW; then
 					osascript -e 'display notification "未成功在六小時內充電至100%" with title "電池校正錯誤" sound name "Blow"'
@@ -1947,7 +1981,7 @@ if [[ "$action" == "calibrate" ]]; then
 		now=$(date +%s)
 		charge100_timeout=$(($now + 6*60*60))
 		while true; do
-			if [[ $(date +%s) > $charge100_timeout ]]; then
+			if [[ $(date +%s) -gt $charge100_timeout ]]; then
 				ha_webhook "err_charge100"
 				if $is_TW; then
 					osascript -e 'display notification "未在六小時內成功充電至 100%" with title "電池校正錯誤" sound name "Blow"'
@@ -2033,15 +2067,29 @@ if [[ "$action" == "calibrate" ]]; then
 	fi
 
 	ha_webhook "calibration_end" $(get_accurate_battery_percentage) $(get_voltage)
+
+	end_t=`date +%s`
+	diff=$((end_t-$start_t))
 	
 	if $is_TW; then
-		osascript -e 'display notification "'"校正完成 \n電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\n健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"'" with title "電池校正" sound name "Blow"'
+	    n_days=$(echo $((diff/(24*60*60)))  | awk '{if ( $1 > 0) print $1 " 天 "}')
+		n_hours=$(echo $(((diff/(60*60)) % 24)) | awk '{print $1 " 小時"}')
+		n_minutes=$(echo $(((diff/60) % 60)) | awk '{print $1 " 分"}')
+		n_seconds=$(echo $((diff % 60)) | awk '{print $1 " 秒"}')
+		osascript -e 'display notification "'"校正完成, 共花 $n_days$n_hours $n_minutes\n電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\n健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"'" with title "電池校正" sound name "Blow"'
+		log "校正完成, 共花 $n_days$n_hours $n_minutes $n_seconds."
+		log "電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C"
+		log "健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"	
 	else
-		osascript -e 'display notification "'"Calibration completed.\nBattery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\nHealth $(get_battery_health)%, Cycle $(get_cycle)"'" with title "Battery Calibration" sound name "Blow"'
+	    n_days=$(echo $((diff/(24*60*60)))  | awk '{if ( $1 > 0) print $1 " day "}')
+    	n_hours=$(echo $(((diff/(60*60)) % 24)) | awk '{print $1 " hour"}')
+    	n_minutes=$(echo $(((diff/60) % 60)) | awk '{print $1 " min"}')
+    	n_seconds=$(echo $((diff % 60)) | awk '{print $1 " sec"}')
+		osascript -e 'display notification "'"Calibration completed in $n_days$n_hours $n_minutes.\nBattery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\nHealth $(get_battery_health)%, Cycle $(get_cycle)"'" with title "Battery Calibration" sound name "Blow"'
+		log "Calibration completed in $n_days$n_hours $n_minutes $n_seconds."
+		log "Battery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C"
+		log "Health $(get_battery_health)%, Cycle $(get_cycle)"	
 	fi
-	log "Calibration completed."
-	log "Battery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C"
-	log "Health $(get_battery_health)%, Cycle $(get_cycle)"	
 	
 	rm $calibrate_pidfile 2>/dev/null
 	$battery_binary maintain recover # Recover old maintain status
@@ -2435,7 +2483,7 @@ if [[ "$action" == "schedule" ]]; then
 		minute00=$minute
 	fi
 
-	if [[ $n_days > 0 ]] && [[ -z $weekday ]]; then
+	if [[ $n_days -gt 0 ]] && [[ -z $weekday ]]; then
 		if [[ $month_period -eq 1 ]]; then
 			log "Schedule calibration on day ${days[*]} at $hour:$minute00" >> $logfile
 			echo "Schedule calibration on day ${days[*]} at $hour:$minute00" > $schedule_tracker_file
@@ -2467,7 +2515,7 @@ if [[ "$action" == "schedule" ]]; then
 		<key>StartCalendarInterval</key>
 		<array>	
 "
-	if [[ $n_days > 0 ]]; then
+	if [[ $n_days -gt 0 ]]; then
 		for i in $(seq 1 $n_days); do
 			schedule_definition+="			<dict>
 				<key>Day</key>
