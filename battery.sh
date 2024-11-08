@@ -806,7 +806,7 @@ function get_cpu_type() {
     #fi
 }
 
-function get_parameter { # get parameter value from configuration file. the format is var=value or var= value or var = value
+function get_parameter() { # get parameter value from configuration file. the format is var=value or var= value or var = value
     var_loc=$(echo $(echo "$1" | tr " " "\n" | grep -n "$2" | cut -d: -f1) | awk '{print $1}')
     if [ -z $var_loc ]; then
         echo
@@ -815,7 +815,7 @@ function get_parameter { # get parameter value from configuration file. the form
     fi
 }
 
-function get_changelog { # get the latest changelog
+function get_changelog() { # get the latest changelog
 	if [[ -z $1 ]]; then
 		changelog=$(curl -sSL $github_link/CHANGELOG | sed s:\":'\\"':g 2>&1)
 	else
@@ -1050,6 +1050,8 @@ if [[ "$action" == "update" ]]; then
 
 	if [[ "$setting" == "beta" ]]; then
 		github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/refs/heads/$subsetting"
+	else
+		github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
 	fi
 	battery_new=$(echo $(curl -sSL "$github_link/battery.sh"))
 	battery_new_version=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")
@@ -1349,8 +1351,8 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 
 		# check if there is update version
 		if [[ $(date +%s) -gt $check_update_timeout ]]; then
-			updated="$(curl -sS https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/battery.sh | grep "$informed_version")"
-			new_version="$(curl -sS https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/battery.sh | grep "BATTERY_CLI_VERSION=")"
+			updated="$(curl -sS $github_link/battery.sh | grep "$informed_version")"
+			new_version="$(curl -sS $github_link/battery.sh | grep "BATTERY_CLI_VERSION=")"
 			new_version="$(echo $new_version | awk '{print $1}')"
 			new_version=$(echo ${new_version/"BATTERY_CLI_VERSION="} | tr -d \")
 			
