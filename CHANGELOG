@@ -1,3 +1,12 @@
+v2.0.10
+* fix bugs below
+- number comparison defect might cause error in next calibration date and decision on discharge or not
+- update check might be executed repeatedly if the check update time is missed due to sleep or shutdown
+
+* new features
+- support traditional Chinese in daily notification
+- show how much time calibration took in calibration complete notification and log
+
 v2.0.9
 * fix bugs below
 - need to enter password before charging or discharging
