@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.4"
+BATTERY_CLI_VERSION="v0.0.5"
 BATTERY_VISUDO_VERSION="v1.0.3"
 
 # Path fixes for unexpected environments
@@ -1717,20 +1717,20 @@ if [[ "$action" == "maintain" ]]; then
 	# Report status
 	$battery_binary status
 
-	echo "setting = $setting"
-	echo $(ps aux | grep $PPID)
-	if [[ $(get_battery_percentage) -gt $setting ]]; then # if current battery percentage is higher than maintain percentage
-		if ! [[ $(ps aux | grep $PPID) =~ "setup.sh" ]] && ! [[ $(ps aux | grep $PPID) =~ "update.sh" ]]; then 
-			# Ask user if discharging right now unless this action is invoked by setup.sh
-			if $is_TW; then
-				answer="$(osascript -e 'display dialog "'"你要現在就放電到 $setting% 嗎?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
-			else
-				answer="$(osascript -e 'display dialog "'"Do you want to discharge battery to $setting% now?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
-			fi
-			if [[ "$answer" == "Yes" ]] || [ -z $answer ]; then
-				log "Start discharging to $setting%"
-				$battery_binary discharge $setting 
-				$battery_binary maintain recover
+	if valid_percentage "$setting"; then
+		if [[ $(get_battery_percentage) -gt $setting ]]; then # if current battery percentage is higher than maintain percentage
+			if ! [[ $(ps aux | grep $PPID) =~ "setup.sh" ]] && ! [[ $(ps aux | grep $PPID) =~ "update.sh" ]]; then 
+				# Ask user if discharging right now unless this action is invoked by setup.sh
+				if $is_TW; then
+					answer="$(osascript -e 'display dialog "'"你要現在就放電到 $setting% 嗎?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+				else
+					answer="$(osascript -e 'display dialog "'"Do you want to discharge battery to $setting% now?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+				fi
+				if [[ "$answer" == "Yes" ]] || [ -z $answer ]; then
+					log "Start discharging to $setting%"
+					$battery_binary discharge $setting 
+					$battery_binary maintain recover
+				fi
 			fi
 		fi
 	fi
