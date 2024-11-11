@@ -2719,7 +2719,7 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	#$battery_binary maintain suspend
 	#disable_charging
 
-	sudo smc -k B0St -r; # in order to invoke password
+	#sudo smc -k B0St -r; # in order to invoke password
 
 	#if $has_BCLM; then sudo smc -k BCLM -w 0a; echo "set BCLM = 0a"; fi
 	#test_intel_unit write CH0B 01 ACEN 01 read B0AC CHBI CH0B ACEN write CH0B 00 ACEN 01
@@ -2784,8 +2784,8 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 
 	sudo smc -k BCLM -w 0a
 	open -a aldente
-	ps aux | grep aldente
 	sleep 10
+	ps aux | grep aldente
 	sudo smc -k ACEN -w 00
 	sleep 5
 	acen=$(read_smc ACEN); echo "ACEN = $acen"
