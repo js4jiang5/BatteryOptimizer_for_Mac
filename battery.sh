@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.11"
+BATTERY_CLI_VERSION="v0.0.12"
 BATTERY_VISUDO_VERSION="v1.0.3"
 
 # Path fixes for unexpected environments
@@ -2716,8 +2716,8 @@ fi
 # Test intel discharge
 if [[ "$action"  == "test_intel_discharge" ]]; then
 	echo "This test might need to enter password"
-	$battery_binary maintain suspend
-	disable_charging
+	#$battery_binary maintain suspend
+	#disable_charging
 
 	sudo smc -k B0St -r; # in order to invoke password
 
@@ -2782,9 +2782,20 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	#	test_intel_file $smc_list replace 00_01 00_00
 	#fi
 
-	if test -f $smc_list_aldente; then
-		sudo smc -k BCLM -w 0a
-		test_intel_aldente $smc_list_aldente
-		test_intel_aldente $smc_list_aldente
-	fi
+	sudo smc -k BCLM -w 0a
+	open -a aldente
+	ps aux | grep aldente
+	sleep 10
+	sudo smc -k ACEN -w 00
+	acen=$(read_smc ACEN); echo "ACEN = $acen"
+	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	sudo smc -k ACEN -w 01
+	osascript -e 'quit app "aldente"'
+
+	#if test -f $smc_list_aldente; then
+	#	sudo smc -k BCLM -w 0a
+	#	test_intel_aldente $smc_list_aldente
+	#	test_intel_aldente $smc_list_aldente
+	#fi
 fi
