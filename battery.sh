@@ -2787,6 +2787,7 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	ps aux | grep aldente
 	sleep 10
 	sudo smc -k ACEN -w 00
+	sleep 5
 	acen=$(read_smc ACEN); echo "ACEN = $acen"
 	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
