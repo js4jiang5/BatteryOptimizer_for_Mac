@@ -2806,7 +2806,7 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	for i in {0..255}; do
 		i_hex=$(printf "%02x" $i)
 		sudo smc -k ACEN -w $i_hex; echo "set ACEN = $i_hex"
-		sleep 0.1
+		sleep 0.5
 		acen=$(read_smc ACEN); echo "ACEN = $acen"
 		if [[ $acen == "00" ]]; then
 			echo "found"
