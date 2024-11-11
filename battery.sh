@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.10"
+BATTERY_CLI_VERSION="v0.0.11"
 BATTERY_VISUDO_VERSION="v1.0.3"
 
 # Path fixes for unexpected environments
@@ -1076,26 +1076,28 @@ function test_intel_aldente() {
 			sleep 0.1
 			acen=$(read_smc ACEN); echo "ACEN = $acen"
 			aclm=$(read_smc ACLM); echo "ACLM = $aclm"
+			b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
 			val=$(read_smc $smc); echo "$smc = $val"
-			if [[ $((0x${acen})) -eq 0 ]]; then
-				echo "found ACEN = 0"
-				sleep 5
-				b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+			if [[ $((0x${b0ac})) -gt 0 ]] ; then
+				echo "found B0AC = $((0x${b0ac}))"
+				echo "found ACEN = $((0x${acen}))"
+				#sleep 5
 				val=$(read_smc $smc); echo "$smc = $val"
-				sudo smc -k ACEN -w 01; echo "set ACEN = 01"
-				sleep 1
-				val=$(read_smc $smc); echo "$smc = $val"
-				acen=$(read_smc ACEN); echo "ACEN = $acen"
-				aclm=$(read_smc ACLM); echo "ACLM = $aclm"
-				sudo smc -k ACEN -w 00; echo "set ACEN = 00"
-				sudo smc -k ACLM -w 0000; echo "set ACLM = 0000"
-				sleep 5
-				acen=$(read_smc ACEN); echo "ACEN = $acen"
-				aclm=$(read_smc ACLM); echo "ACLM = $aclm"
-				b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-				val=$(read_smc $smc); echo "$smc = $val"
+				#sudo smc -k ACEN -w 01; echo "set ACEN = 01"
+				#sleep 1
+				#val=$(read_smc $smc); echo "$smc = $val"
+				#acen=$(read_smc ACEN); echo "ACEN = $acen"
+				#aclm=$(read_smc ACLM); echo "ACLM = $aclm"
+				#sudo smc -k ACEN -w 00; echo "set ACEN = 00"
+				#sudo smc -k ACLM -w 0000; echo "set ACLM = 0000"
+				#sleep 5
+				#acen=$(read_smc ACEN); echo "ACEN = $acen"
+				#aclm=$(read_smc ACLM); echo "ACLM = $aclm"
+				#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+				#val=$(read_smc $smc); echo "$smc = $val"
 				sudo smc -k ACEN -w 01; echo "set ACEN = 01"
 				sudo smc -k ACLM -w 122a; echo "set ACLM = 122a"
+				sudo smc -k BSAC -w 22; echo "set BSAC = 22"
 				found=1
 			fi
 			if [[ $found == "1" ]]; then
