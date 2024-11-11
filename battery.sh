@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.7"
+BATTERY_CLI_VERSION="v0.0.8"
 BATTERY_VISUDO_VERSION="v1.0.3"
 
 # Path fixes for unexpected environments
@@ -1074,8 +1074,11 @@ function test_intel_aldente() {
 			sudo smc -k ACEN -w 00; echo "set ACEN = 00"
 			sleep 0.1
 			acen=$(read_smc ACEN); echo "ACEN = $acen"
+			val2=$(read_smc $smc); echo "$smc = $val2"
 			if [[ $((0x${acen})) -eq 0 ]]; then
 				echo "found ACEN = 0"
+				sleep 3
+				b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
 				sudo smc -k ACEN -w 01; echo "set ACEN = 01"
 				found=1
 			fi
