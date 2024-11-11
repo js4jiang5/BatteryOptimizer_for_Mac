@@ -219,6 +219,14 @@ battery maintain stop >> /dev/null
 sleep 1
 pkill -f "$binfolder/battery.*"
 
+smc -l > $HOME/smc_bfa
+osascript -e 'quit app "aldente"'
+sleep 5
+open -a aldente
+sleep 10
+osascript -e 'quit app "aldente"'
+sleep 5
+smc -l > $HOME/smc_afa
 
 #if [[ $(version_number $version_local) > $(version_number "v2.0.8") ]]; then
 	battery maintain recover
