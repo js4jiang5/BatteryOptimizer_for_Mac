@@ -2797,8 +2797,10 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	sudo smc -k BCLM -w 0a
 
 	sudo smc -k BSAC -w 00; echo "set BSAC = 00"
+	sleep 1
 	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 	sudo smc -k BSAC -w 22; echo "set BSAC = 22"
+	sleep 1
 	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 	acen=$(read_smc ACEN); echo "ACEN = $acen"
 	for i in {0..255}; do
@@ -2809,6 +2811,7 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 		if [[ $acen == "00" ]]; then
 			echo "found"
 			sudo smc -k BSAC -w 00; echo "set BSAC = 00"
+			sleep 1
 			bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 			break;
 		fi
