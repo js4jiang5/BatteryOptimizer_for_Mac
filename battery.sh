@@ -2719,7 +2719,7 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	#$battery_binary maintain suspend
 	#disable_charging
 
-	#sudo smc -k B0St -r; # in order to invoke password
+	sudo smc -k B0St -r; # in order to invoke password
 
 	#if $has_BCLM; then sudo smc -k BCLM -w 0a; echo "set BCLM = 0a"; fi
 	#test_intel_unit write CH0B 01 ACEN 01 read B0AC CHBI CH0B ACEN write CH0B 00 ACEN 01
@@ -2786,15 +2786,34 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	open -a aldente
 	sleep 10
 	#ps aux | grep aldente
-	sudo smc -k ACEN -w 00
+	sudo smc -k ACEN -w 00; echo "set ACEN = 00"
 	sleep 5
 	acen=$(read_smc ACEN); echo "ACEN = $acen"
 	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	sudo smc -k ACEN -w 01
+	sudo smc -k ACEN -w 01; echo "set ACEN = 01"
 	osascript -e 'quit app "aldente"'
 	sleep 3
 	sudo smc -k BCLM -w 0a
+
+	sudo smc -k BSAC -w 00; echo "set BSAC = 00"
+	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	sudo smc -k BSAC -w 22; echo "set BSAC = 22"
+	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	acen=$(read_smc ACEN); echo "ACEN = $acen"
+	for i in {0..255}; do
+		i_hex=$(printf "%02x" $i)
+		sudo smc -k ACEN -w $i_hex; echo "set ACEN = $i_hex"
+		sleep 0.1
+		acen=$(read_smc ACEN); echo "ACEN = $acen"
+		if [[ $acen == "00" ]]; then
+			echo "found"
+			sudo smc -k BSAC -w 00; echo "set BSAC = 00"
+			bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+			break;
+		fi
+	done
+	
 
 	#if test -f $smc_list_aldente; then
 	#	sudo smc -k BCLM -w 0a
