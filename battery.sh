@@ -1072,22 +1072,30 @@ function test_intel_aldente() {
 			echo -e "\n$smc"
 			sudo smc -k $smc -w $val; echo "set $smc = $val"
 			sudo smc -k ACEN -w 00; echo "set ACEN = 00"
+			sudo smc -k ACLM -w 0000; echo "set ACLM = 0000"
 			sleep 0.1
 			acen=$(read_smc ACEN); echo "ACEN = $acen"
-			val2=$(read_smc $smc); echo "$smc = $val2"
+			aclm=$(read_smc ACLM); echo "ACLM = $aclm"
+			val=$(read_smc $smc); echo "$smc = $val"
 			if [[ $((0x${acen})) -eq 0 ]]; then
 				echo "found ACEN = 0"
 				sleep 5
 				b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+				val=$(read_smc $smc); echo "$smc = $val"
 				sudo smc -k ACEN -w 01; echo "set ACEN = 01"
 				sleep 1
-				val3=$(read_smc $smc); echo "$smc = $val3"
+				val=$(read_smc $smc); echo "$smc = $val"
+				acen=$(read_smc ACEN); echo "ACEN = $acen"
+				aclm=$(read_smc ACLM); echo "ACLM = $aclm"
 				sudo smc -k ACEN -w 00; echo "set ACEN = 00"
+				sudo smc -k ACLM -w 0000; echo "set ACLM = 0000"
 				sleep 5
 				acen=$(read_smc ACEN); echo "ACEN = $acen"
+				aclm=$(read_smc ACLM); echo "ACLM = $aclm"
 				b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-				val4=$(read_smc $smc); echo "$smc = $val4"
+				val=$(read_smc $smc); echo "$smc = $val"
 				sudo smc -k ACEN -w 01; echo "set ACEN = 01"
+				sudo smc -k ACLM -w 122a; echo "set ACLM = 122a"
 				found=1
 			fi
 			if [[ $found == "1" ]]; then
