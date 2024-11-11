@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.6"
+BATTERY_CLI_VERSION="v0.0.7"
 BATTERY_VISUDO_VERSION="v1.0.3"
 
 # Path fixes for unexpected environments
@@ -1055,6 +1055,39 @@ function test_intel_file() {
 			#fi
 		fi
 	done < $smc_list
+	if [[ $found == "1" ]]; then
+		exit 0
+	fi
+}
+
+function test_intel_aldente() {
+	# test_intel_file $smc_list replace 00 01
+	smc_list_aldente=$1
+	n_lines=0
+	found=0
+	while read -r "line"; do
+		smc=$(echo $line | awk '{print $1}')
+		val=$(echo ${line#*bytes} | tr -d ' ' | tr -d ')')
+		if [[ $smc != "DUSR" ]] && [[ $smc != "ACEN" ]] && [[ ! "$line" =~ "sp78" ]] && [[ ! "$line" =~ "sp87" ]] && [[ ! "$line" =~ "flt" ]] && [[ ! "$line" =~ "[fp" ]] && [[ ! "$line" =~ "ADC" ]]; then
+			echo -e "\n$smc"
+			sudo smc -k $smc -w $val; echo "set $smc = $val"
+			sudo smc -k ACEN -w 00; echo "set ACEN = 00"
+			sleep 0.1
+			acen=$(read_smc ACEN); echo "ACEN = $acen"
+			if [[ $((0x${acen})) -eq 0 ]]; then
+				echo "found ACEN = 0"
+				sudo smc -k ACEN -w 01; echo "set ACEN = 01"
+				found=1
+			fi
+			if [[ $found == "1" ]]; then
+				break
+			fi
+			#n_lines=$((n_lines+1))
+			#if [[ $n_lines -eq 30 ]]; then
+			#	break
+			#fi
+		fi
+	done < $smc_list_aldente
 	if [[ $found == "1" ]]; then
 		exit 0
 	fi
@@ -2673,50 +2706,64 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	#test_intel_unit write CH0B 03 ACEN 01 read B0AC CHBI CH0B ACEN write CH0B 00 ACEN 01
 	#test_intel_unit write CH0B 04 ACEN 01 read B0AC CHBI CH0B ACEN write CH0B 00 ACEN 01
 
-	if $has_BCLM; then sudo smc -k BCLM -w 0a; echo "set BCLM = 64"; fi
-	test_intel_unit write CH0B 01 read B0AC CHBI CH0B ACEN write CH0B 00
-	test_intel_unit write CH0B 02 read B0AC CHBI CH0B ACEN write CH0B 00
-	test_intel_unit write CH0B 03 read B0AC CHBI CH0B ACEN write CH0B 00
-	test_intel_unit write CH0B 04 read B0AC CHBI CH0B ACEN write CH0B 00
+	#if $has_BCLM; then sudo smc -k BCLM -w 0a; echo "set BCLM = 64"; fi
+	#test_intel_unit write CH0B 01 read B0AC CHBI CH0B ACEN write CH0B 00
+	#test_intel_unit write CH0B 02 read B0AC CHBI CH0B ACEN write CH0B 00
+	#test_intel_unit write CH0B 03 read B0AC CHBI CH0B ACEN write CH0B 00
+	#test_intel_unit write CH0B 04 read B0AC CHBI CH0B ACEN write CH0B 00
 
-	[[ $(smc -k CH0H -r) =~ "no data" ]] && has_CH0H=false || has_CH0H=true;
-	if $has_CH0H; then
-		if $has_BCLM; then sudo smc -k BCLM -w 0a; echo "set BCLM = 0a"; fi
-		test_intel_unit write CH0H 00000001 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
-		test_intel_unit write CH0H 00000100 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
-		test_intel_unit write CH0H 00010000 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
-		test_intel_unit write CH0H 01000000 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
-		test_intel_unit write CH0H 01000100 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
-		test_intel_unit write CH0H 00010001 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
-		test_intel_unit write CH0H 01010101 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
-	fi
+	#[[ $(smc -k CH0H -r) =~ "no data" ]] && has_CH0H=false || has_CH0H=true;
+	#if $has_CH0H; then
+	#	if $has_BCLM; then sudo smc -k BCLM -w 0a; echo "set BCLM = 0a"; fi
+	#	test_intel_unit write CH0H 00000001 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
+	#	test_intel_unit write CH0H 00000100 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
+	#	test_intel_unit write CH0H 00010000 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
+	#	test_intel_unit write CH0H 01000000 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
+	#	test_intel_unit write CH0H 01000100 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
+	#	test_intel_unit write CH0H 00010001 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
+	#	test_intel_unit write CH0H 01010101 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
+	#fi
 
 	# check computer type
 	mac_year=$(defaults read ~/Library/Preferences/com.apple.SystemProfiler.plist 'CPU Names' | cut -sd '"' -f 4 | uniq)
 	smc_list=$configfolder/smc_list
+	smc_list_aldente=$configfolder/smc_list_aldente
 	if [[ $mac_year =~ "2014" ]]; then
 		curl -sS -o $smc_list "$github_link/dist/smc_list_2014"
+		curl -sS -o $smc_list_aldente "$github_link/dist/smc_list_aldente_2014"
 	elif [[ $mac_year =~ "2016" ]]; then
 		curl -sS -o $smc_list "$github_link/dist/smc_list_2016"
+		curl -sS -o $smc_list_aldente "$github_link/dist/smc_list_aldente_2016"
 	elif [[ $mac_year =~ "2017" ]]; then
 		curl -sS -o $smc_list "$github_link/dist/smc_list_2017"
+		curl -sS -o $smc_list_aldente "$github_link/dist/smc_list_aldente_2017"
 	elif [[ $mac_year =~ "2019" ]]; then
 		curl -sS -o $smc_list "$github_link/dist/smc_list_2019"
+		curl -sS -o $smc_list_aldente "$github_link/dist/smc_list_aldente_2019"
 	elif [[ $(sysctl -n machdep.cpu.brand_string) =~ "i5" ]]; then
 		curl -sS -o $smc_list "$github_link/dist/smc_list_2016"
+		curl -sS -o $smc_list_aldente "$github_link/dist/smc_list_aldente_2016"
 	elif [[ $(sysctl -n machdep.cpu.brand_string) =~ "i7" ]]; then
 		curl -sS -o $smc_list "$github_link/dist/smc_list_2017"
+		curl -sS -o $smc_list_aldente "$github_link/dist/smc_list_aldente_2017"
 	elif [[ $(sysctl -n machdep.cpu.brand_string) =~ "i9" ]]; then
 		curl -sS -o $smc_list "$github_link/dist/smc_list_2019"
+		curl -sS -o $smc_list_aldente "$github_link/dist/smc_list_aldente_2019"
 	else
 		echo "Error: MAC model is not recognized"
 		exit 1
 	fi
 
-	if test -f $smc_list; then
-		test_intel_file $smc_list replace 00 01
-		test_intel_file $smc_list replace 01 00
-		test_intel_file $smc_list replace 00_00 00_01
-		test_intel_file $smc_list replace 00_01 00_00
+	#if test -f $smc_list; then
+	#	test_intel_file $smc_list replace 00 01
+	#	test_intel_file $smc_list replace 01 00
+	#	test_intel_file $smc_list replace 00_00 00_01
+	#	test_intel_file $smc_list replace 00_01 00_00
+	#fi
+
+	if test -f $smc_list_aldente; then
+		sudo smc -k BCLM -w 0a
+		test_intel_aldente $smc_list_aldente
+		test_intel_aldente $smc_list_aldente
 	fi
 fi
