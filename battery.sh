@@ -2792,6 +2792,8 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
 	sudo smc -k ACEN -w 01
 	osascript -e 'quit app "aldente"'
+	sleep 3
+	sudo smc -k BCLM -w 0a
 
 	#if test -f $smc_list_aldente; then
 	#	sudo smc -k BCLM -w 0a
