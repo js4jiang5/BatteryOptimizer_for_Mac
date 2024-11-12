@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.18"
+BATTERY_CLI_VERSION="v0.0.19"
 BATTERY_VISUDO_VERSION="v1.0.3"
 
 # Path fixes for unexpected environments
@@ -2917,10 +2917,10 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
 	ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
 	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	for i in {0..16}; do
+	for i in {0..255}; do
 		i_hex=$(printf "%02x" $i)
 		sudo smc -k CH0B -w $i_hex; echo "set CH0B = $i_hex"
-		sleep 10
+		sleep 5
 		b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
 		chbi=$(read_smc CHBI); echo "CHBI = $chbi"
 		if [[ $((0x${b0ac})) -gt 0 ]]; then
@@ -2931,7 +2931,7 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 			bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 			ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
 			ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-			break;
+			#break;
 		fi
 	done
 
