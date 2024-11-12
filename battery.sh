@@ -2782,19 +2782,19 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	#	test_intel_file $smc_list replace 00_01 00_00
 	#fi
 
-	#sudo smc -k BCLM -w 0a
-	#open -a aldente
-	#sleep 10
-	##ps aux | grep aldente
-	#sudo smc -k ACEN -w 00; echo "set ACEN = 00"
-	#sleep 5
-	#acen=$(read_smc ACEN); echo "ACEN = $acen"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#sudo smc -k ACEN -w 01; echo "set ACEN = 01"
-	#osascript -e 'quit app "aldente"'
-	#sleep 3
-	#sudo smc -k BCLM -w 0a
+	sudo smc -k BCLM -w 0a
+	open -a aldente
+	sleep 10
+	ps aux | grep aldente
+	sudo smc -k ACEN -w 00; echo "set ACEN = 00"
+	sleep 5
+	acen=$(read_smc ACEN); echo "ACEN = $acen"
+	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	sudo smc -k ACEN -w 01; echo "set ACEN = 01"
+	osascript -e 'quit app "aldente"'
+	sleep 3
+	sudo smc -k BCLM -w 0a
 
 	#sudo smc -k BCLM -w 0a
 	#sudo smc -k BSAC -w 00; echo "set BSAC = 00"
