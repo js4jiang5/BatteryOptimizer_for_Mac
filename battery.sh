@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.13"
+BATTERY_CLI_VERSION="v0.0.14"
 BATTERY_VISUDO_VERSION="v1.0.3"
 
 # Path fixes for unexpected environments
@@ -2923,7 +2923,7 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 		sleep 5
 		b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
 		chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-		if [[ $((0x${b0ac})) -gt 0 ]] 
+		if [[ $((0x${b0ac})) -gt 0 ]]; then
 			echo "found"
 			sudo smc -k CH0B -w 00; echo "set CH0B = 00"
 			sleep 1
