@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.14"
+BATTERY_CLI_VERSION="v0.0.15"
 BATTERY_VISUDO_VERSION="v1.0.3"
 
 # Path fixes for unexpected environments
@@ -2782,19 +2782,19 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	#	test_intel_file $smc_list replace 00_01 00_00
 	#fi
 
-	sudo smc -k BCLM -w 0a
-	open -a aldente
-	sleep 10
-	ps aux | grep aldente
-	sudo smc -k ACEN -w 00; echo "set ACEN = 00"
-	sleep 5
-	acen=$(read_smc ACEN); echo "ACEN = $acen"
-	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	sudo smc -k ACEN -w 01; echo "set ACEN = 01"
-	osascript -e 'quit app "aldente"'
-	sleep 3
-	sudo smc -k BCLM -w 0a
+	#sudo smc -k BCLM -w 0a
+	#open -a aldente
+	#sleep 10
+	#ps aux | grep aldente
+	#sudo smc -k ACEN -w 00; echo "set ACEN = 00"
+	#sleep 5
+	#acen=$(read_smc ACEN); echo "ACEN = $acen"
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	#sudo smc -k ACEN -w 01; echo "set ACEN = 01"
+	#osascript -e 'quit app "aldente"'
+	#sleep 3
+	#sudo smc -k BCLM -w 0a
 
 	#sudo smc -k BCLM -w 0a
 	#sudo smc -k BSAC -w 00; echo "set BSAC = 00"
@@ -2820,93 +2820,113 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	
 	sudo smc -k BCLM -w 0a
 
-	sudo smc -k BSAC -w 00; echo "set BSAC = 00"
-	sleep 5
-	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	acen=$(read_smc ACEN); echo "ACEN = $acen"
-	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+	#sudo smc -k BSAC -w 00; echo "set BSAC = 00"
+	#sleep 5
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#acen=$(read_smc ACEN); echo "ACEN = $acen"
+	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	#ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
+	#ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
+	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
 
-	sudo smc -k BSAC -w 01; echo "set BSAC = 01"
-	sleep 5
-	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	acen=$(read_smc ACEN); echo "ACEN = $acen"
-	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+	#sudo smc -k BSAC -w 01; echo "set BSAC = 01"
+	#sleep 5
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#acen=$(read_smc ACEN); echo "ACEN = $acen"
+	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	#ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
+	#ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
+	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+
+	#sudo smc -k BSAC -w 02; echo "set BSAC = 02"
+	#sleep 5
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#acen=$(read_smc ACEN); echo "ACEN = $acen"
+	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	#ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
+	#ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
+	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+
+	#sudo smc -k BSAC -w 10; echo "set BSAC = 10"
+	#sleep 5
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#acen=$(read_smc ACEN); echo "ACEN = $acen"
+	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	#ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
+	#ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
+	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+
+	#sudo smc -k BSAC -w 11; echo "set BSAC = 11"
+	#sleep 5
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#acen=$(read_smc ACEN); echo "ACEN = $acen"
+	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	#ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
+	#ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
+	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+
+	#sudo smc -k BSAC -w 12; echo "set BSAC = 12"
+	#sleep 5
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#acen=$(read_smc ACEN); echo "ACEN = $acen"
+	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	#ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
+	#ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
+	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+
+	#sudo smc -k BSAC -w 20; echo "set BSAC = 20"
+	#sleep 5
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#acen=$(read_smc ACEN); echo "ACEN = $acen"
+	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	#ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
+	#ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
+	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+
+	#sudo smc -k BSAC -w 21; echo "set BSAC = 21"
+	#sleep 5
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#acen=$(read_smc ACEN); echo "ACEN = $acen"
+	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	#ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
+	#ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
+	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+
+	#sudo smc -k BSAC -w 22; echo "set BSAC = 22"
+	#sleep 5
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#acen=$(read_smc ACEN); echo "ACEN = $acen"
+	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	#ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
+	#ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
+	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+
+	#sudo smc -k CH0K -w 01; echo "set CH0K = 01"
+	#sleep 5
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#acen=$(read_smc ACEN); echo "ACEN = $acen"
+	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	#ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
+	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
 
 	sudo smc -k BSAC -w 02; echo "set BSAC = 02"
+	sudo smc -k CH0K -w 00; echo "set CH0K = 00"
+	sudo smc -k CH0B -w 0d; echo "set CH0B = 0d"
 	sleep 5
 	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 	acen=$(read_smc ACEN); echo "ACEN = $acen"
-	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	sudo smc -k BSAC -w 10; echo "set BSAC = 10"
-	sleep 5
-	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	acen=$(read_smc ACEN); echo "ACEN = $acen"
-	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	sudo smc -k BSAC -w 11; echo "set BSAC = 11"
-	sleep 5
-	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	acen=$(read_smc ACEN); echo "ACEN = $acen"
-	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	sudo smc -k BSAC -w 12; echo "set BSAC = 12"
-	sleep 5
-	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	acen=$(read_smc ACEN); echo "ACEN = $acen"
-	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	sudo smc -k BSAC -w 20; echo "set BSAC = 20"
-	sleep 5
-	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	acen=$(read_smc ACEN); echo "ACEN = $acen"
-	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	sudo smc -k BSAC -w 21; echo "set BSAC = 21"
-	sleep 5
-	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	acen=$(read_smc ACEN); echo "ACEN = $acen"
-	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
 	ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
 	ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
 	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
 
 	sudo smc -k BSAC -w 22; echo "set BSAC = 22"
+	sudo smc -k CH0K -w 00; echo "set CH0K = 00"
+	sudo smc -k CH0B -w 0d; echo "set CH0B = 0d"
 	sleep 5
 	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 	acen=$(read_smc ACEN); echo "ACEN = $acen"
-	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
 	ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
 	ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	sudo smc -k CH0K -w 01; echo "set CH0K = 01"
-	sleep 5
-	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	acen=$(read_smc ACEN); echo "ACEN = $acen"
-	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
 	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
 
 	sudo smc -k BSAC -w 02; echo "set BSAC = 02"
@@ -2917,7 +2937,7 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
 	ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
 	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	for i in {0..16}; do
+	for i in {13..32}; do
 		i_hex=$(printf "%02x" $i)
 		sudo smc -k CH0B -w $i_hex; echo "set CH0B = $i_hex"
 		sleep 5
