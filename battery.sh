@@ -2887,7 +2887,7 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 	acen=$(read_smc ACEN); echo "ACEN = $acen"
 	ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	for i in {0..255}; do
+	for i in {0..16}; do
 		i_hex=$(printf "%02x" $i)
 		sudo smc -k CH0B -w $i_hex; echo "set CH0B = $i_hex"
 		sleep 5
