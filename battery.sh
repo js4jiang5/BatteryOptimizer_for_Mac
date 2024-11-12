@@ -2879,6 +2879,7 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 	acen=$(read_smc ACEN); echo "ACEN = $acen"
 	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
 
 	sudo smc -k BSAC -w 02; echo "set BSAC = 02"
 	sudo smc -k CH0K -w 00; echo "set CH0K = 00"
@@ -2889,7 +2890,7 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	for i in {0..255}; do
 		i_hex=$(printf "%02x" $i)
 		sudo smc -k CH0B -w $i_hex; echo "set CH0B = $i_hex"
-		sleep 0.5
+		sleep 5
 		b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
 		if [[ $((0x${b0ac})) -gt 0 ]] 
 			echo "found"
@@ -2897,6 +2898,8 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 			sleep 1
 			acen=$(read_smc ACEN); echo "ACEN = $acen"
 			bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+			ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
+			ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
 			break;
 		fi
 	done
