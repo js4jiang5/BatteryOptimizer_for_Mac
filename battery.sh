@@ -2951,10 +2951,12 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 			bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 			ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
 			ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-			break;
+			#break;
 		fi
 	done
-
+	sudo smc -k CH0B -w 00; echo "set CH0B = 00"
+	sudo smc -k BSAC -w 22; echo "set BSAC = 22"
+	
 	#sudo smc -k BSAC -w 22; echo "set BSAC = 22"
 	#sleep 1
 	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
