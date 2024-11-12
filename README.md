@@ -142,4 +142,4 @@ Usage:
 ```
 
 ### Final note
-If you like this tool, [buy me a coffee](https://buymeacoffee.com/js4jiang5) ☕ 😀.
+If you feel this tool is helpful for you, you may [buy me a coffee](https://buymeacoffee.com/js4jiang5) ☕ 😀.
