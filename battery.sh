@@ -4,8 +4,8 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.22"
-BATTERY_VISUDO_VERSION="v1.0.3"
+BATTERY_CLI_VERSION="v0.0.23"
+BATTERY_VISUDO_VERSION="v1.0.4"
 
 # Path fixes for unexpected environments
 PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
@@ -145,7 +145,7 @@ Usage:
 visudoconfig="
 # Visudo settings for the battery utility installed from https://github.com/js4jiang5/BatteryOptimizer_for_MAC
 # intended to be placed in $visudo_file on a mac
-Cmnd_Alias      BATTERYOFF = $binfolder/smc -k CH0B -w 02, $binfolder/smc -k CH0C -w 02, $binfolder/smc -k CH0B -r, $binfolder/smc -k CH0C -r
+Cmnd_Alias      BATTERYOFF = $binfolder/smc -k CH0B -w 02, $binfolder/smc -k CH0B -w 01, $binfolder/smc -k CH0C -w 02, $binfolder/smc -k CH0B -r, $binfolder/smc -k CH0C -r
 Cmnd_Alias      BATTERYON = $binfolder/smc -k CH0B -w 00, $binfolder/smc -k CH0C -w 00
 Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r, $binfolder/smc -k CH0J -w 00, $binfolder/smc -k CH0J -r, $binfolder/smc -k CH0K -w 00, $binfolder/smc -k CH0K -r
 Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01, $binfolder/smc -k CH0J -w 01, $binfolder/smc -k CH0K -w 01
@@ -153,7 +153,7 @@ Cmnd_Alias      LEDCONTROL = $binfolder/smc -k ACLC -w 04, $binfolder/smc -k ACL
 Cmnd_Alias      BATTERYBCLM = $binfolder/smc -k BCLM -w 0a, $binfolder/smc -k BCLM -w 64, $binfolder/smc -k BCLM -r
 Cmnd_Alias      BATTERYCHWA = $binfolder/smc -k CHWA -w 00, $binfolder/smc -k CHWA -w 01, $binfolder/smc -k CHWA -r
 Cmnd_Alias      BATTERYACEN = $binfolder/smc -k ACEN -w 00, $binfolder/smc -k ACEN -w 01, $binfolder/smc -k ACEN -r
-Cmnd_Alias      BATTERYBSAC = $binfolder/smc -k BSAC -w 03, $binfolder/smc -k BSAC -w 13, $binfolder/smc -k BSAC -w 23, $binfolder/smc -k BSAC -w 33, $binfolder/smc -k BSAC -w 43, $binfolder/smc -k BSAC -r
+Cmnd_Alias      BATTERYBSAC = $binfolder/smc -k BSAC -w 13, $binfolder/smc -k BSAC -w 33, $binfolder/smc -k BSAC -w 15, $binfolder/smc -k BSAC -w 35, $binfolder/smc -k BSAC -w 17, $binfolder/smc -k BSAC -w 37, $binfolder/smc -k BSAC -w 19, $binfolder/smc -k BSAC -w 39, $binfolder/smc -k BSAC -w 02, $binfolder/smc -k BSAC -w 22, $binfolder/smc -k BSAC -w 03, $binfolder/smc -k BSAC -w 23, $binfolder/smc -k BSAC -r
 Cmnd_Alias      BATTERYACLM = $binfolder/smc -k ACLM -w 0000, $binfolder/smc -k ACLM -w 0b80, $binfolder/smc -k ACLM -w 0d80, $binfolder/smc -k ACLM -w 1058, $binfolder/smc -k ACLM -w 122a, $binfolder/smc -k ACLM -r
 Cmnd_Alias      BATTERYCHBI = $binfolder/smc -k CHBI -r
 Cmnd_Alias      BATTERYB0AC = $binfolder/smc -k B0AC -r 
@@ -575,31 +575,34 @@ function change_magsafe_led_color() {
 # Re:discharging, we're using keys uncovered by @howie65: https://github.com/actuallymentor/battery/issues/20#issuecomment-1364540704
 # CH0I seems to be the "disable the adapter" key
 function enable_discharging() {
-	#if [[ $(get_cpu_type) == "apple" ]]; then
+	if [[ $(get_cpu_type) == "apple" ]]; then
 		disable_charging
 		log "🔽🪫 Enabling battery discharging"
 		if $has_CH0I; then sudo smc -k CH0I -w 01; fi
 		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
-	#else
+	else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
-		#if $has_ACEN; then sudo smc -k ACEN -w 00; fi
-		if $has_CH0J; then sudo smc -k CH0J -w 01; fi
-		if $has_CH0K; then sudo smc -k CH0K -w 01; fi
-		if $has_ACLM; then sudo smc -k ACLM -w 0000; fi
-	#fi
+		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
+		if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) & 0xdf)) | awk '{printf "%02x", $1}'); fi	
+		if $has_CH0B; then sudo smc -k CH0B -w 01; sudo smc -k CH0B -w 01; fi
+		#if $has_CH0J; then sudo smc -k CH0J -w 01; fi
+		#if $has_CH0K; then sudo smc -k CH0K -w 01; fi
+	fi
 	sleep 1
 }
 
 function disable_discharging() {
 	log "🔼🪫 Disabling battery discharging"
-	#if [[ $(get_cpu_type) == "apple" ]]; then
+	if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0I; then sudo smc -k CH0I -w 00; fi
-	#else
-		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		if $has_CH0J; then sudo smc -k CH0J -w 00; fi
-		if $has_CH0K; then sudo smc -k CH0K -w 00; fi
-		if $has_ACLM; then sudo smc -k ACLM -w $aclm; fi
-	#fi
+	else
+		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
+		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+		if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi			
+		if $has_CH0B; then sudo smc -k CH0B -w 00; sudo smc -k CH0B -w 00; fi
+		#if $has_CH0J; then sudo smc -k CH0J -w 00; fi
+		#if $has_CH0K; then sudo smc -k CH0K -w 00; fi
+	fi
 	sleep 1
 
 	## Keep track of status
@@ -634,27 +637,31 @@ function disable_discharging() {
 # but @joelucid uses CH0C https://github.com/davidwernhart/AlDente/issues/52#issuecomment-1019933570
 # so I'm using both since with only CH0B I noticed sometimes during sleep it does trigger charging
 function enable_charging() {
-	#if [[ $(get_cpu_type) == "apple" ]]; then
+	if [[ $(get_cpu_type) == "apple" ]]; then
 		disable_discharging
 		log "🔌🔋 Enabling battery charging"
 		if $has_CH0B; then sudo smc -k CH0B -w 00; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 00; fi
-	#else
+	else
 		if $has_BCLM; then sudo smc -k BCLM -w 64; fi
-		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-	#fi
+		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+		if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi	
+		if $has_CH0B; then sudo smc -k CH0B -w 00; sudo smc -k CH0B -w 00; fi
+	fi
 	sleep 1
 }
 
 function disable_charging() {
 	log "🔌🪫 Disabling battery charging"
-	#if [[ $(get_cpu_type) == "apple" ]]; then
+	if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0B; then sudo smc -k CH0B -w 02; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 02; fi
-	#fi
+	else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
-		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-	#fi
+		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+		if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi	
+		if $has_CH0B; then sudo smc -k CH0B -w 02; sudo smc -k CH0B -w 02; fi
+	fi
 	sleep 1
 }
 
@@ -3090,32 +3097,72 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
 	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
 
-	sudo smc -k BCLM -w 64; echo "set BCLM = 64"
-	sudo smc -k BSAC -w 02; echo "set BSAC = 02"
-	#sudo smc -k CH0K -w 00; echo "set CH0K = 00"
-	sleep 1
+	#sudo smc -k BCLM -w 64; echo "set BCLM = 64"
+	#sudo smc -k BSAC -w 02; echo "set BSAC = 02"
+	##sudo smc -k CH0K -w 00; echo "set CH0K = 00"
+	#sleep 1
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#acen=$(read_smc ACEN); echo "ACEN = $acen"
+	#ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
+	#ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
+	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+	#for i in {0..255}; do
+	#	i_hex=$(printf "%02x" $i)
+	#	sudo smc -k CH0B -w $i_hex; echo "set CH0B = $i_hex"
+	#	sleep 5
+	#	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	#	chbi=$(read_smc CHBI); echo "CHBI = $chbi"
+	#	if [[ $((0x${b0ac})) -gt 0 ]]; then
+	#		echo "found"
+	#		#sudo smc -k CH0B -w 00; echo "set CH0B = 00"
+	#		sleep 1
+	#		acen=$(read_smc ACEN); echo "ACEN = $acen"
+	#		bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#		ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
+	#		ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
+	#		break;
+	#	fi
+	#done
+
+	enable_charging
+	echo "set BCLM=64"
+	echo "set ACEN=01"
+	echo "set CH0B=00"
+	sleep 5
+	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	chbi=$(read_smc CHBI); echo "CHBI = $chbi"
 	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	acen=$(read_smc ACEN); echo "ACEN = $acen"
-	ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
 	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	for i in {0..255}; do
-		i_hex=$(printf "%02x" $i)
-		sudo smc -k CH0B -w $i_hex; echo "set CH0B = $i_hex"
-		sleep 5
-		b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-		chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-		if [[ $((0x${b0ac})) -gt 0 ]]; then
-			echo "found"
-			#sudo smc -k CH0B -w 00; echo "set CH0B = 00"
-			sleep 1
-			acen=$(read_smc ACEN); echo "ACEN = $acen"
-			bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-			ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-			ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-			break;
-		fi
-	done
+
+	disable_charging
+	echo "set BCLM=0a"
+	echo "set ACEN=01"
+	echo "set CH0B=02"
+	sleep 5
+	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	chbi=$(read_smc CHBI); echo "CHBI = $chbi"
+	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+
+	enable_discharging
+	echo "set BCLM=0a"
+	echo "set ACEN=00"
+	echo "set CH0B=01"
+	sleep 5
+	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	chbi=$(read_smc CHBI); echo "CHBI = $chbi"
+	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+
+	disable_discharging
+	echo "set BCLM=0a"
+	echo "set ACEN=01"
+	echo "set CH0B=00"
+	sleep 5
+	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	chbi=$(read_smc CHBI); echo "CHBI = $chbi"
+	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
 
 	#sudo smc -k BSAC -w 22; echo "set BSAC = 22"
 	#sleep 1
