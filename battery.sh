@@ -3153,7 +3153,8 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	chbi=$(read_smc CHBI); echo "CHBI = $chbi"
 	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
+	pmset -g batt | head -n1
+	
 	disable_discharging
 	echo "set BCLM=0a"
 	echo "set ACEN=01"
