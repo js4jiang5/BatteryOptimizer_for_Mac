@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.23"
+BATTERY_CLI_VERSION="v0.0.24"
 BATTERY_VISUDO_VERSION="v1.0.4"
 
 # Path fixes for unexpected environments
@@ -584,7 +584,7 @@ function enable_discharging() {
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
 		if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) & 0xdf)) | awk '{printf "%02x", $1}'); fi	
-		if $has_CH0B; then sudo smc -k CH0B -w 01; sudo smc -k CH0B -w 01; fi
+		if $has_CH0B; then sudo smc -k CH0B -w 00; sudo smc -k CH0B -w 00; fi
 		#if $has_CH0J; then sudo smc -k CH0J -w 01; fi
 		#if $has_CH0K; then sudo smc -k CH0K -w 01; fi
 	fi
@@ -599,7 +599,7 @@ function disable_discharging() {
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 		if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi			
-		if $has_CH0B; then sudo smc -k CH0B -w 00; sudo smc -k CH0B -w 00; fi
+		if $has_CH0B; then sudo smc -k CH0B -w 02; sudo smc -k CH0B -w 02; fi
 		#if $has_CH0J; then sudo smc -k CH0J -w 00; fi
 		#if $has_CH0K; then sudo smc -k CH0K -w 00; fi
 	fi
@@ -3147,18 +3147,18 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	enable_discharging
 	echo "set BCLM=0a"
 	echo "set ACEN=00"
-	echo "set CH0B=01"
+	echo "set CH0B=00"
 	sleep 5
 	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
 	chbi=$(read_smc CHBI); echo "CHBI = $chbi"
 	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
 	pmset -g batt | head -n1
-	
+
 	disable_discharging
 	echo "set BCLM=0a"
 	echo "set ACEN=01"
-	echo "set CH0B=00"
+	echo "set CH0B=02"
 	sleep 5
 	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
 	chbi=$(read_smc CHBI); echo "CHBI = $chbi"
