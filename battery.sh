@@ -3165,6 +3165,17 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
 
+	enable_discharging
+	echo "set BCLM=0a"
+	echo "set ACEN=00"
+	echo "set CH0B=00"
+	sleep 5
+	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+	chbi=$(read_smc CHBI); echo "CHBI = $chbi"
+	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+	pmset -g batt | head -n1
+	
 	#sudo smc -k BSAC -w 22; echo "set BSAC = 22"
 	#sleep 1
 	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
