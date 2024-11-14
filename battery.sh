@@ -581,9 +581,9 @@ function enable_discharging() {
 		if $has_CH0I; then sudo smc -k CH0I -w 01; fi
 		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
 	else
-		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
-		if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) & 0xdf)) | awk '{printf "%02x", $1}'); fi	
+		#if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) & 0xdf)) | awk '{printf "%02x", $1}'); fi	
+		if $has_BCLM; then sudo smc -k BCLM -w 0a; sleep 2; fi
 		if $has_CH0B; then sudo smc -k CH0B -w 00; sudo smc -k CH0B -w 00; fi
 		#if $has_CH0J; then sudo smc -k CH0J -w 01; fi
 		#if $has_CH0K; then sudo smc -k CH0K -w 01; fi
@@ -596,9 +596,9 @@ function disable_discharging() {
 	if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0I; then sudo smc -k CH0I -w 00; fi
 	else
-		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi			
+		#if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi			
+		if $has_BCLM; then sudo smc -k BCLM -w 0a; sleep 2; fi
 		if $has_CH0B; then sudo smc -k CH0B -w 02; sudo smc -k CH0B -w 02; fi
 		#if $has_CH0J; then sudo smc -k CH0J -w 00; fi
 		#if $has_CH0K; then sudo smc -k CH0K -w 00; fi
@@ -643,9 +643,9 @@ function enable_charging() {
 		if $has_CH0B; then sudo smc -k CH0B -w 00; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 00; fi
 	else
-		if $has_BCLM; then sudo smc -k BCLM -w 64; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi	
+		#if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi	
+		if $has_BCLM; then sudo smc -k BCLM -w 64; sleep 2; fi
 		if $has_CH0B; then sudo smc -k CH0B -w 00; sudo smc -k CH0B -w 00; fi
 	fi
 	sleep 1
@@ -657,9 +657,9 @@ function disable_charging() {
 		if $has_CH0B; then sudo smc -k CH0B -w 02; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 02; fi
 	else
-		if $has_BCLM; then sudo smc -k BCLM -w 0a;fi
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi	
+		#if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi	
+		if $has_BCLM; then sudo smc -k BCLM -w 0a; sleep 2; fi
 		if $has_CH0B; then sudo smc -k CH0B -w 02; sudo smc -k CH0B -w 02; fi
 	fi
 	sleep 1
@@ -3126,44 +3126,44 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 
 	enable_charging
 	echo "set BCLM=64"
-	echo "set ACEN=01"
+	#echo "set ACEN=01"
 	echo "set CH0B=00"
 	sleep 5
 	bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
 	for i in {0..10}; do
 		sleep 1
-		b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+		b0ac=$(read_smc B0AC); chbi=$(read_smc CHBI);
+		echo "B0AC = $b0ac, CHBI = $chbi"
 	done
 
 	disable_charging
 	echo "set BCLM=0a"
-	echo "set ACEN=01"
+	#echo "set ACEN=01"
 	echo "set CH0B=02"
 	sleep 5
 	bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
 	for i in {0..10}; do
 		sleep 1
-		b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+		b0ac=$(read_smc B0AC); chbi=$(read_smc CHBI);
+		echo "B0AC = $b0ac, CHBI = $chbi"
 	done
 
 	enable_discharging
 	echo "set BCLM=0a"
-	echo "set ACEN=00"
+	#echo "set ACEN=00"
 	echo "set CH0B=00"
 	sleep 5
 	bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
 	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
 	for i in {0..10}; do
 		sleep 1
-		b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
+		b0ac=$(read_smc B0AC); chbi=$(read_smc CHBI);
+		echo "B0AC = $b0ac, CHBI = $chbi"
 	done
 	pmset -g batt | head -n1
 
