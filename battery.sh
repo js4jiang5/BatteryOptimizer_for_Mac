@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.25"
+BATTERY_CLI_VERSION="v0.0.26"
 BATTERY_VISUDO_VERSION="v1.0.4"
 
 # Path fixes for unexpected environments
@@ -581,7 +581,7 @@ function enable_discharging() {
 		if $has_CH0I; then sudo smc -k CH0I -w 01; fi
 		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
 	else
-		if $has_BCLM; then sudo smc -k BCLM -w 64; sudo smc -k BCLM -w 0a; fi
+		if $has_BCLM; then sudo smc -k BCLM -w 0a; sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
 		if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) & 0xdf)) | awk '{printf "%02x", $1}'); fi	
 		if $has_CH0B; then sudo smc -k CH0B -w 00; sudo smc -k CH0B -w 00; fi
@@ -596,7 +596,7 @@ function disable_discharging() {
 	if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0I; then sudo smc -k CH0I -w 00; fi
 	else
-		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
+		if $has_BCLM; then sudo smc -k BCLM -w 0a; sudo smc -k BCLM -w 0a; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 		if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi			
 		if $has_CH0B; then sudo smc -k CH0B -w 02; sudo smc -k CH0B -w 02; fi
@@ -643,7 +643,7 @@ function enable_charging() {
 		if $has_CH0B; then sudo smc -k CH0B -w 00; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 00; fi
 	else
-		if $has_BCLM; then sudo smc -k BCLM -w 0a; sudo smc -k BCLM -w 64; fi
+		if $has_BCLM; then sudo smc -k BCLM -w 64; sudo smc -k BCLM -w 64; fi
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 		if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi	
 		if $has_CH0B; then sudo smc -k CH0B -w 00; sudo smc -k CH0B -w 00; fi
@@ -657,7 +657,7 @@ function disable_charging() {
 		if $has_CH0B; then sudo smc -k CH0B -w 02; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 02; fi
 	else
-		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
+		if $has_BCLM; then sudo smc -k BCLM -w 0a; sudo smc -k BCLM -w 0a;fi
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 		if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi	
 		if $has_CH0B; then sudo smc -k CH0B -w 02; sudo smc -k CH0B -w 02; fi
