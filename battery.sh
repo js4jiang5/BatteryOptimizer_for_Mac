@@ -3124,6 +3124,8 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	#	fi
 	#done
 
+	battery status
+	
 	enable_charging
 	echo "set BCLM=64"
 	#echo "set ACEN=01"
