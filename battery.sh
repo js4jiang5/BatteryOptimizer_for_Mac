@@ -5,7 +5,7 @@
 ## variables are used by this binary as well at the update script
 ## ###############
 BATTERY_CLI_VERSION="v0.0.29"
-BATTERY_VISUDO_VERSION="v1.0.4"
+BATTERY_VISUDO_VERSION="v1.0.5"
 
 # Path fixes for unexpected environments
 PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
@@ -150,7 +150,7 @@ Cmnd_Alias      BATTERYON = $binfolder/smc -k CH0B -w 00, $binfolder/smc -k CH0C
 Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r, $binfolder/smc -k CH0J -w 00, $binfolder/smc -k CH0J -r, $binfolder/smc -k CH0K -w 00, $binfolder/smc -k CH0K -r
 Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01, $binfolder/smc -k CH0J -w 01, $binfolder/smc -k CH0K -w 01
 Cmnd_Alias      LEDCONTROL = $binfolder/smc -k ACLC -w 04, $binfolder/smc -k ACLC -w 03, $binfolder/smc -k ACLC -w 02, $binfolder/smc -k ACLC -w 01, $binfolder/smc -k ACLC -w 00, $binfolder/smc -k ACLC -r
-Cmnd_Alias      BATTERYBCLM = $binfolder/smc -k BCLM -w 0a, $binfolder/smc -k BCLM -w 64, $binfolder/smc -k BCLM -r
+Cmnd_Alias      BATTERYBCLM = $binfolder/smc -k BCLM -w 0a, $binfolder/smc -k BCLM -w 64, $binfolder/smc -k BCLM -w 00, $binfolder/smc -k BCLM -r
 Cmnd_Alias      BATTERYCHWA = $binfolder/smc -k CHWA -w 00, $binfolder/smc -k CHWA -w 01, $binfolder/smc -k CHWA -r
 Cmnd_Alias      BATTERYACEN = $binfolder/smc -k ACEN -w 00, $binfolder/smc -k ACEN -w 01, $binfolder/smc -k ACEN -r
 Cmnd_Alias      BATTERYBSAC = $binfolder/smc -k BSAC -w 13, $binfolder/smc -k BSAC -w 33, $binfolder/smc -k BSAC -w 15, $binfolder/smc -k BSAC -w 35, $binfolder/smc -k BSAC -w 17, $binfolder/smc -k BSAC -w 37, $binfolder/smc -k BSAC -w 19, $binfolder/smc -k BSAC -w 39, $binfolder/smc -k BSAC -w 02, $binfolder/smc -k BSAC -w 22, $binfolder/smc -k BSAC -w 03, $binfolder/smc -k BSAC -w 23, $binfolder/smc -k BSAC -r
@@ -583,7 +583,7 @@ function enable_discharging() {
 	else
 		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
 		#if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) & 0xdf)) | awk '{printf "%02x", $1}'); fi	
-		if $has_BCLM; then sudo smc -k BCLM -w 0a; sleep 2; fi
+		if $has_BCLM; then sudo smc -k BCLM -w 00; sleep 2; fi
 		if $has_CH0B; then sudo smc -k CH0B -w 00; sudo smc -k CH0B -w 00; fi
 		#if $has_CH0J; then sudo smc -k CH0J -w 01; fi
 		#if $has_CH0K; then sudo smc -k CH0K -w 01; fi
@@ -598,7 +598,7 @@ function disable_discharging() {
 	else
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 		#if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi			
-		if $has_BCLM; then sudo smc -k BCLM -w 0a; sleep 2; fi
+		if $has_BCLM; then sudo smc -k BCLM -w 00; sleep 2; fi
 		if $has_CH0B; then sudo smc -k CH0B -w 02; sudo smc -k CH0B -w 02; fi
 		#if $has_CH0J; then sudo smc -k CH0J -w 00; fi
 		#if $has_CH0K; then sudo smc -k CH0K -w 00; fi
@@ -659,7 +659,7 @@ function disable_charging() {
 	else
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 		#if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi	
-		if $has_BCLM; then sudo smc -k BCLM -w 0a; sleep 2; fi
+		if $has_BCLM; then sudo smc -k BCLM -w 00; sleep 2; fi
 		if $has_CH0B; then sudo smc -k CH0B -w 02; sudo smc -k CH0B -w 02; fi
 	fi
 	sleep 1
