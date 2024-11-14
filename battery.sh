@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.29"
+BATTERY_CLI_VERSION="v0.0.30"
 BATTERY_VISUDO_VERSION="v1.0.5"
 
 # Path fixes for unexpected environments
@@ -3125,7 +3125,7 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 	#done
 
 	battery status
-	
+
 	enable_charging
 	echo "set BCLM=64"
 	#echo "set ACEN=01"
@@ -3140,34 +3140,34 @@ if [[ "$action"  == "test_intel_discharge" ]]; then
 		echo "B0AC = $b0ac, CHBI = $chbi"
 	done
 
-	disable_charging
-	echo "set BCLM=0a"
-	#echo "set ACEN=01"
-	echo "set CH0B=02"
-	sleep 5
-	bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	for i in {0..10}; do
-		sleep 1
-		b0ac=$(read_smc B0AC); chbi=$(read_smc CHBI);
-		echo "B0AC = $b0ac, CHBI = $chbi"
-	done
+	#disable_charging
+	#echo "set BCLM=0a"
+	##echo "set ACEN=01"
+	#echo "set CH0B=02"
+	#sleep 5
+	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
+	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+	#for i in {0..10}; do
+	#	sleep 1
+	#	b0ac=$(read_smc B0AC); chbi=$(read_smc CHBI);
+	#	echo "B0AC = $b0ac, CHBI = $chbi"
+	#done
 
-	enable_discharging
-	echo "set BCLM=0a"
-	#echo "set ACEN=00"
-	echo "set CH0B=00"
-	sleep 5
-	bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	for i in {0..10}; do
-		sleep 1
-		b0ac=$(read_smc B0AC); chbi=$(read_smc CHBI);
-		echo "B0AC = $b0ac, CHBI = $chbi"
-	done
-	pmset -g batt | head -n1
+	#enable_discharging
+	#echo "set BCLM=0a"
+	##echo "set ACEN=00"
+	#echo "set CH0B=00"
+	#sleep 5
+	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
+	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
+	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
+	#for i in {0..10}; do
+	#	sleep 1
+	#	b0ac=$(read_smc B0AC); chbi=$(read_smc CHBI);
+	#	echo "B0AC = $b0ac, CHBI = $chbi"
+	#done
+	#pmset -g batt | head -n1
 
 	#disable_discharging
 	#echo "set BCLM=0a"
