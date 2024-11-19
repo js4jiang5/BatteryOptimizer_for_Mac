@@ -141,3 +141,5 @@ Usage:
     enable charging, remove the smc tool, and the battery script
 ```
 
+### Final note
+If you feel this tool is helpful for you, you may [buy me a coffee](https://buymeacoffee.com/js4jiang5) ☕ 😀.

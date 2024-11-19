@@ -197,7 +197,7 @@ if test -f $schedule_tracker_file && [[ $schedule_enabled =~ "enabled" ]]; then
 fi
 
 echo "[ 3 ] Setting up visudo declarations"
-if [[ $(version_number $version_local) < $(version_number "v2.0.9") ]]; then
+if [[ 10#$(version_number $version_local) -lt 10#$(version_number "v2.0.9") ]]; then
 	sudo $batteryfolder/battery.sh visudo $USER
 fi
 
@@ -219,7 +219,7 @@ sleep 1
 pkill -f "$binfolder/battery.*"
 
 
-if [[ $(version_number $version_local) -gt $(version_number "v2.0.8") ]]; then
+if [[ 10#$(version_number $version_local) -gt 10#$(version_number "v2.0.8") ]]; then
 	battery maintain recover
 else # to be removed at the beginning of 2025
 	battery maintain_synchronous recover >> $HOME/.battery/battery.log &
