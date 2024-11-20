@@ -118,8 +118,8 @@ chmod 755 $binfolder/battery
 chmod u+x $binfolder/battery
 
 battery_new=$(echo $(cat $binfolder/battery 2>/dev/null))
-battery_version_new=$(echo $(get_parameter "$battery_local" "BATTERY_CLI_VERSION") | tr -d \")
-visudo_version_new=$(echo $(get_parameter "$battery_local" "BATTERY_VISUDO_VERSION") | tr -d \")
+battery_version_new=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")
+visudo_version_new=$(echo $(get_parameter "$battery_new" "BATTERY_VISUDO_VERSION") | tr -d \")
 
 echo "[ 3 ] Setting up visudo declarations"
 if [[ $visudo_version_new != $visudo_version_local ]]; then
@@ -149,7 +149,7 @@ echo -e "\n🎉 Battery tool updated.\n"
 
 # Restart battery maintain process
 echo -e "Restarting battery maintain.\n"
-echo "$battery_version_new" > $configfolder/informed.version
+write_config informed_version "$battery_version_new"
 
 battery maintain stop >> /dev/null
 sleep 1
