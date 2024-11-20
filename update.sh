@@ -8,41 +8,6 @@ function valid_day() {
 	fi
 }
 
-function get_changelog { # get the latest changelog
-	if [[ -z $1 ]]; then
-		changelog=$(curl -sSL "$github_link/CHANGELOG" | sed s:\":'\\"':g 2>&1)
-	else
-		changelog=$(curl -sSL "$github_link/$1" | sed s:\":'\\"':g 2>&1)
-	fi
-
-    n_lines=0
-	while read -r "line"; do
-		line="v${line#*v}" # remove any words before v
-		num=$(echo $line | tr '.' ' '| tr 'v' ' ') # extract number parts
-		is_version=true
-		n_num=0
-		for var in $num; do
-			if ! [[ "$var" =~ ^[0-9]+$ ]]; then
-				is_version=false
-				break
-			else
-				n_num=$((n_num+1))
-			fi
-		done
-		if [[ $line =~ "." ]] && [[ $line =~ "v" ]] && $is_version && [[ $n_num == 3 ]] && [[ $n_lines -gt 0 ]]; then
-			is_version=true
-		else
-			is_version=false
-		fi
-
-        if $is_version; then # found the start of 2nd version
-			break
-		fi
-        n_lines=$((n_lines+1))
-    done <<< "$changelog"
-    echo -e "$changelog" | awk 'NR>=2 && NR<='$n_lines
-}
-
 function format00() {
 	value=$1
 	if [ $value -lt 10 ]; then
@@ -62,6 +27,43 @@ function version_number { # get number part of version for comparison
 	echo $(format00 $v1)$(format00 $v2)$(format00 $v3)
 }
 
+function get_parameter() { # get parameter value from configuration file. the format is var=value or var= value or var = value
+    var_loc=$(echo $(echo "$1" | tr " " "\n" | grep -n "$2" | cut -d: -f1) | awk '{print $1}')
+    if [ -z $var_loc ]; then
+        echo
+    else
+        echo $1 | awk '{print $"'"$((var_loc))"'"}' | tr '=' ' ' | awk '{print $2}'
+    fi
+}
+
+function read_config() { # read $val of $name in config_file
+	name=$1
+	val=
+	if test -f $config_file; then
+		while read -r "line" || [[ -n "$line" ]]; do
+			if [[ "$line" =~  "$name = " ]]; then
+				val=${line#*'= '}
+				break
+			fi
+		done < $config_file
+	fi
+	echo $val
+}
+
+function write_config() { # write $val to $name in config_file
+	name=$1
+	val=$2
+	if test -f $config_file; then
+		config=$(cat $config_file 2>/dev/null)
+		name_loc=$(echo "$config" | grep -n "$name" | cut -d: -f1)
+		if [[ $name_loc ]]; then
+			sed -i '' ''"$name_loc"'s/.*/'"$name"' = '"$val"'/' $config_file
+		else # not exist yet
+			echo "$name = $val" >> $config_file
+		fi
+	fi
+}
+
 # Force-set path to include sbin
 PATH="$PATH:/usr/sbin"
 
@@ -69,6 +71,7 @@ PATH="$PATH:/usr/sbin"
 tempfolder=~/.battery-tmp
 binfolder=/usr/local/bin
 configfolder=$HOME/.battery
+config_file=$configfolder/config_battery
 batteryfolder="$tempfolder/battery"
 language_file=$configfolder/language.code
 github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
@@ -92,7 +95,10 @@ fi
 
 echo -e "🔋 Starting battery update\n"
 
-version_local=$(echo $(battery version)) #update informed version first
+battery_local=$(echo $(cat $binfolder/battery 2>/dev/null))
+battery_version_local=$(echo $(get_parameter "$battery_local" "BATTERY_CLI_VERSION") | tr -d \")
+visudo_version_local=$(echo $(get_parameter "$battery_local" "BATTERY_VISUDO_VERSION") | tr -d \")
+
 # Write battery function as executable
 echo "[ 1 ] Downloading latest battery version"
 update_branch="main"
@@ -111,95 +117,28 @@ chown $USER $binfolder/battery
 chmod 755 $binfolder/battery
 chmod u+x $binfolder/battery
 
-if ! test -f $binfolder/shutdown.sh; then # check if shutdown.sh already exist, to be removed at the beginning of 2025
-	if [[ $(smc -k BCLM -r) == *"no data"* ]]; then # power limit during shutdown only required for Apple CPU Macbook
-		echo "[ 3 ] Setup for power limit when Macs shutdown"
-		sudo cp $batteryfolder/dist/.reboot $HOME/.reboot
-		sudo cp $batteryfolder/dist/.shutdown $HOME/.shutdown
-		sudo cp $batteryfolder/dist/shutdown.sh $binfolder/shutdown.sh
-		sudo cp $batteryfolder/dist/battery_shutdown.plist $HOME/Library/LaunchAgents/battery_shutdown.plist
-		launchctl enable "gui/$(id -u $USER)/com.battery_shutdown.app"
-		launchctl unload "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
-		launchctl load "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
-		sudo chown $USER $HOME/.reboot
-		sudo chmod 755 $HOME/.reboot
-		sudo chmod u+x $HOME/.reboot
-		sudo chown $USER $HOME/.shutdown
-		sudo chmod 755 $HOME/.shutdown
-		sudo chmod u+x $HOME/.shutdown
-		sudo chown $USER $binfolder/shutdown.sh
-		sudo chmod 755 $binfolder/shutdown.sh
-		sudo chmod u+x $binfolder/shutdown.sh
-	fi
-fi
-
-# correct the schedule plist if it is incorrect due to the bug, to be removed at the beginning of 2025
-schedule_tracker_file="$configfolder/calibrate_schedule"
-enable_exist="$(launchctl print gui/$(id -u $USER) | grep "=> enabled")"
-if [[ $enable_exist ]]; then # new version that replace => false with => enabled
-    schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep enabled | grep "com.battery_schedule.app")"
-else # old version that use => false
-    schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep "=> false" | grep "com.battery_schedule.app")"
-    schedule_enabled=${schedule_enabled/false/enabled}
-fi
-
-if test -f $schedule_tracker_file && [[ $schedule_enabled =~ "enabled" ]]; then
-	schedule=$(cat $schedule_tracker_file 2>/dev/null)
-
-	time=$(echo ${schedule#*" at "} | awk '{print $1}')
-	hour=${time%:*}
-	minute=${time#*:}
-
-	if [[ $schedule == *"every"* ]] && [[ $schedule == *"Week"* ]] && [[ $schedule == *"Year"* ]]; then
-        weekday=$(echo $schedule | awk '{print $4}')
-        week_period=$(echo $schedule | awk '{print $6}')
-        week=$(echo $schedule | awk '{print $13}')
-        year=$(echo $schedule | awk '{print $16}')
-        if  [[ $schedule =~ "MON" ]]; then weekday=1; elif
-            [[ $schedule =~ "TUE" ]]; then weekday=2; elif
-            [[ $schedule =~ "WED" ]]; then weekday=3; elif
-            [[ $schedule =~ "THU" ]]; then weekday=4; elif
-            [[ $schedule =~ "FRI" ]]; then weekday=5; elif
-            [[ $schedule =~ "SAT" ]]; then weekday=6; elif
-            [[ $schedule =~ "SUN" ]]; then weekday=0;
-        fi
-        schedule="weekday $weekday week_period $week_period hour $hour minute $minute"
-    else
-		n_days=0
-		days[0]=
-		days[1]=
-		days[2]=
-		days[3]=
-        schedule=${schedule/weekday}
-		day_loc=$(echo "$schedule" | tr " " "\n" | grep -n "day" | cut -d: -f1)
-		if [[ $day_loc ]]; then
-			for i_day in {1..4}; do
-				value=$(echo $schedule | awk '{print $"'"$((day_loc+i_day))"'"}')
-				if valid_day $value; then
-					days[$n_days]=$value
-					n_days=$(($n_days+1))
-				else
-					break
-				fi
-			done 
-		fi
-
-		month_period_loc=$(echo "$schedule" | tr " " "\n" | grep -n "every" | cut -d: -f1)
-
-		if [[ $month_period_loc ]]; then
-			month_period=$(echo $schedule | awk '{print $"'"$((month_period_loc+1))"'"}');
-            schedule="day ${days[*]} month_period $month_period hour $hour minute $minute"
-		else # calibrate every month case
-			schedule="day ${days[*]} $month_period hour $hour minute $minute"
-		fi
-    fi
-    battery schedule $schedule
-fi
+battery_new=$(echo $(cat $binfolder/battery 2>/dev/null))
+battery_version_new=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")
+visudo_version_new=$(echo $(get_parameter "$battery_new" "BATTERY_VISUDO_VERSION") | tr -d \")
 
 echo "[ 3 ] Setting up visudo declarations"
-if [[ 10#$(version_number $version_local) -lt 10#$(version_number "v2.0.9") ]]; then
-	sudo $batteryfolder/battery.sh visudo $USER
+if [[ $visudo_version_new != $visudo_version_local ]]; then
+	sudo $binfolder/battery visudo $USER
 fi
+
+echo "[ 4 ] Setting up battery configuration"
+if ! test -f $config_file; then # config file not exist
+	touch $config_file
+fi
+if [[ -z $(read_config calibrate_method) ]]; then write_config calibrate_method "$(cat $configfolder/calibrate_method 2>/dev/null)"; rm -rf $configfolder/calibrate_method; fi
+if [[ -z $(read_config calibrate_schedule) ]]; then write_config calibrate_schedule "$(cat $configfolder/calibrate_schedule 2>/dev/null)"; rm -rf $configfolder/calibrate_schedule; fi
+if [[ -z $(read_config informed_version) ]]; then write_config informed_version "$(cat $configfolder/informed.version 2>/dev/null)"; rm -rf $configfolder/informed.version; fi
+if [[ -z $(read_config language) ]]; then write_config language "$(cat $configfolder/language.code 2>/dev/null)"; rm -rf $configfolder/language.code; fi
+if [[ -z $(read_config maintain_percentage) ]]; then write_config maintain_percentage "$(cat $configfolder/maintain.percentage 2>/dev/null)"; rm -rf $configfolder/maintain.percentage; fi
+if [[ -z $(read_config clamshell_discharge) ]]; then write_config clamshell_discharge "$(cat $configfolder/clamshell_discharge 2>/dev/null)"; rm -rf $configfolder/clamshell_discharge; fi
+if [[ -z $(read_config webhookid) ]]; then write_config webhookid "$(cat $configfolder/ha_webhook.id 2>/dev/null)"; rm -rf $configfolder/ha_webhook.id; fi
+if test -f $configfolder/sig; then rm -rf $configfolder/sig; fi
+if test -f $configfolder/state; then rm -rf $configfolder/state; fi
 
 # Remove tempfiles
 cd
@@ -210,29 +149,21 @@ echo -e "\n🎉 Battery tool updated.\n"
 
 # Restart battery maintain process
 echo -e "Restarting battery maintain.\n"
-version=$(echo $(battery version)) #update informed version first
-informed_version_file=$configfolder/informed.version
-echo "$version" > $informed_version_file
+write_config informed_version "$battery_version_new"
 
 battery maintain stop >> /dev/null
 sleep 1
 pkill -f "$binfolder/battery.*"
+battery maintain recover
 
-
-if [[ 10#$(version_number $version_local) -gt 10#$(version_number "v2.0.8") ]]; then
-	battery maintain recover
-else # to be removed at the beginning of 2025
-	battery maintain_synchronous recover >> $HOME/.battery/battery.log &
-	battery create_daemon >> /dev/null
-	battery schedule enable >> /dev/null
-	battery status 
-fi
-
-button_empty="                                                                                                                                                    "
+empty="                                                                    "
+button_empty="${empty} Buy me a coffee ☕ ${empty}😀"
+button_empty_tw="${empty} 請我喝杯咖啡 ☕ ${empty}😀"
 if $is_TW; then
-	changelog=$(get_changelog CHANGELOG_TW)
-	answer="$(osascript -e 'display dialog "'"已更新至 $version, 更新內容如下\n\n$changelog"'" buttons {"'"$button_empty"'", "完成"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+	answer="$(osascript -e 'display dialog "'"已更新至 $battery_version_new \n\n如果您覺得這個小工具對您有幫助,點擊下方按鈕請我喝杯咖啡吧"'" buttons {"'"$button_empty_tw"'", "完成"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
 else
-	changelog=$(get_changelog CHANGELOG)
-	answer="$(osascript -e 'display dialog "'"Update to $version completed, changes include\n\n$changelog"'" buttons {"'"$button_empty"'", "Finish"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+	answer="$(osascript -e 'display dialog "'"Update to $battery_version_new completed. \n\nIf you feel this tool is helpful, click the button below and buy me a coffee."'" buttons {"'"$button_empty"'", "Finish"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+fi
+if [[ $answer =~ "coffee" ]] || [[ $answer =~ "咖啡" ]]; then
+    open https://buymeacoffee.com/js4jiang5
 fi

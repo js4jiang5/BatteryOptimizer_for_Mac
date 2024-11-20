@@ -1,5 +1,19 @@
 #!/bin/bash
 
+function write_config() { # write $val to $name in config_file
+	name=$1
+	val=$2
+	if test -f $config_file; then
+		config=$(cat $config_file 2>/dev/null)
+		name_loc=$(echo "$config" | grep -n "$name" | cut -d: -f1)
+		if [[ $name_loc ]]; then
+			sed -i '' ''"$name_loc"'s/.*/'"$name"' = '"$val"'/' $config_file
+		else # not exist yet
+			echo "$name = $val" >> $config_file
+		fi
+	fi
+}
+
 # User welcome message
 echo -e "\n####################################################################"
 echo '# 👋 Welcome, this is the setup script for the battery CLI tool.'
@@ -14,6 +28,7 @@ mkdir -p $tempfolder
 # Set script value
 calling_user=${1:-"$USER"}
 configfolder=/Users/$calling_user/.battery
+config_file=$configfolder/config_battery
 pidfile=$configfolder/battery.pid
 logfile=$configfolder/battery.log
 sleepwatcher_log=$configfolder/sleepwatcher.log
@@ -36,7 +51,8 @@ batteryfolder="$tempfolder/battery"
 echo "[ 2 ] Downloading latest version of battery CLI"
 rm -rf $batteryfolder
 mkdir -p $batteryfolder
-curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/heads/$update_branch.zip"
+#curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/heads/$update_branch.zip"
+curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/tags/v2.0.12.zip"
 unzip -qq $batteryfolder/repo.zip -d $batteryfolder
 cp -r $batteryfolder/$in_zip_folder_name/* $batteryfolder
 rm $batteryfolder/repo.zip
@@ -96,6 +112,17 @@ sudo chown -R $calling_user $configfolder
 
 # Run battery maintain with default percentage 80
 echo "[ 7 ] Set default battery maintain percentage to 80%, can be changed afterwards"
+# Setup configuration file
+version=$(echo $(battery version))
+touch $config_file
+write_config calibrate_method 1
+write_config calibrate_schedule
+write_config informed_version $version
+write_config language
+write_config maintain_percentage
+write_config clamshell_discharge
+write_config webhookid
+
 $binfolder/battery maintain 80 >/dev/null &
 
 if [[ $(smc -k BCLM -r) == *"no data"* ]]; then # sleepwatcher only required for Apple CPU Macbook
@@ -164,38 +191,6 @@ if [[ $(smc -k BCLM -r) == *"no data"* ]]; then # sleepwatcher only required for
 		sudo chown -R $calling_user $HOME/.wakeup
 		sudo chmod 755 $HOME/.wakeup
 		sudo chmod +x $HOME/.wakeup
-
-#		sleep_file=$HOME/.sleep
-#		wakeup_file=$HOME/.wakeup
-#		# .sleep
-#		sleep_code="#!/bin/bash
-#if [[ \$(smc -k CHWA -r) == *\"no data\"* ]]; then
-#	chwa_has_data=false
-#else
-#	chwa_has_data=true
-#fi
-
-#if \$chwa_has_data; then
-#	sudo smc -k CHWA -w 01 # limit at 80% before sleep
-#	echo \"\`date +%Y/%m/%d-%T\` sleep\"  >> $sleepwatcher_log
-#fi"
-#		echo "$sleep_code" > "$sleep_file"
-#		chmod +x "$sleep_file"
-
-#		# .wakeup
-#		wakeup_code="#!/bin/bash
-#if [[ \$(smc -k CHWA -r) == *\"no data\"* ]]; then
-#	chwa_has_data=false
-#else
-#	chwa_has_data=true
-#fi
-
-#if \$chwa_has_data; then
-#	sudo smc -k CHWA -w 00 # allow full charge to 100%
-#	echo \"\`date +%Y/%m/%d-%T\` wakeup\"  >> $sleepwatcher_log
-#fi"
-#		echo "$wakeup_code" > "$wakeup_file"
-#		chmod +x "$wakeup_file"
 	fi
 fi
 
@@ -204,4 +199,42 @@ cd ../..
 echo "[ Final ] Removing temp folder $tempfolder"
 rm -rf $tempfolder
 
-echo -e "\n🎉 Battery tool installed. Type \"battery help\" for instructions.\n"
+#echo -e "\n🎉 Battery tool installed. Type \"battery help\" for instructions.\n"
+
+lang=$(defaults read -g AppleLocale)
+if [[ $lang =~ "zh_TW" ]]; then
+	is_TW=true
+else
+	is_TW=false
+fi
+
+empty="                                                                    "
+button_empty="${empty} Buy me a coffee ☕ ${empty}😀"
+button_empty_tw="${empty} 請我喝杯咖啡 ☕ ${empty}😀"
+notice="Installation completed.
+
+Please setup your MAC system settings as follows
+1.	system settings > notifications > enable \\\"Allow notifications when mirroring or sharing\\\"
+2.	system settings > notifications > applications > Script Editor > Choose \\\"Alerts\\\"
+3.	system settings > battery > options > enable 
+	\\\"Prevent automatic sleeping on power adapter when the display is off\\\" or
+	system settings > display > advanced > enable 
+	\\\"Prevent your MAC from sleeping when its display is off\\\"
+"
+notice_tw="安裝完成.
+
+請調整 MAC 系統設定如下
+1.	系統設定 > 通知 > 開啟 \\\"在鏡像輸出或共享顯示器時允許通知\\\"
+2.	系統設定 > 通知 > 應用程式通知 > 工序指令編寫程式 > 選擇 \\\"提示\\\"
+3.	系統設定 > 電池 > 進階 > 開啟 \\\"避免在顯示器關閉時自動進入睡眠\\\" 或
+	系統設定 > 顯示器 > 進階 > 開啟 \\\"避免在顯示器關閉時自動進入睡眠\\\"
+"
+
+if $is_TW; then
+	answer="$(osascript -e 'display dialog "'"$notice_tw \n如果您覺得這個小工具對您有幫助,點擊下方按鈕請我喝杯咖啡吧"'" buttons {"'"$button_empty_tw"'", "完成"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+else
+	answer="$(osascript -e 'display dialog "'"$notice \nIf you feel this tool is helpful, you may click the button below and buy me a coffee."'" buttons {"'"$button_empty"'", "Finish"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+fi
+if [[ $answer =~ "coffee" ]] || [[ $answer =~ "咖啡" ]]; then
+    open https://buymeacoffee.com/js4jiang5
+fi

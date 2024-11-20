@@ -1,3 +1,18 @@
+v2.0.12
+此次更新需要輸入密碼
+* 修正問題
+- 針對 Intel Macbook 放電功能的修改可能影響到 Apple Macbook 放電穩定性
+- 判斷 calibrate 是否正在進行有出錯概率
+- 判斷 maintain 是否正在進行有出錯概率
+- 判斷 AC 電源線是否有接上有出錯概率
+- battery schedule disable 需要重開機才生效的問題
+
+* 新增功能
+- 支援部分 Intel Macbooks 電源燈號顯示 (綠燈: 暫停充電, 橘燈: 充電中)
+- 將所有設定整合至單一檔案, 以利於統合管理
+- 將電池維護狀態 (battery maintain status) 整合至 PID 檔案, 以利於統合管理
+- 將 SIG 型別整合至 SIG PID 檔案, 以利於統合管理
+
 v2.0.11
 * 修正問題
 - 每日電池狀況通知未成功改成繁體中文
