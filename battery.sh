@@ -26,7 +26,7 @@ calibrate_pidfile=$configfolder/calibrate.pid
 schedule_path=$HOME/Library/LaunchAgents/battery_schedule.plist
 shutdown_path=$HOME/Library/LaunchAgents/battery_shutdown.plist
 daily_log=$configfolder/daily.log
-github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
+github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/refs/heads/pre-release"
 
 ## ###############
 ## Housekeeping
