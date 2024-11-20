@@ -112,10 +112,11 @@ sudo chown -R $calling_user $configfolder
 # Run battery maintain with default percentage 80
 echo "[ 7 ] Set default battery maintain percentage to 80%, can be changed afterwards"
 # Setup configuration file
+version=$(echo $(battery version))
 touch $config_file
 write_config calibrate_method 1
 write_config calibrate_schedule
-write_config informed_version
+write_config informed_version $version
 write_config language
 write_config maintain_percentage
 write_config clamshell_discharge
