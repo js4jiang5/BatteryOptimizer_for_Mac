@@ -9,7 +9,7 @@
 - 支援 Apple 和 Intel CPU Mac（請參閱下面的註釋）
 - 航行模式 (sail mode)，允許電池從維持百分比航行到航行目標而無需充電
 - 定時校準，每月指定日（最多四日）開始自動校準，或每1-3個月指定一日，或每1-12週指定星期幾開始自動校準
-- 新指令“suspend”，暫時暫停維護，允許充電至 100%，並在重新連接交流電源供應器時自動恢復維護
+- 新指令“suspend”，暫時電池維護，允許充電至 100%，並在重新連接交流電源供應器時自動恢復維護
 - 即使 MacBook 睡眠或關機時，充電限制器仍然有效
   - Intel CPU：限制為上限百分比
   - Apple CPU：限制固定為80%（註：不支援MacOS Sequoia，因為 Apple 不再提供此功能）
@@ -36,11 +36,7 @@
 ### 刪除指令
 - 電池轉接器開/關（令人困惑，最好不要使用）
 - 電池充電開/關（令人困惑，最好不要使用）
-- 電池保持使用電壓（不實用，因為充電開始時電壓突然升高）
-
-- battery adapter on/off (令人困惑，最好不要使用)
-- battery charging on/off (令人困惑，最好不要使用)
-- battery maintain 使用電壓為依據 (不實用，因為充電開始時電壓突然升高)
+- 電池保持使用電壓為依據（不實用，因為充電開始時電壓突然升高）
 
 ### 需求
 這是適用於 Apple 和 Intel Silicon Mac 的 CLI 工具。<br>
@@ -100,14 +96,14 @@ Usage:
     battery schedule day 1 8 15 22    # 每月 1, 8, 15, 22 日早上九點校準
     battery schedule day 3 18 hour 13    # 每月 3, 18 日 13:00 (下午一點)校準
     battery schedule day 6 16 26 hour 18 minute 30    # 每月 6, 16, 26 日 18:30 校準
-    battery schedule weekday 0 week_period 2 hour 21 minute 30 # 每兩個禮拜的禮拜 21:30 校準
+    battery schedule weekday 0 week_period 2 hour 21 minute 30 # 每兩個禮拜的禮拜日 21:30 校準
     battery schedule disable    # 停止定期校準
     battery schedule enable    # 重啟定期校準
     限制:
       1. 每月最多四日
       2. 正確日期(day)範圍  [1-28]
       3. 正確小時(hour)範圍 [0-23]
-      4. 正確分(minute)範圍 [0-59]
+      4. 正確分鐘(minute)範圍 [0-59]
       5. 正確星期幾(weekday)範圍 [0-6] 0:星期日, 1:星期一, 以此類推
       6. 正確星期週期(week_period)範圍 [1-12]
       7. 正確月週期(month_period)範圍 [1-3]
@@ -124,13 +120,13 @@ Usage:
     顯示電池 SMC 狀態、容量、溫度、運作狀況和循環計數
 
   battery dailylog
-    輸出電池日誌並顯示電池日誌儲存位置
+    顯示電池日誌以及電池日誌儲存位置
 
   battery changelog
     顯示在 Github 上最新版本的變更內容
 
   battery logs LINES[integer, optional]
-    顯示電池記錄的最後指定行數
+    顯示電池記錄的最末指定行數
     eg: battery logs 100
 
   battery language LANG[tw,us]
