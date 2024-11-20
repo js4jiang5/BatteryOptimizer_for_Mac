@@ -753,7 +753,7 @@ function get_battery_temperature() {
 	else
 		#temperature=$(ioreg -l -n AppleSmartBattery -r | grep "\"Temperature\" =" | awk '{ print $3 }' | tr ',' '.')
 		#temperature=$(echo "scale=1; ($temperature+5)/100" | bc)
-		temperature=$(read_smc TB0T) # this value is closer to coconutBattery and AlDente
+		temperature=$(echo $(smc -k TB0T -r) | awk '{print $3}') # this value is closer to coconutBattery and AlDente
 		temperature=$(echo "scale=1; ($temperature*1000+50)/1000" | bc)
 	fi
     
