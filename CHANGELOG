@@ -1,3 +1,18 @@
+v2.0.12
+This update need to enter password
+* fix bugs below
+- modification for Intel discharging might affect Apple discharging stability
+- detection of whether calibrate is running is not solid accurate
+- detection of whether maintain is running is not solid accurate
+- detection of whether AC adapter is connected is not solid accurate
+- battery schedule disable need reboot to become effective
+
+* new features
+- support LED change for some Intel Macbooks (Green: no charging, Orange: charging)
+- integrate all configurations in one file for better management
+- integrate battery maintain status into PID file for better management
+- integrate SIG type in SIG PID file for better management
+
 v2.0.11
 * fix bugs below
 - daily notification is not shown in traditional Chinese successfully

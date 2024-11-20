@@ -2,8 +2,11 @@
 
 [BatteryOptimizer_for_MAC](https://github.com/js4jiang5/BatteryOptimizer_for_MAC) is a fork of [Battery APP v1.2.7](https://github.com/actuallymentor/battery), with new features, enhancements, bug fixes, and removal of confusing or useless comands as follows
 
+## Other languages
+- [正體中文 README](README_TW.md)<br>
+
 ### New features
-- support both Apple and Intel CPU Macs
+- support both Apple and Intel CPU Macs (See Note below)
 - sail mode, allowing the battery to sail from maintain percentage to sail target without charging
 - scheduled calibration, starting automatic calibration on specified days per month (at most four days), or specified one day every 1-3 month, or specified weekday every 1-12 weeks
 - new command "suspend", suspending maintain temporarily allowing charging to 100%, and automatically resume maintain when AC adapter is reconnected
@@ -11,6 +14,8 @@
   - Intel CPU: limit is at maintain percentage
   - Apple CPU: limit is fixed at 80% (Note: MacOS Sequoia not supported because Apple no longer provide this function)
 - add battery daily log and notification
+
+  Note: Discharge and calibrate only available for Intel CPU Macs with model 2014 or earlier. I am still searching discharge method for the other Intel Models.
 
 ### Enhancements
 - replace macOS battery percentage with real hardware charging percentage.
@@ -34,7 +39,12 @@
 - battery maintain using voltage (not practical because voltage boost abruptly when charging starts)
 
 ### Requirements
-This is a CLI tool for both Apple and Intel Silicon Macs.
+This is a CLI tool for both Apple and Intel Silicon Macs.<br>
+Please setup your MAC system settings as follows
+1.	system settings > notifications > enable "Allow notifications when mirroring or sharing"
+2.	system settings > notifications > applications > Script Editor > Choose "Alerts"
+3.	system settings > battery > options > enable "Prevent automatic sleeping on power adapter when the display is off" or<br>
+system settings > display > advanced > enable "Prevent your MAC from sleeping when its display is off"
 
 ### 🖥 Command-line version installation
 
@@ -54,7 +64,7 @@ This will:
 
 ### Usage
 
-For help, run `battery` without parameters:
+For help, run `battery` without parameters or `battery help`:
 
 ```
 Battery CLI utility v2.0.0
@@ -62,9 +72,8 @@ Battery CLI utility v2.0.0
 Usage:
 
   battery maintain PERCENTAGE[10-100,stop,suspend,recover] SAILING_TARGET[5-99]
-  - reboot-persistent battery level maintenance: turn off charging above, and on below a certain value
-  - it has the option of a --force-discharge flag that discharges even when plugged in (this does NOT work with clamshell mode)
-  - SAILING_TARGET default is PERCENTAGE-5 if not specified
+  - PERCENTAGE is battery level upper bound above which charging is stopped
+  - SAILING_TARGET is battery level lower bound below which charging is started. default value is PERCENTAGE-5 if not specified
   - Examples:
     battery maintain 80 50    # maintain at 80% with sailing to 50%
     battery maintain 80    # equivalent to battery maintain 80 75
@@ -74,8 +83,8 @@ Usage:
 
   battery calibrate
   - calibrate the battery by discharging it to 15%, then recharging it to 100%, and keeping it there for 1 hour, then discharge to maintained percentage level
-  - if macbook lid is not open or AC adapter is not connected, a remind notification will be received.
-  - calibration will be started automatically once macbook lid is open and AC adapter is connected, and calibration will be terminated if lid is not open in one day.
+  - if macbook lid is open and AC adapter is connected, calibrate start immediately
+  - if macbook lid is not open or AC adapter is not connected, a remind notification will be received. calibration will be started automatically once macbook lid is open and AC adapter is connected, and calibration will be terminated if lid is not open in one day.
   - notification will be received when each step is completed or error occurs till the end of calibration
   - if you prefer the notifications to stay on until you dismiss it, setup notifications as follows
     system settings > notifications > applications > Script Editor > Choose "Alerts"
