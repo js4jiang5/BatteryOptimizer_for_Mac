@@ -1636,8 +1636,8 @@ if [[ "$action" == "maintain" ]]; then
 	# Enable the daemon that continues maintaining after reboot
 	$battery_binary create_daemon
 
-	# Enable schedule
-	$battery_binary schedule enable >> $logfile
+	## Enable schedule
+	#$battery_binary schedule enable >> $logfile
 
 	# Report status
 	$battery_binary status
