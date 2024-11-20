@@ -780,7 +780,7 @@ function get_charger_connection() { # 20241013 by JS
 	else
 		not_discharging=0
 	fi
-	ac_connected=$(($ac_attached || $not_discharging || $acfp -gt 0 ))
+	ac_connected=$(($ac_attached || $not_discharging || $acfp > 0 ))
 	echo "$ac_connected"
 }
 
