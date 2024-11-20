@@ -51,7 +51,6 @@ batteryfolder="$tempfolder/battery"
 echo "[ 2 ] Downloading latest version of battery CLI"
 rm -rf $batteryfolder
 mkdir -p $batteryfolder
-#curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/heads/$update_branch.zip"
 curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/tags/v2.0.12.zip"
 unzip -qq $batteryfolder/repo.zip -d $batteryfolder
 cp -r $batteryfolder/$in_zip_folder_name/* $batteryfolder
