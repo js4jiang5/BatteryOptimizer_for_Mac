@@ -43,8 +43,6 @@ This is a CLI tool for both Apple and Intel Silicon Macs.<br>
 Please setup your MAC system settings as follows
 1.	system settings > notifications > enable "Allow notifications when mirroring or sharing"
 2.	system settings > notifications > applications > Script Editor > Choose "Alerts"
-3.	system settings > battery > options > enable "Prevent automatic sleeping on power adapter when the display is off" or<br>
-system settings > display > advanced > enable "Prevent your MAC from sleeping when its display is off"
 
 ### 🖥 Command-line version installation
 

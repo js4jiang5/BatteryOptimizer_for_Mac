@@ -215,18 +215,12 @@ notice="Installation completed.
 Please setup your MAC system settings as follows
 1.	system settings > notifications > enable \\\"Allow notifications when mirroring or sharing\\\"
 2.	system settings > notifications > applications > Script Editor > Choose \\\"Alerts\\\"
-3.	system settings > battery > options > enable 
-	\\\"Prevent automatic sleeping on power adapter when the display is off\\\" or
-	system settings > display > advanced > enable 
-	\\\"Prevent your MAC from sleeping when its display is off\\\"
 "
 notice_tw="安裝完成.
 
 請調整 MAC 系統設定如下
 1.	系統設定 > 通知 > 開啟 \\\"在鏡像輸出或共享顯示器時允許通知\\\"
 2.	系統設定 > 通知 > 應用程式通知 > 工序指令編寫程式 > 選擇 \\\"提示\\\"
-3.	系統設定 > 電池 > 進階 > 開啟 \\\"避免在顯示器關閉時自動進入睡眠\\\" 或
-	系統設定 > 顯示器 > 進階 > 開啟 \\\"避免在顯示器關閉時自動進入睡眠\\\"
 "
 
 if $is_TW; then
