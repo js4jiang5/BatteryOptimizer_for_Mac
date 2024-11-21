@@ -92,9 +92,6 @@ This will:
 <img src="https://i.imgur.com/hlvnmMW.jpg" /> <br>
 
 ### Usage
-Examples of most used commands
-`battery maintain 80 75`
-
 For help, run `battery` without parameters or `battery help`:
 
 ```
