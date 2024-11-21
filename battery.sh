@@ -1431,6 +1431,13 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 			check_update_timeout=$((`date +%s` + (24*60*60))) # check update one time each day
 		fi
 
+		# Turn off AlDente if it is running to avoid conflict
+		aldente_is_running=$(pgrep -f aldente)
+		if [[ $aldente_is_running ]]; then
+			log "AlDente is running. Turn it off"
+			osascript -e 'quit app "aldente"'
+		fi
+
 		if [ "$maintain_status" == "active" ]; then
 			# Keep track of LED status
 			charging_status=$(get_charging_status)
