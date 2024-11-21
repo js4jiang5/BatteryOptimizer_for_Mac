@@ -85,6 +85,12 @@ curl -s https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/mai
 - `安排每兩週的週三 10:50 進行電池校正` <br>
 <img src="https://i.imgur.com/JTNpakx.jpg" /> <br>
 
+- `電池狀態每日通知` <br>
+<img src="https://i.imgur.com/42ATyJz.jpg" /> <br>
+
+- `顯示電池狀態日誌` <br>
+<img src="https://i.imgur.com/ETfjely.jpg" /> <br>
+
 - `有更新版通知` <br>
 <img src="https://i.imgur.com/wRw4GFl.jpg" /> <br>
 

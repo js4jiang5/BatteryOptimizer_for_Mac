@@ -85,6 +85,12 @@ This will:
 - `calibration schedule on WED every 2 weeks at 10:50` <br>
 <img src="https://i.imgur.com/yXYeBB1.jpg" /> <br>
 
+- `daily notification` <br>
+<img src="https://i.imgur.com/UvAivHE.jpg" /> <br>
+
+- `show daily log` <br>
+<img src="https://i.imgur.com/ETfjely.jpg" /> <br>
+
 - `new version available notification` <br>
 <img src="https://i.imgur.com/nQttVUL.jpg" /> <br>
 
