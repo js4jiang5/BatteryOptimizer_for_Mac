@@ -173,11 +173,9 @@ battery maintain recover
 
 button_empty="                                                                                                                                                    "
 if $is_TW; then
-	changelog=$(get_changelog CHANGELOG_TW)
-	answer="$(osascript -e 'display dialog "'"已更新至 $version"'" buttons {"'"$button_empty"'", "完成"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+	answer="$(osascript -e 'display dialog "'"已更新至 $battery_version_new"'" buttons {"'"$button_empty"'", "完成"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
 else
-	changelog=$(get_changelog CHANGELOG)
-	answer="$(osascript -e 'display dialog "'"Update to $version completed"'" buttons {"'"$button_empty"'", "Finish"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+	answer="$(osascript -e 'display dialog "'"Update to $battery_version_new completed"'" buttons {"'"$button_empty"'", "Finish"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
 fi
 
 #echo -e "Start testing intel discharge.\n"
