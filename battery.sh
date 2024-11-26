@@ -562,7 +562,7 @@ function enable_discharging() {
 		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
 	else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
-		sudo smc -d on; fi
+		sudo smc -d on;
 		#if $has_ACEN; then sudo smc -k ACEN -w 00; fi
 		#if $has_CH0K; then sudo smc -k CH0K -w 01; fi
 	fi
@@ -574,7 +574,7 @@ function disable_discharging() {
 	if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0I; then sudo smc -k CH0I -w 00; fi
 	else
-		sudo smc -d off; fi
+		sudo smc -d off;
 		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 		#if $has_CH0K; then sudo smc -k CH0K -w 00; fi
 	fi
