@@ -4,8 +4,8 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v0.0.30"
-BATTERY_VISUDO_VERSION="v1.0.5"
+BATTERY_CLI_VERSION="v0.0.31"
+BATTERY_VISUDO_VERSION="v1.0.6"
 
 # Path fixes for unexpected environments
 PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
@@ -17,23 +17,15 @@ binfolder=/usr/local/bin
 visudo_folder=/private/etc/sudoers.d
 visudo_file=${visudo_folder}/battery
 configfolder=$HOME/.battery
+config_file=$configfolder/config_battery
 pidfile=$configfolder/battery.pid
 logfile=$configfolder/battery.log
 pid_sig=$configfolder/sig.pid
-sigfile="$configfolder/sig"
-state_file="$configfolder/state"
-maintain_percentage_tracker_file=$configfolder/maintain.percentage
 daemon_path=$HOME/Library/LaunchAgents/battery.plist
 calibrate_pidfile=$configfolder/calibrate.pid
-calibrate_method_file=$configfolder/calibrate_method
 schedule_path=$HOME/Library/LaunchAgents/battery_schedule.plist
-schedule_tracker_file="$configfolder/calibrate_schedule"
 shutdown_path=$HOME/Library/LaunchAgents/battery_shutdown.plist
-webhookid_file=$configfolder/ha_webhook.id
 daily_log=$configfolder/daily.log
-informed_version_file=$configfolder/informed.version
-language_file=$configfolder/language.code
-aclm_file=$configfolder/ACLM
 github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/refs/heads/intel"
 
 ## ###############
@@ -145,16 +137,15 @@ Usage:
 visudoconfig="
 # Visudo settings for the battery utility installed from https://github.com/js4jiang5/BatteryOptimizer_for_MAC
 # intended to be placed in $visudo_file on a mac
-Cmnd_Alias      BATTERYOFF = $binfolder/smc -k CH0B -w 02, $binfolder/smc -k CH0B -w 01, $binfolder/smc -k CH0C -w 02, $binfolder/smc -k CH0B -r, $binfolder/smc -k CH0C -r
+Cmnd_Alias      BATTERYOFF = $binfolder/smc -k CH0B -w 02, $binfolder/smc -k CH0C -w 02, $binfolder/smc -k CH0B -r, $binfolder/smc -k CH0C -r
 Cmnd_Alias      BATTERYON = $binfolder/smc -k CH0B -w 00, $binfolder/smc -k CH0C -w 00
-Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r, $binfolder/smc -k CH0J -w 00, $binfolder/smc -k CH0J -r, $binfolder/smc -k CH0K -w 00, $binfolder/smc -k CH0K -r
-Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01, $binfolder/smc -k CH0J -w 01, $binfolder/smc -k CH0K -w 01
+Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r, $binfolder/smc -k CH0J -w 00, $binfolder/smc -k CH0J -r, $binfolder/smc -k CH0K -w 00, $binfolder/smc -k CH0K -r, $binfolder/smc -d off
+Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01, $binfolder/smc -k CH0J -w 01, $binfolder/smc -k CH0K -w 01, $binfolder/smc -d on
 Cmnd_Alias      LEDCONTROL = $binfolder/smc -k ACLC -w 04, $binfolder/smc -k ACLC -w 03, $binfolder/smc -k ACLC -w 02, $binfolder/smc -k ACLC -w 01, $binfolder/smc -k ACLC -w 00, $binfolder/smc -k ACLC -r
-Cmnd_Alias      BATTERYBCLM = $binfolder/smc -k BCLM -w 0a, $binfolder/smc -k BCLM -w 64, $binfolder/smc -k BCLM -w 00, $binfolder/smc -k BCLM -r
+Cmnd_Alias      BATTERYBCLM = $binfolder/smc -k BCLM -w 0a, $binfolder/smc -k BCLM -w 64, $binfolder/smc -k BCLM -r
 Cmnd_Alias      BATTERYCHWA = $binfolder/smc -k CHWA -w 00, $binfolder/smc -k CHWA -w 01, $binfolder/smc -k CHWA -r
 Cmnd_Alias      BATTERYACEN = $binfolder/smc -k ACEN -w 00, $binfolder/smc -k ACEN -w 01, $binfolder/smc -k ACEN -r
-Cmnd_Alias      BATTERYBSAC = $binfolder/smc -k BSAC -w 13, $binfolder/smc -k BSAC -w 33, $binfolder/smc -k BSAC -w 15, $binfolder/smc -k BSAC -w 35, $binfolder/smc -k BSAC -w 17, $binfolder/smc -k BSAC -w 37, $binfolder/smc -k BSAC -w 19, $binfolder/smc -k BSAC -w 39, $binfolder/smc -k BSAC -w 02, $binfolder/smc -k BSAC -w 22, $binfolder/smc -k BSAC -w 03, $binfolder/smc -k BSAC -w 23, $binfolder/smc -k BSAC -r
-Cmnd_Alias      BATTERYACLM = $binfolder/smc -k ACLM -w 0000, $binfolder/smc -k ACLM -w 0b80, $binfolder/smc -k ACLM -w 0d80, $binfolder/smc -k ACLM -w 1058, $binfolder/smc -k ACLM -w 122a, $binfolder/smc -k ACLM -r
+Cmnd_Alias      BATTERYBFCL = $binfolder/smc -k BFCL -w 00, $binfolder/smc -k BFCL -w 5f, $binfolder/smc -k BFCL -r
 Cmnd_Alias      BATTERYCHBI = $binfolder/smc -k CHBI -r
 Cmnd_Alias      BATTERYB0AC = $binfolder/smc -k B0AC -r 
 ALL ALL = NOPASSWD: BATTERYOFF
@@ -165,8 +156,7 @@ ALL ALL = NOPASSWD: LEDCONTROL
 ALL ALL = NOPASSWD: BATTERYBCLM
 ALL ALL = NOPASSWD: BATTERYCHWA
 ALL ALL = NOPASSWD: BATTERYACEN
-ALL ALL = NOPASSWD: BATTERYBSAC
-ALL ALL = NOPASSWD: BATTERYACLM
+ALL ALL = NOPASSWD: BATTERYBFCL
 ALL ALL = NOPASSWD: BATTERYCHBI
 ALL ALL = NOPASSWD: BATTERYB0AC
 "
@@ -186,27 +176,10 @@ thirdsetting=$4
 [[ $(smc -k CH0J -r) =~ "no data" ]] && has_CH0J=false || has_CH0J=true;
 [[ $(smc -k CH0K -r) =~ "no data" ]] && has_CH0K=false || has_CH0K=true;
 [[ $(smc -k ACEN -r) =~ "no data" ]] && has_ACEN=false || has_ACEN=true;
-[[ $(smc -k BSAC -r) =~ "no data" ]] && has_BSAC=false || has_BSAC=true;
 [[ $(smc -k ACLC -r) =~ "no data" ]] && has_ACLC=false || has_ACLC=true;
 [[ $(smc -k CHWA -r) =~ "no data" ]] && has_CHWA=false || has_CHWA=true;
-[[ $(smc -k ACLM -r) =~ "no data" ]] && has_ACLM=false || has_ACLM=true;
-
-lang=$(defaults read -g AppleLocale)
-if test -f $language_file; then
-	language=$(cat "$language_file" 2>/dev/null)
-	if [[ "$language" == "tw" ]]; then
-		is_TW=true
-	else
-		is_TW=false
-	fi
-else
-	if [[ $lang =~ "zh_TW" ]]; then
-		is_TW=true
-	else
-		is_TW=false
-	fi
-fi
-is_TW=false
+[[ $(smc -k BFCL -r) =~ "no data" ]] && has_BFCL=false || has_BFCL=true;
+[[ $(smc -k ACFP -r) =~ "no data" ]] && has_ACFP=false || has_ACFP=true;
 
 ## ###############
 ## Helpers
@@ -219,8 +192,11 @@ function valid_action() {
     # List of valid actions
     VALID_ACTIONS=("" "visudo" "maintain" "calibrate" "schedule" "charge" "discharge" 
 	"status" "dailylog" "logs" "language" "update" "version" "reinstall" "uninstall" 
-	"maintain_synchronous" "status_csv" "create_daemon" "disable_daemon" "remove_daemon" "changelog" "test_intel_discharge")
+	"maintain_synchronous" "status_csv" "create_daemon" "disable_daemon" "remove_daemon" "changelog")
     
+    VALID_ACTIONS_USER=("" "visudo" "maintain" "calibrate" "schedule" "charge" "discharge" 
+	"status" "dailylog" "logs" "language" "update" "version" "reinstall" "uninstall" "changelog")
+
     # Check if action is valid
     local action_valid=false
     for valid_action in "${VALID_ACTIONS[@]}"; do
@@ -234,7 +210,7 @@ function valid_action() {
         echo "Error: Unknown command '$action'"
         # Find similar commands
         echo "Did you mean one of these?"
-        for valid_action in "${VALID_ACTIONS[@]}"; do
+        for valid_action in "${VALID_ACTIONS_USER[@]}"; do
             if [[ "$valid_action" == *"${action:0:3}"* ]]; then
                 echo "  - $valid_action"
             fi
@@ -248,8 +224,8 @@ function valid_action() {
 
 function ha_webhook() {
 	DST=http://homeassistant.local:8123
-	if test -f "$webhookid_file"; then
-		WEBHOOKID=$(cat "$webhookid_file" 2>/dev/null)
+	WEBHOOKID=$(read_config webhookid)
+	if [[ $WEBHOOKID ]]; then
 		if [ $3 ]; then
 			curl -sS -X POST \
 			-H "Content-Type: application/json"\
@@ -354,7 +330,7 @@ function format00() {
 
 function check_next_calibration_date() {
     LANG=en_us_8859_1
-	schedule=$(cat "$schedule_tracker_file" 2>/dev/null)
+	schedule=$(read_config calibrate_schedule)
 	if [[ $schedule == *"every"* ]] && [[ $schedule == *"Week"* ]] && [[ $schedule == *"Year"* ]]; then
         weekday=$(echo $schedule | awk '{print $4}')
         week_period=$(echo $schedule | awk '{print $6}')
@@ -474,7 +450,7 @@ function show_schedule() {
 		schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep "=> false" | grep "com.battery_schedule.app")"
 		schedule_enabled=${schedule_enabled/false/enabled}
 	fi
-	schedule_txt="$(cat $schedule_tracker_file 2>/dev/null)"
+	schedule_txt="$(read_config calibrate_schedule)"
 	if [[ $schedule_enabled =~ "enabled" ]]; then
 		if [[ $schedule_txt ]]; then
 			if $is_TW; then
@@ -548,7 +524,7 @@ function change_magsafe_led_color() {
 		color=$1
 
 		# Check whether user can run color changes without password (required for backwards compatibility)
-		if sudo -n smc -k ACLC -r &>/dev/null; then
+		if $has_ACLC || $has_BFCL; then
 			log "💡 Setting magsafe color to $color"
 		else
 			log "🚨 Your version of battery is using an old visudo file, please run 'battery visudo' to fix this, until you do battery cannot change magsafe led colors"
@@ -557,17 +533,21 @@ function change_magsafe_led_color() {
 
 		if [[ "$color" == "green" ]]; then
 			log "setting LED to green"
-			sudo smc -k ACLC -w 03
+			if $has_ACLC; then sudo smc -k ACLC -w 03; fi
+			if $has_BFCL; then sudo smc -k BFCL -w 00; fi
 		elif [[ "$color" == "orange" ]]; then
 			log "setting LED to orange"
-			sudo smc -k ACLC -w 04
+			if $has_ACLC; then sudo smc -k ACLC -w 04; fi
+			if $has_BFCL; then sudo smc -k BFCL -w 5f; fi
 		elif [[ "$color" == "none" ]]; then
 			log "setting LED to none"
-			sudo smc -k ACLC -w 01
+			if $has_ACLC; then sudo smc -k ACLC -w 01; fi
+			if $has_BFCL; then sudo smc -k BFCL -w 5f; fi
 		else
 			# Default action: reset. Value 00 is a guess and needs confirmation
 			log "resetting LED"
-			sudo smc -k ACLC -w 00
+			if $has_ACLC; then sudo smc -k ACLC -w 00; fi
+			if $has_BFCL; then sudo smc -k BFCL -w 00; fi
 		fi
 	fi
 }
@@ -575,17 +555,15 @@ function change_magsafe_led_color() {
 # Re:discharging, we're using keys uncovered by @howie65: https://github.com/actuallymentor/battery/issues/20#issuecomment-1364540704
 # CH0I seems to be the "disable the adapter" key
 function enable_discharging() {
+	disable_charging
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		disable_charging
 		log "🔽🪫 Enabling battery discharging"
 		if $has_CH0I; then sudo smc -k CH0I -w 01; fi
 		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
 	else
-		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
-		#if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) & 0xdf)) | awk '{printf "%02x", $1}'); fi	
-		if $has_BCLM; then sudo smc -k BCLM -w 00; sleep 2; fi
-		if $has_CH0B; then sudo smc -k CH0B -w 00; sudo smc -k CH0B -w 00; fi
-		#if $has_CH0J; then sudo smc -k CH0J -w 01; fi
+		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
+		sudo smc -d on; fi
+		#if $has_ACEN; then sudo smc -k ACEN -w 00; fi
 		#if $has_CH0K; then sudo smc -k CH0K -w 01; fi
 	fi
 	sleep 1
@@ -596,11 +574,8 @@ function disable_discharging() {
 	if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0I; then sudo smc -k CH0I -w 00; fi
 	else
-		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		#if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi			
-		if $has_BCLM; then sudo smc -k BCLM -w 00; sleep 2; fi
-		if $has_CH0B; then sudo smc -k CH0B -w 02; sudo smc -k CH0B -w 02; fi
-		#if $has_CH0J; then sudo smc -k CH0J -w 00; fi
+		sudo smc -d off; fi
+		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 		#if $has_CH0K; then sudo smc -k CH0K -w 00; fi
 	fi
 	sleep 1
@@ -637,16 +612,14 @@ function disable_discharging() {
 # but @joelucid uses CH0C https://github.com/davidwernhart/AlDente/issues/52#issuecomment-1019933570
 # so I'm using both since with only CH0B I noticed sometimes during sleep it does trigger charging
 function enable_charging() {
+	disable_discharging
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		disable_discharging
 		log "🔌🔋 Enabling battery charging"
 		if $has_CH0B; then sudo smc -k CH0B -w 00; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 00; fi
 	else
-		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		#if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi	
-		if $has_BCLM; then sudo smc -k BCLM -w 64; sleep 2; fi
-		if $has_CH0B; then sudo smc -k CH0B -w 00; sudo smc -k CH0B -w 00; fi
+		if $has_BCLM; then sudo smc -k BCLM -w 64; fi
+		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 	fi
 	sleep 1
 }
@@ -657,28 +630,24 @@ function disable_charging() {
 		if $has_CH0B; then sudo smc -k CH0B -w 02; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 02; fi
 	else
-		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		#if $has_BSAC && $has_CH0B; then sudo smc -k BSAC -w $(echo $((0x$(read_smc BSAC) | 0x20)) | awk '{printf "%02x", $1}'); fi	
-		if $has_BCLM; then sudo smc -k BCLM -w 00; sleep 2; fi
-		if $has_CH0B; then sudo smc -k CH0B -w 02; sudo smc -k CH0B -w 02; fi
+		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
+		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 	fi
 	sleep 1
 }
 
 function get_smc_charging_status() {
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		hex_status=$(smc -k CH0B -r | awk '{print $4}' | sed s:\)::)
+		hex_status=$(read_smc_hex CH0B)
 		if [[ "$hex_status" == "00" ]]; then
 			echo "enabled"
 		else
 			echo "disabled"
 		fi
 	else
-		bclm_hex_status=$(smc -k BCLM -r | awk '{print $6}' | sed s:\)::)
-		#acen_hex_status=$(smc -k ACEN -r | awk '{print $6}' | sed s:\)::)
-		aclm_hex_status=$(read_smc ACLM)
-		#if [[ "$bclm_hex_status" == "64" ]] && [[ "$acen_hex_status" == "01" ]]; then
-		if [[ "$bclm_hex_status" == "64" ]] && [[ "$aclm_hex_status" != "0000" ]]; then
+		bclm_hex_status=$(read_smc_hex BCLM)
+		acen_hex_status=$(read_smc_hex ACEN)
+		if [[ "$bclm_hex_status" == "64" ]] && [[ "$acen_hex_status" == "01" ]]; then
 			echo "enabled"
 		else
 			echo "disabled"
@@ -688,17 +657,15 @@ function get_smc_charging_status() {
 
 function get_smc_discharging_status() {
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		hex_status=$(smc -k CH0I -r | awk '{print $4}' | sed s:\)::)
-		if [[ "$hex_status" == "0" ]]; then
+		hex_status=$(read_smc_hex CH0I)
+		if [[ "$hex_status" == "00" ]]; then
 			echo "not discharging"
 		else
 			echo "discharging"
 		fi
 	else
-		#acen_hex_status=$(smc -k ACEN -r | awk '{print $6}' | sed s:\)::)
-		#if [[ "$acen_hex_status" == "01" ]]; then
-		aclm_hex_status=$(read_smc ACLM)
-		if [[ "$aclm_hex_status" != "0000" ]]; then
+		acen_hex_status=$(read_smc_hex ACEN)
+		if [[ "$acen_hex_status" == "01" ]]; then
 			echo "not discharging"
 		else
 			echo "discharging"
@@ -711,8 +678,7 @@ function get_smc_discharging_status() {
 ## ###############
 
 function get_battery_percentage() {
-	#battery_percentage=$(pmset -g batt | tail -n1 | awk '{print $3}' | sed s:\%\;::)
-	battery_percentage=$(smc -k BRSC -r | awk '{print $3}')
+	battery_percentage=$(read_smc BRSC)
 	if [ $battery_percentage -gt 100 ]; then
 		battery_percentage=$((battery_percentage/256)) # BRSC is battery_level in some system, but bettery_level in others
 	fi
@@ -741,8 +707,8 @@ function get_charging_status() {
 	#	is_charging=$(pmset -g batt | tail -n1 | awk '{ x=match($0, /; charging;/) > 0; print x }')
 	#	is_discharging=$(pmset -g batt | tail -n1 | awk '{ x=match($0, /; discharging;/) > 0; print x }')
 	#else
-		charge_current=$(smc -k CHBI -r | awk '{print $3}' | sed s:\)::)
-		discharge_current=$(smc -k B0AC -r | awk '{print $3}' | sed s:\)::)
+		charge_current=$(read_smc CHBI)
+		discharge_current=$(read_smc B0AC)
 		if [[ $charge_current == "0" ]]; then
 			is_charging=0
 		else
@@ -765,7 +731,7 @@ function get_charging_status() {
 }
 
 function get_maintain_percentage() {
-	maintain_percentage=$(cat $maintain_percentage_tracker_file 2>/dev/null)
+	maintain_percentage=$(read_config maintain_percentage)
 	echo "$maintain_percentage" | awk '{print $1}'
 }
 
@@ -803,16 +769,20 @@ function get_cycle() {
 
 function get_charger_connection() { # 20241013 by JS
 	# AC is consider connected if battery is not discharging
-	#ac_attached=$(pmset -g batt | tail -n1 | awk '{ x=match($0, /AC attached/) > 0; print x }')
-	#is_charging=$(pmset -g batt | tail -n1 | awk '{ x=match($0, /; charging;/) > 0; print x }')
 	ac_attached=$(pmset -g batt | head -n1 | awk '{ x=match($0, /AC Power/) > 0; print x }')
-	discharge_current=$(smc -k B0AC -r | awk '{print $3}' | sed s:\)::)
+	discharge_current=$(read_smc B0AC)
+	if $has_ACFP; then
+		acfp=$(read_smc ACFP)
+	else
+		acfp=0
+	fi
+	
 	if [[ $discharge_current == "0" ]]; then
 		not_discharging=1
 	else
 		not_discharging=0
 	fi
-	ac_connected=$(($ac_attached || $not_discharging))
+	ac_connected=$(($ac_attached || $not_discharging || $acfp > 0 ))
 	echo "$ac_connected"
 }
 
@@ -898,8 +868,8 @@ function confirm_SIG() {
 }
 
 function ack_SIG() {
-	sigpid=$(cat "$pid_sig" 2>/dev/null)
-	sig=$(cat "$sigfile" 2>/dev/null)
+	sigpid=$(echo $(cat "$pid_sig" 2>/dev/null) | awk '{print $1}')
+	sig=$(echo $(cat "$pid_sig" 2>/dev/null) | awk '{print $2}')
 	if [ "$sig" == "suspend" ]; then # if suspend is called by user, enable charging to 100%
 		maintain_status="suspended"
 		enable_charging
@@ -917,7 +887,7 @@ function ack_SIG() {
 
 function calibrate_interrupted() {
 	rm $calibrate_pidfile 2>/dev/null
-	if [[ "$(maintain_is_running)" == "1" ]] && [[ "$(cat $state_file 2>/dev/null)" == "suspended" ]]; then
+	if [[ "$(maintain_is_running)" == "1" ]] && [[ "$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $2}')" == "suspended" ]]; then
 		$battery_binary maintain recover
 	fi
 	kill 0 # kill all child processes
@@ -926,7 +896,7 @@ function calibrate_interrupted() {
 
 function charge_interrupted() {
 	disable_charging
-	if [[ "$(maintain_is_running)" == "1" ]] && [[ "$(cat $state_file 2>/dev/null)" == "suspended" ]]; then
+	if [[ "$(maintain_is_running)" == "1" ]] && [[ "$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $2}')" == "suspended" ]]; then
 		$battery_binary maintain recover
 	fi
 	exit 1
@@ -934,7 +904,7 @@ function charge_interrupted() {
 
 function discharge_interrupted() {
 	disable_discharging
-	if [[ "$(maintain_is_running)" == "1" ]] && [[ "$(cat $state_file 2>/dev/null)" == "suspended" ]]; then
+	if [[ "$(maintain_is_running)" == "1" ]] && [[ "$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $2}')" == "suspended" ]]; then
 		$battery_binary maintain recover
 	fi
 	exit 1
@@ -943,7 +913,7 @@ function discharge_interrupted() {
 function maintain_is_running() {
 	# check if battery maintain is running
 	if test -f "$pidfile"; then # if maintain is ongoing
-		pid=$(cat "$pidfile" 2>/dev/null)
+		pid=$(cat "$pidfile" 2>/dev/null | awk '{print $1}')
 		#n_pid=$(pgrep -f $battery_binary | awk 'END{print NR}')
 		#pid_found=0
 		#for ((i = 1; i <= n_pid; i++)); do
@@ -953,7 +923,16 @@ function maintain_is_running() {
 		#		break
 		#	fi
 		#done
-		if [[ $(pgrep -f $battery_binary) == *"$pid"* ]] && [[ $pid ]]; then
+		pid_found=false
+		pids=$(ps x | grep battery | awk '{print $1}')
+		for pid_running in $pids; do
+			if [ "$pid" == "$pid_running" ]; then # battery maintain is running
+				pid_found=true
+				break
+			fi
+		done
+
+		if $pid_found; then
 			echo 1
 		else
 			echo 0
@@ -967,7 +946,15 @@ function calibrate_is_running() {
 	# check if battery calibrate is running
 	if test -f "$calibrate_pidfile"; then # if calibration is ongoing
 		pid_calibrate=$(cat "$calibrate_pidfile" 2>/dev/null)
-		if [[ $(pgrep -f $battery_binary) == *"$pid_calibrate"* ]] && [[ $pid_calibrate ]]; then
+		pid_found=false
+		pids=$(ps x | grep battery | awk '{print $1}')
+		for pid_running in $pids; do
+			if [ "$pid_calibrate" == "$pid_running" ]; then # battery maintain is running
+				pid_found=true
+				break
+			fi
+		done
+		if $pid_found; then
 			echo 1
 		else
 			echo 0
@@ -977,147 +964,46 @@ function calibrate_is_running() {
 	fi
 }
 
-function read_smc() {
+function read_smc() { # read smc decimal value
+	val=$(read_smc_hex $1)
+	[[ -z $val ]] && echo || echo $((0x${val}))
+}
+
+function read_smc_hex() { # read smc hex value
 	key=$1
 	line=$(echo $(smc -k $key -r))
-	echo ${line#*bytes} | tr -d ' ' | tr -d ')'
-}
-
-function test_intel_unit() {
-	# test_intel_unit write CH0B 01 ACEN 00 read B0AC CHBI CH0B ACEN write CH0B 00 ACEN 01
-	cnt=1
-	mode="write"
-	echo
-	while true; do 
-		smc=${!cnt}; cnt=$((cnt+1))
-		if [[ "$smc" == "read" ]]; then
-			mode="read"
-			sleep 3
-			continue
-		elif [[ "$smc" == "write" ]]; then
-			mode="write"
-			continue
-		fi
-		has_smc="has_$smc"
-		if [[ "$mode" == "write" ]]; then
-			val=${!cnt}; cnt=$((cnt+1))
-			if ${!has_smc}; then 
-				sudo smc -k $smc -w $val; echo "set $smc = $val"; 
-			fi
-		else
-			val=$(read_smc $smc); echo "$smc = $val";
-			case $smc in
-				"B0AC") b0ac=$val;;
-				"CHBI") chbi=$val;;
-				"ACEN") acen=$val;:
-			esac
-		fi
-		
-		if [[ "$cnt" -gt "$#" ]]; then
-			if [[ $((0x${b0ac})) -gt 0 ]] || [[ $((0x${acen})) -eq 0 ]]; then
-				echo "found B0AC = $((0x${b0ac}))"
-				echo "found ACEN = $((0x${acen}))"
-				exit 0
-			fi
-			break
-		fi
-	done
-}
-
-function test_intel_file() {
-	# test_intel_file $smc_list replace 00 01
-	smc_list=$1
-	replace_loc=$(echo "$@" | tr " " "\n" | grep -n "replace" | cut -d: -f1)
-	bytes_old=$(echo $@ | awk '{print $"'"$((replace_loc+1))"'"}' | tr -d '_');
-	bytes_new=$(echo $@ | awk '{print $"'"$((replace_loc+2))"'"}' | tr -d '_');
-	bytes_old_space="(bytes $(echo $@ | awk '{print $"'"$((replace_loc+1))"'"}' | tr '_' ' '))";
-	#echo $bytes_old $bytes_new $bytes_old_space
-	n_lines=0
-	found=0
-	while read -r "line"; do
-		smc=$(echo $line | awk '{print $1}')
-		if [[ $smc != "DUSR" ]] && [[ $smc != "ACEN" ]] && [[ ! "$line" =~ "sp78" ]] && [[ ! "$line" =~ "sp87" ]] && [[ ! "$line" =~ "flt" ]] && [[ ! "$line" =~ "[fp" ]] && [[ ! "$line" =~ "ADC" ]]; then
-			if [[ "$line" =~ "$bytes_old_space" ]]; then
-				echo -e "\n$smc"
-				sudo smc -k $smc -w $bytes_new; echo "set $smc = $bytes_new"
-				sudo smc -k ACEN -w 00; echo "set ACEN = 00"
-				sleep 3
-				b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-				chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-				acen=$(read_smc ACEN); echo "ACEN = $acen"
-				if [[ $((0x${b0ac})) -gt 0 ]] || [[ $((0x${acen})) -eq 0 ]]; then
-					echo "found B0AC = $((0x${b0ac}))"
-					echo "found ACEN = $((0x${acen}))"
-					found=1
-				fi
-				sudo smc -k $smc -w $bytes_old; echo "set $smc = $bytes_old"
-				if $has_ACEN; then sudo smc -k ACEN -w 01; echo "set ACEN = 01"; fi
-				if [[ $found == "1" ]]; then
-					break
-				fi
-			fi
-			#n_lines=$((n_lines+1))
-			#if [[ $n_lines -eq 30 ]]; then
-			#	break
-			#fi
-		fi
-	done < $smc_list
-	if [[ $found == "1" ]]; then
-		exit 0
+	if [[ $line =~ "no data" ]]; then
+		echo
+	else
+		echo ${line#*bytes} | tr -d ' ' | tr -d ')'
 	fi
 }
 
-function test_intel_aldente() {
-	# test_intel_file $smc_list replace 00 01
-	smc_list_aldente=$1
-	n_lines=0
-	found=0
-	while read -r "line"; do
-		smc=$(echo $line | awk '{print $1}')
-		val=$(echo ${line#*bytes} | tr -d ' ' | tr -d ')')
-		if [[ $smc != "DUSR" ]] && [[ $smc != "ACEN" ]] && [[ ! "$line" =~ "sp78" ]] && [[ ! "$line" =~ "sp87" ]] && [[ ! "$line" =~ "flt" ]] && [[ ! "$line" =~ "[fp" ]] && [[ ! "$line" =~ "ADC" ]]; then
-			echo -e "\n$smc"
-			sudo smc -k $smc -w $val; echo "set $smc = $val"
-			sudo smc -k ACEN -w 00; echo "set ACEN = 00"
-			sudo smc -k ACLM -w 0000; echo "set ACLM = 0000"
-			sleep 0.1
-			acen=$(read_smc ACEN); echo "ACEN = $acen"
-			aclm=$(read_smc ACLM); echo "ACLM = $aclm"
-			b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-			val=$(read_smc $smc); echo "$smc = $val"
-			if [[ $((0x${b0ac})) -gt 0 ]] ; then
-				echo "found B0AC = $((0x${b0ac}))"
-				echo "found ACEN = $((0x${acen}))"
-				#sleep 5
-				val=$(read_smc $smc); echo "$smc = $val"
-				#sudo smc -k ACEN -w 01; echo "set ACEN = 01"
-				#sleep 1
-				#val=$(read_smc $smc); echo "$smc = $val"
-				#acen=$(read_smc ACEN); echo "ACEN = $acen"
-				#aclm=$(read_smc ACLM); echo "ACLM = $aclm"
-				#sudo smc -k ACEN -w 00; echo "set ACEN = 00"
-				#sudo smc -k ACLM -w 0000; echo "set ACLM = 0000"
-				#sleep 5
-				#acen=$(read_smc ACEN); echo "ACEN = $acen"
-				#aclm=$(read_smc ACLM); echo "ACLM = $aclm"
-				#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-				#val=$(read_smc $smc); echo "$smc = $val"
-				sudo smc -k ACEN -w 01; echo "set ACEN = 01"
-				sudo smc -k ACLM -w 122a; echo "set ACLM = 122a"
-				sudo smc -k BSAC -w 22; echo "set BSAC = 22"
-				found=1
-			fi
-			if [[ $found == "1" ]]; then
+function read_config() { # read $val of $name in config_file
+	name=$1
+	val=
+	if test -f $config_file; then
+		while read -r "line" || [[ -n "$line" ]]; do
+			if [[ "$line" =~  "$name = " ]]; then
+				val=${line#*'= '}
 				break
 			fi
-			#n_lines=$((n_lines+1))
-			#if [[ $n_lines -eq 30 ]]; then
-			#	break
-			#fi
+		done < $config_file
+	fi
+	echo $val
+}
+
+function write_config() { # write $val to $name in config_file
+	name=$1
+	val=$2
+	if test -f $config_file; then
+		config=$(cat $config_file 2>/dev/null)
+		name_loc=$(echo "$config" | grep -n "$name" | cut -d: -f1)
+		if [[ $name_loc ]]; then
+			sed -i '' ''"$name_loc"'s/.*/'"$name"' = '"$val"'/' $config_file
+		else # not exist yet
+			echo "$name = $val" >> $config_file
 		fi
-	done < $smc_list_aldente
-	if [[ $found == "1" ]]; then
-		exit 0
 	fi
 }
 
@@ -1135,33 +1021,22 @@ fi
 if ! valid_action "$action"; then
     exit 1
 fi
+# check language
+lang=$(defaults read -g AppleLocale)
 
-# store ACLM default value for Intel Macs
-if [[ $(get_cpu_type) == "intel" ]]; then
-	if ! test -f $aclm_file; then # store default ACLM value if it is not stored yet
-		aclm=$(read_smc ACLM)
-		if [[ $((0x${aclm})) -gt 2000 ]]; then # sanity check
-			echo $aclm > $aclm_file
-		fi
+language=$(read_config language)
+if [[ $language ]]; then
+	if [[ "$language" == "tw" ]]; then
+		is_TW=true
 	else
-		aclm=$(cat $aclm_file 2>/dev/null)
+		is_TW=false
 	fi
-
-	# find closest value
-	if [[ $((0x${aclm})) -gt 4500 ]]; then # Intel 2019
-		aclm=122a
-	elif [[ $((0x${aclm})) -gt 4000 ]]; then # Intel 2017
-		aclm=1058
-	elif [[ $((0x${aclm})) -gt 3000 ]]; then # Intel 2014
-		aclm=0d80
-	else # Intel 2016
-		aclm=0b80
+else
+	if [[ $lang =~ "zh_TW" ]]; then
+		is_TW=true
+	else
+		is_TW=false
 	fi
-	has_CH0I=false
-	has_CH0J=false
-	has_CH0K=false
-else # ACLM not used for Apple Macs
-	has_ACLM=false
 fi
 
 # Visudo message
@@ -1284,15 +1159,6 @@ if [[ "$action" == "update" ]]; then
 		fi
 		
 		if [[ $answer == "Yes" ]]; then
-			# update visudo if necessary
-			if [[ $visudo_new_version != $BATTERY_VISUDO_VERSION ]]; then
-				curl -sS -o $configfolder/battery_tmp.sh "$github_link/battery.sh"
-				chown $USER $configfolder/battery_tmp.sh
-				chmod 755 $configfolder/battery_tmp.sh
-				chmod u+x $configfolder/battery_tmp.sh
-				sudo $configfolder/battery_tmp.sh visudo $USER
-				rm -rf $configfolder/battery_tmp.sh
-			fi
 			curl -sS "$github_link/update.sh" | bash
 		fi
 	fi
@@ -1344,7 +1210,7 @@ if [[ "$action" == "charge" ]]; then
 	while [[ "$battery_percentage" -lt "$setting" ]]; do
 
 		if [[ "$battery_percentage" -ge "$((setting - 3))" ]]; then
-			sleep 5 &
+			caffeinate -is sleep 5 &
 		else
 			caffeinate -is sleep 60 &
 		fi
@@ -1431,7 +1297,7 @@ fi
 # Maintain at level
 if [[ "$action" == "maintain_synchronous" ]]; then
 	if [[ $(get_cpu_type) == "apple" ]]; then # reset to default when reboot
-		sudo smc -k CHWA -w 00
+		if $has_CHWA; then sudo smc -k CHWA -w 00; fi
 	fi
 
 	# Recover old maintain status if old setting is found
@@ -1440,7 +1306,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 		# Before doing anything, log out environment details as a debugging trail
 		log "Debug trail. User: $USER, config folder: $configfolder, logfile: $logfile, file called with 1: $1, 2: $2"
 
-		maintain_percentage=$(cat $maintain_percentage_tracker_file 2>/dev/null)
+		maintain_percentage=$(read_config maintain_percentage)
 		if [[ $maintain_percentage ]]; then
 			log "Recovering maintenance percentage $maintain_percentage"
 			setting=$(echo $maintain_percentage | awk '{print $1}')
@@ -1497,11 +1363,11 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 	# Loop until battery percent is exceeded
 	maintain_status="active"
 	pre_maintain_status=$maintain_status
-	echo $maintain_status > $state_file
+	echo "$$ $maintain_status" > $pidfile
 	daily_log_done=false
 	ac_connection=$(get_charger_connection)
 	pre_ac_connection=$ac_connection
-	sleep_duration=5
+	sleep_duration=60
 	charging_status=$(get_charging_status)
 	if [ "$charging_status" == "1" ]; then
 		log "Battery is charging"
@@ -1520,9 +1386,9 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 	now=$(date +%s)
 	check_update_timeout=$((now + (3*24*60*60))) # first check update 3 days later
 	
-	if test -f $informed_version_file; then
-		informed_version=$(cat < $informed_version_file)
-	else
+
+	informed_version=$(read_config informed_version)
+	if [[ -z $informed_version ]]; then
 		informed_version=$BATTERY_CLI_VERSION
 	fi
 	
@@ -1530,7 +1396,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 	trap ack_SIG SIGUSR1
 	while true; do
 		if [ "$maintain_status" != "$pre_maintain_status" ]; then # update state to state_file
-			echo $maintain_status > $state_file
+			echo "$$ $maintain_status" > $pidfile
 			pre_maintain_status=$maintain_status 
 		fi
 		
@@ -1540,7 +1406,11 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 			daily_log_done=true
 			logd "$(get_accurate_battery_percentage)% $(get_voltage)V $(get_battery_temperature)°C $(get_battery_health)% $(get_cycle)" | awk '{printf "%-10s, %9s, %9s, %13s, %9s, %9s\n", $1, $2, $3, $4, $5, $6}' >> $daily_log
 			#if [ "$(date +%d)" == "01" ]; then # monthly notification
+			if $is_TW; then
+				osascript -e 'display notification "'"電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\n健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"'" with title "Battery" sound name "Blow"'
+			else
 				osascript -e 'display notification "'"Battery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\nHealth $(get_battery_health)%, Cycle $(get_cycle)"'" with title "Battery" sound name "Blow"'
+			fi
 			#fi
 		fi
 
@@ -1558,9 +1428,16 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 					osascript -e 'display notification "'"New version $new_version available \nUpdate with command \\\"battery update\\\""'" with title "BatteryOptimizer" sound name "Blow"'
 				fi
 				informed_version=$new_version
-				echo "$informed_version" > $informed_version_file
+				write_config informed_version $informed_version
 			fi
 			check_update_timeout=$((`date +%s` + (24*60*60))) # check update one time each day
+		fi
+
+		# Turn off AlDente if it is running to avoid conflict
+		aldente_is_running=$(pgrep -f aldente)
+		if [[ $aldente_is_running ]]; then
+			log "AlDente is running. Turn it off"
+			osascript -e 'quit app "aldente"'
 		fi
 
 		if [ "$maintain_status" == "active" ]; then
@@ -1584,7 +1461,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 
 				log "Stop charge above $setting"
 				disable_charging
-				sleep_duration=5
+				sleep_duration=60
 
 			elif [[ "$battery_percentage" -lt "$lower_limit" ]] && [[ "$smc_charging_status" == "disabled" ]]; then
 
@@ -1596,7 +1473,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 			sleep $sleep_duration &
 			wait $!
 		else
-			sleep_duration=5
+			sleep_duration=60
 			sleep $sleep_duration &
 			wait $!
 
@@ -1631,13 +1508,12 @@ if [[ "$action" == "maintain" ]]; then
 		notify=1
 	fi
 
-	pid=$(cat "$pidfile" 2>/dev/null)
+	pid=$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $1}')
 	if [[ "$setting" == "recover" ]]; then
 		if [[ "$(maintain_is_running)" == "1" ]]; then
-			maintain_status=$(cat "$state_file" 2>/dev/null)
+			maintain_status=$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $2}')
 			if [[ "$maintain_status" == "suspended" ]]; then # maintain is running but not active
-				echo $$ > $pid_sig
-				echo "recover" > $sigfile
+				echo "$$ recover"> $pid_sig
 				sleep 1
 
 				# waiting for ack from $pid
@@ -1674,13 +1550,12 @@ if [[ "$action" == "maintain" ]]; then
 			log "Battery maintain is not running"
 			exit 0
 		else
-			maintain_status=$(cat "$state_file" 2>/dev/null)
+			maintain_status=$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $2}')
 			if [[ "$maintain_status" == "active" ]]; then
-				echo $$ > $pid_sig
 				if [ "$notify" == "1" ]; then # if suspend is called by user, enable charging to 100%
-					echo "suspend" > $sigfile
+					echo "$$ suspend" > $pid_sig
 				else # if suspend is called by another battery process, let that process handle charging
-					echo "suspend_no_charging" > $sigfile
+					echo "$$ suspend_no_charging" > $pid_sig
 				fi
 
 				sleep 1
@@ -1719,14 +1594,13 @@ if [[ "$action" == "maintain" ]]; then
 	# Kill old process silently
 	if test -f "$pidfile"; then
 		log "Killing old maintain process at $(cat $pidfile)" >> $logfile
-		pid=$(cat "$pidfile" 2>/dev/null)
+		pid=$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $1}')
 		kill $pid &>/dev/null
 	fi
 
 	if [[ "$setting" == "stop" ]]; then
 		log "Killing running maintain daemons & enabling charging as default state" >> $logfile
 		rm $pidfile 2>/dev/null
-		rm $state_file 2>/dev/null
 		$battery_binary disable_daemon
 		$battery_binary schedule disable
 		enable_charging
@@ -1758,22 +1632,21 @@ if [[ "$action" == "maintain" ]]; then
 
 	if ! [[ "$setting" == "recover" ]]; then
 		# Update settings
-		rm "$maintain_percentage_tracker_file" 2>/dev/null
 
 		if ! valid_percentage $subsetting; then
-			log "Writing new setting $setting to $maintain_percentage_tracker_file" >> $logfile
-			echo $setting >$maintain_percentage_tracker_file
+			log "Writing new setting $setting to maintain_percentage" >> $logfile
+			write_config maintain_percentage $setting
 		else
-			log "Writing new setting $setting $subsetting to $maintain_percentage_tracker_file" >> $logfile
-			echo $setting $subsetting >$maintain_percentage_tracker_file
+			log "Writing new setting $setting $subsetting to maintain_percentage" >> $logfile
+			write_config maintain_percentage "$setting $subsetting"
 		fi
 	fi
 
 	# Enable the daemon that continues maintaining after reboot
 	$battery_binary create_daemon
 
-	# Enable schedule
-	$battery_binary schedule enable >> $logfile
+	## Enable schedule
+	#$battery_binary schedule enable >> $logfile
 
 	# Report status
 	$battery_binary status
@@ -1807,7 +1680,7 @@ if [[ "$action" == "calibrate" ]]; then
 
 	if ! [[ -t 0 ]]; then # if the command is not entered from stdin (terminal) by a person, meaning it is a scheduled calibration
 		# check schedule to see if this week should calibrate
-		schedule=$(cat "$schedule_tracker_file" 2>/dev/null)
+		schedule=$(read_config calibrate_schedule)
 		if [[ $schedule == *"every"* ]] && [[ $schedule == *"Week"* ]] && [[ $schedule == *"Year"* ]]; then
 			week_period=$(echo $schedule | awk '{print $6}')
 			week=$(echo $schedule | awk '{print $13}')
@@ -1882,7 +1755,7 @@ if [[ "$action" == "calibrate" ]]; then
 		now=$(date +%s)
 		lid_open_timeout=$(($now + 24*60*60))
 		while [[ $(date +%s)  -lt $lid_open_timeout ]]; do
-			if [[ $(lid_closed) == "No" ]]; then
+			if [[ $(lid_closed) == "No" ]] && [[ $(get_charger_connection) == "1" ]]; then
 				break
 			fi
 			sleep 5
@@ -1892,12 +1765,22 @@ if [[ "$action" == "calibrate" ]]; then
 	# check if lid is open or not
 	if [[ $(lid_closed) == "Yes" ]] || [[ $(get_charger_connection) == "0" ]]; then # lid is still closed, terminate the calibration
 		ha_webhook "err_lid_closed"
-		if $is_TW; then
-			osascript -e 'display notification "筆電上蓋沒打開或電源沒接" with title "電池校正錯誤" sound name "Blow"'
-		else
-			osascript -e 'display notification "Macbook lid is not open or no AC power!" with title "Battery Calibration Error" sound name "Blow"'
+		if [[ $(lid_closed) == "Yes" ]]; then
+			if $is_TW; then
+				osascript -e 'display notification "筆電上蓋沒打開" with title "電池校正錯誤" sound name "Blow"'
+			else
+				osascript -e 'display notification "Macbook lid is not open!" with title "Battery Calibration Error" sound name "Blow"'
+			fi
+			log "Calibration Error: Macbook lid is not open!"
 		fi
-		log "Calibration Error: Macbook lid is not open or no AC power!"
+		if [[ $(get_charger_connection) == "0" ]]; then
+			if $is_TW; then
+				osascript -e 'display notification "電源沒接" with title "電池校正錯誤" sound name "Blow"'
+			else
+				osascript -e 'display notification "No AC power!" with title "Battery Calibration Error" sound name "Blow"'
+			fi
+			log "Calibration Error: Macbook has no AC power!"
+		fi
 		exit 1
 	fi
 
@@ -1908,18 +1791,16 @@ if [[ "$action" == "calibrate" ]]; then
 	pid=$(cat "$calibrate_pidfile" 2>/dev/null)
 	
 	# check maintain percentage
-	setting=$(echo $(cat $maintain_percentage_tracker_file 2>/dev/null) | awk '{print $1}')
+	setting=$(get_maintain_percentage)
 	if [[ -z $setting ]]; then # default percentage is 80
 		setting=80
 	fi
 
 	# Select calibrate method. Method 1: Discharge first. Method 2: Charge first
 	method=1
-	if test -f "$calibrate_method_file"; then
-		method=$(cat "$calibrate_method_file" 2>/dev/null)
-		if [[ "$method" != "1" ]] && [[ "$method" != "2" ]]; then # method can be 1 or 2 only
-			method=1
-		fi
+	method=$(read_config calibrate_method)
+	if [[ "$method" != "1" ]] && [[ "$method" != "2" ]]; then # method can be 1 or 2 only
+		method=1
 	fi
 
 	if [ "$method" == "1" ]; then
@@ -2187,8 +2068,8 @@ if [[ "$action" == "status" ]]; then
 	fi
 
 	if [[ "$(maintain_is_running)" == "1" ]]; then
-		maintain_percentage=$(cat $maintain_percentage_tracker_file 2>/dev/null)
-		maintain_status=$(cat $state_file 2>/dev/null)
+		maintain_percentage=$(read_config maintain_percentage)
+		maintain_status=$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $2}')
 		if [[ "$maintain_status" == "active" ]]; then
 			if [[ $maintain_percentage ]]; then
 				upper_limit=$(echo $maintain_percentage | awk '{print $1}')
@@ -2242,8 +2123,7 @@ fi
 # Status logger in csv format
 if [[ "$action" == "status_csv" ]]; then
 
-	maintain_percentage=$(cat $maintain_percentage_tracker_file 2>/dev/null)
-	maintain_percentage=$(echo $maintain_percentage | awk '{print $1}')
+	maintain_percentage=$(get_maintain_percentage)
 	echo "$(get_battery_percentage),$(get_remaining_time),$(get_smc_charging_status),$(get_smc_discharging_status),$maintain_percentage"
 
 fi
@@ -2343,7 +2223,7 @@ if [[ "$action" == "schedule" ]]; then
 	minute=0
 
 	if [ $2 == "disable" ]; then
-		if test -f $schedule_tracker_file; then
+		if [[ $(read_config calibrate_schedule) ]]; then
 			if $is_TW; then
 				log "電池自動校正時程已暫停"
 				echo
@@ -2353,6 +2233,7 @@ if [[ "$action" == "schedule" ]]; then
 			fi
 			log "Disabling schedule at gui/$(id -u $USER)/com.battery_schedule.app" >> $logfile
 			launchctl disable "gui/$(id -u $USER)/com.battery_schedule.app"
+			launchctl unload "$schedule_path" 2> /dev/null
 		fi
 		exit 0
 	fi
@@ -2366,7 +2247,7 @@ if [[ "$action" == "schedule" ]]; then
 			schedule_enabled=${schedule_enabled/false/enabled}
 		fi
 		if ! [[ $schedule_enabled =~ "enabled" ]]; then
-			if test -f $schedule_tracker_file; then
+			if [[ $(read_config calibrate_schedule) ]]; then
 				log "Enabling schedule at gui/$(id -u $USER)/com.battery_schedule.app" >> $logfile
 				launchctl enable "gui/$(id -u $USER)/com.battery_schedule.app"
 			fi
@@ -2549,15 +2430,15 @@ if [[ "$action" == "schedule" ]]; then
 	if [[ $n_days -gt 0 ]] && [[ -z $weekday ]]; then
 		if [[ $month_period -eq 1 ]]; then
 			log "Schedule calibration on day ${days[*]} at $hour:$minute00" >> $logfile
-			echo "Schedule calibration on day ${days[*]} at $hour:$minute00" > $schedule_tracker_file
+			write_config calibrate_schedule "Schedule calibration on day ${days[*]} at $hour:$minute00"
 		else
 			n_days=1
 			log "Schedule calibration on day ${days[0]} every $month_period month at $hour:$minute00 starting from Month `date +%m` of Year `date +%Y`" >> $logfile
-			echo "Schedule calibration on day ${days[0]} every $month_period month at $hour:$minute00 starting from Month `date +%m` of Year `date +%Y`" > $schedule_tracker_file
+			write_config calibrate_schedule "Schedule calibration on day ${days[0]} every $month_period month at $hour:$minute00 starting from Month `date +%m` of Year `date +%Y`"
 		fi
 	else
 		log "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week `date +%V` of Year `date +%Y`" >> $logfile
-		echo "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week `date +%V` of Year `date +%Y`" > $schedule_tracker_file
+		write_config calibrate_schedule "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week `date +%V` of Year `date +%Y`"
 	fi
 
 	# create schedule file
@@ -2709,511 +2590,13 @@ fi
 # Set language
 if [[ "$action"  == "language" ]]; then
 	if [[ "$2" == "tw" ]]; then
-		echo $2 > $language_file
+		write_config language $2
 		log "顯示語言改為繁體中文"
 	elif [[ "$2" == "us" ]]; then
-		echo $2 > $language_file
+		write_config language $2
 		log "Change language to English"
 	else
 		log "Specified language is not recognized. Only [tw, us] are allowed"
 	fi
 	exit 0
-fi
-
-# Test intel discharge
-if [[ "$action"  == "test_intel_discharge" ]]; then
-	echo "This test might need to enter password"
-	#$battery_binary maintain suspend
-	#disable_charging
-
-	sudo smc -k B0St -r; # in order to invoke password
-
-	#if $has_BCLM; then sudo smc -k BCLM -w 0a; echo "set BCLM = 0a"; fi
-	#test_intel_unit write CH0B 01 ACEN 01 read B0AC CHBI CH0B ACEN write CH0B 00 ACEN 01
-	#test_intel_unit write CH0B 02 ACEN 01 read B0AC CHBI CH0B ACEN write CH0B 00 ACEN 01
-	#test_intel_unit write CH0B 03 ACEN 01 read B0AC CHBI CH0B ACEN write CH0B 00 ACEN 01
-	#test_intel_unit write CH0B 04 ACEN 01 read B0AC CHBI CH0B ACEN write CH0B 00 ACEN 01
-
-	#if $has_BCLM; then sudo smc -k BCLM -w 0a; echo "set BCLM = 64"; fi
-	#test_intel_unit write CH0B 01 read B0AC CHBI CH0B ACEN write CH0B 00
-	#test_intel_unit write CH0B 02 read B0AC CHBI CH0B ACEN write CH0B 00
-	#test_intel_unit write CH0B 03 read B0AC CHBI CH0B ACEN write CH0B 00
-	#test_intel_unit write CH0B 04 read B0AC CHBI CH0B ACEN write CH0B 00
-
-	#[[ $(smc -k CH0H -r) =~ "no data" ]] && has_CH0H=false || has_CH0H=true;
-	#if $has_CH0H; then
-	#	if $has_BCLM; then sudo smc -k BCLM -w 0a; echo "set BCLM = 0a"; fi
-	#	test_intel_unit write CH0H 00000001 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
-	#	test_intel_unit write CH0H 00000100 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
-	#	test_intel_unit write CH0H 00010000 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
-	#	test_intel_unit write CH0H 01000000 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
-	#	test_intel_unit write CH0H 01000100 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
-	#	test_intel_unit write CH0H 00010001 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
-	#	test_intel_unit write CH0H 01010101 ACEN 00 read B0AC CHBI CH0K ACEN write CH0H 00000000 ACEN 01
-	#fi
-
-	# check computer type
-	mac_year=$(defaults read ~/Library/Preferences/com.apple.SystemProfiler.plist 'CPU Names' | cut -sd '"' -f 4 | uniq)
-	smc_list=$configfolder/smc_list
-	smc_list_aldente=$configfolder/smc_list_aldente
-	if [[ $mac_year =~ "2014" ]]; then
-		curl -sS -o $smc_list "$github_link/dist/smc_list_2014"
-		curl -sS -o $smc_list_aldente "$github_link/dist/smc_list_aldente_2014"
-	elif [[ $mac_year =~ "2016" ]]; then
-		curl -sS -o $smc_list "$github_link/dist/smc_list_2016"
-		curl -sS -o $smc_list_aldente "$github_link/dist/smc_list_aldente_2016"
-	elif [[ $mac_year =~ "2017" ]]; then
-		curl -sS -o $smc_list "$github_link/dist/smc_list_2017"
-		curl -sS -o $smc_list_aldente "$github_link/dist/smc_list_aldente_2017"
-	elif [[ $mac_year =~ "2019" ]]; then
-		curl -sS -o $smc_list "$github_link/dist/smc_list_2019"
-		curl -sS -o $smc_list_aldente "$github_link/dist/smc_list_aldente_2019"
-	elif [[ $(sysctl -n machdep.cpu.brand_string) =~ "i5" ]]; then
-		curl -sS -o $smc_list "$github_link/dist/smc_list_2016"
-		curl -sS -o $smc_list_aldente "$github_link/dist/smc_list_aldente_2016"
-	elif [[ $(sysctl -n machdep.cpu.brand_string) =~ "i7" ]]; then
-		curl -sS -o $smc_list "$github_link/dist/smc_list_2017"
-		curl -sS -o $smc_list_aldente "$github_link/dist/smc_list_aldente_2017"
-	elif [[ $(sysctl -n machdep.cpu.brand_string) =~ "i9" ]]; then
-		curl -sS -o $smc_list "$github_link/dist/smc_list_2019"
-		curl -sS -o $smc_list_aldente "$github_link/dist/smc_list_aldente_2019"
-	else
-		echo "Error: MAC model is not recognized"
-		exit 1
-	fi
-
-	##if test -f $smc_list; then
-	##	test_intel_file $smc_list replace 00 01
-	##	test_intel_file $smc_list replace 01 00
-	##	test_intel_file $smc_list replace 00_00 00_01
-	##	test_intel_file $smc_list replace 00_01 00_00
-	##fi
-
-	##sudo smc -k BCLM -w 0a
-	##open -a aldente
-	##sleep 10
-	##ps aux | grep aldente
-	##sudo smc -k ACEN -w 00; echo "set ACEN = 00"
-	##sleep 5
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	##sudo smc -k ACEN -w 01; echo "set ACEN = 01"
-	##osascript -e 'quit app "aldente"'
-	##sleep 3
-	##sudo smc -k BCLM -w 0a
-
-	##sudo smc -k BCLM -w 0a
-	##sudo smc -k BSAC -w 00; echo "set BSAC = 00"
-	##sleep 1
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##sudo smc -k BSAC -w 22; echo "set BSAC = 22"
-	##sleep 1
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##for i in {0..255}; do
-	##	i_hex=$(printf "%02x" $i)
-	##	sudo smc -k ACEN -w $i_hex; echo "set ACEN = $i_hex"
-	##	sleep 0.5
-	##	acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##	if [[ $acen == "00" ]]; then
-	##		echo "found"
-	##		sudo smc -k BSAC -w 00; echo "set BSAC = 00"
-	##		sleep 1
-	##		bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##		break;
-	##	fi
-	##done
-	
-	##sudo smc -k BCLM -w 0a
-
-	##sudo smc -k BSAC -w 00; echo "set BSAC = 00"
-	##sleep 5
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	##ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	##ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	##ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	##sudo smc -k BSAC -w 01; echo "set BSAC = 01"
-	##sleep 5
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	##ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	##ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	##ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	##sudo smc -k BSAC -w 02; echo "set BSAC = 02"
-	##sleep 5
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	##ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	##ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	##ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	##sudo smc -k BSAC -w 10; echo "set BSAC = 10"
-	##sleep 5
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	##ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	##ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	##ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	##sudo smc -k BSAC -w 11; echo "set BSAC = 11"
-	##sleep 5
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	##ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	##ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	##ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	##sudo smc -k BSAC -w 12; echo "set BSAC = 12"
-	##sleep 5
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	##ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	##ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	##ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	##sudo smc -k BSAC -w 20; echo "set BSAC = 20"
-	##sleep 5
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	##ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	##ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	##ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	##sudo smc -k BSAC -w 21; echo "set BSAC = 21"
-	##sleep 5
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	##ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	##ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	##ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	##sudo smc -k BSAC -w 22; echo "set BSAC = 22"
-	##sleep 5
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	##ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	##ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	##ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	##sudo smc -k CH0K -w 01; echo "set CH0K = 01"
-	##sleep 5
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	##ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	##ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	##sudo smc -k BSAC -w 02; echo "set BSAC = 02"
-	##sudo smc -k CH0K -w 00; echo "set CH0K = 00"
-	##sudo smc -k CH0B -w 21; echo "set CH0B = 21"
-	##sleep 5
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	##ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	##ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	##chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	##sudo smc -k CH0B -w 00; echo "set CH0B = 00"
-	##sleep 5
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-
-	##sudo smc -k BSAC -w 22; echo "set BSAC = 22"
-	##sudo smc -k CH0K -w 00; echo "set CH0K = 00"
-	##sudo smc -k CH0B -w 21; echo "set CH0B = 21"
-	##sleep 5
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	##ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	##ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	##chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	##sudo smc -k CH0B -w 00; echo "set CH0B = 00"
-	##sleep 5
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-
-	##sudo smc -k BSAC -w 22; echo "set BSAC = 22"
-	##sudo smc -k BCLM -w 64; echo "set BCLM = 64"
-	##sleep 5
-	##chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	##sudo smc -k CH0B -w 01; echo "set CH0B = 01"
-	##sleep 5
-	##chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	##sudo smc -k CH0B -w 02; echo "set CH0B = 02"
-	##sleep 5
-	##chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	##sudo smc -k CH0B -w 03; echo "set CH0B = 03"
-	##sleep 5
-	##chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	##sudo smc -k CH0B -w 04; echo "set CH0B = 04"
-	##sleep 5
-	##chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	##sudo smc -k CH0B -w 20; echo "set CH0B = 20"
-	##sleep 5
-	##chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	##sudo smc -k CH0B -w 21; echo "set CH0B = 21"
-	##sleep 5
-	##chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	##sudo smc -k CH0B -w 22; echo "set CH0B = 22"
-	##sleep 5
-	##chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	##sudo smc -k CH0B -w 23; echo "set CH0B = 23"
-	##sleep 5
-	##chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	##sudo smc -k CH0B -w 24; echo "set CH0B = 24"
-	##sleep 5
-	##chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	##sudo smc -k BCLM -w 0a; echo "set BCLM = 0a"
-	##sudo smc -k CH0B -w 00; echo "set CH0B = 00"
-
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	##acen=$(read_smc ACEN); echo "ACEN = $acen"
-	##ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	##ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	##ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	##chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	##sudo smc -k CH0B -w 00; echo "set CH0B = 00"
-	##sleep 5
-	##b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-
-	#sudo smc -k BSAC -w 22; echo "set BSAC = 22"
-	#sudo smc -k BCLM -w 64; echo "set BCLM = 64"
-	#sleep 1
-	#sudo smc -k CH0B -w 00; echo "set CH0B = 00"
-	#sleep 10
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-
-	#sudo smc -k CH0B -w 01; echo "set CH0B = 01"
-	#sleep 10
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-
-	#sudo smc -k CH0B -w 00; echo "set CH0B = 00"
-	#sleep 10
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-
-	#sudo smc -k BCLM -w 0a; echo "set BCLM = 0a"
-	#sleep 1
-	#sudo smc -k BCLM -w 64; echo "set BCLM = 64"
-	#sleep 1
-	#sudo smc -k CH0B -w 00; echo "set CH0B = 00"
-	#sleep 10
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-
-	#sudo smc -k BCLM -w 0a; echo "set BCLM = 0a"
-	#sudo smc -k BSAC -w 02; echo "set BSAC = 02"
-	#sudo smc -k CH0B -w 00; echo "set CH0B = 00"
-	#sleep 10
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-
-	#sudo smc -k BSAC -w 02; echo "set BSAC = 02"
-	#sudo smc -k CH0B -w 01; echo "set CH0B = 01"
-	#sleep 10
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-
-	#sudo smc -k CH0B -w 00; echo "set CH0B = 00"
-	#sleep 10
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-
-	#sudo smc -k CH0B -w 21; echo "set CH0B = 21"
-	#sleep 10
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-
-	#sudo smc -k CH0B -w 00; echo "set CH0B = 00"
-	#sleep 10
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-
-	#sudo smc -k CH0B -w 20; echo "set CH0B = 20"
-	#sleep 10
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-
-	#sudo smc -k CH0B -w 21; echo "set CH0B = 21"
-	#sleep 10
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-
-	#sudo smc -k CH0B -w 00; echo "set CH0B = 00"
-	#sleep 10
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-
-	#sudo smc -k BCLM -w 64; echo "set BCLM = 64"
-	#sudo smc -k BSAC -w 02; echo "set BSAC = 02"
-	##sudo smc -k CH0K -w 00; echo "set CH0K = 00"
-	#sleep 1
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#acen=$(read_smc ACEN); echo "ACEN = $acen"
-	#ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	#ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#for i in {0..255}; do
-	#	i_hex=$(printf "%02x" $i)
-	#	sudo smc -k CH0B -w $i_hex; echo "set CH0B = $i_hex"
-	#	sleep 5
-	#	b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#	chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	#	if [[ $((0x${b0ac})) -gt 0 ]]; then
-	#		echo "found"
-	#		#sudo smc -k CH0B -w 00; echo "set CH0B = 00"
-	#		sleep 1
-	#		acen=$(read_smc ACEN); echo "ACEN = $acen"
-	#		bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#		ch0h=$(read_smc CH0H); echo "CH0H = $ch0h"
-	#		ch0k=$(read_smc CH0K); echo "CH0K = $ch0k"
-	#		break;
-	#	fi
-	#done
-
-	battery status
-
-	enable_charging
-	echo "set BCLM=64"
-	#echo "set ACEN=01"
-	echo "set CH0B=00"
-	sleep 5
-	bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	for i in {0..10}; do
-		sleep 1
-		b0ac=$(read_smc B0AC); chbi=$(read_smc CHBI);
-		echo "B0AC = $b0ac, CHBI = $chbi"
-	done
-
-	#disable_charging
-	#echo "set BCLM=0a"
-	##echo "set ACEN=01"
-	#echo "set CH0B=02"
-	#sleep 5
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#for i in {0..10}; do
-	#	sleep 1
-	#	b0ac=$(read_smc B0AC); chbi=$(read_smc CHBI);
-	#	echo "B0AC = $b0ac, CHBI = $chbi"
-	#done
-
-	#enable_discharging
-	#echo "set BCLM=0a"
-	##echo "set ACEN=00"
-	#echo "set CH0B=00"
-	#sleep 5
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	##bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#for i in {0..10}; do
-	#	sleep 1
-	#	b0ac=$(read_smc B0AC); chbi=$(read_smc CHBI);
-	#	echo "B0AC = $b0ac, CHBI = $chbi"
-	#done
-	#pmset -g batt | head -n1
-
-	#disable_discharging
-	#echo "set BCLM=0a"
-	##echo "set ACEN=01"
-	#echo "set CH0B=02"
-	#sleep 5
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-
-	#enable_discharging
-	#echo "set BCLM=0a"
-	##echo "set ACEN=00"
-	#echo "set CH0B=00"
-	#sleep 5
-	#bclm=$(read_smc BCLM); echo "BCLM = $bclm"
-	#b0ac=$(read_smc B0AC); echo "B0AC = $b0ac"
-	#chbi=$(read_smc CHBI); echo "CHBI = $chbi"
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#ch0b=$(read_smc CH0B); echo "CH0B = $ch0b"
-	#pmset -g batt | head -n1
-
-	#sudo smc -k BSAC -w 22; echo "set BSAC = 22"
-	#sleep 1
-	#bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#acen=$(read_smc ACEN); echo "ACEN = $acen"
-	#for i in {0..255}; do
-	#	i_hex=$(printf "%02x" $i)
-	#	sudo smc -k ACEN -w $i_hex; echo "set ACEN = $i_hex"
-	#	sleep 0.5
-	#	acen=$(read_smc ACEN); echo "ACEN = $acen"
-	#	if [[ $acen == "00" ]]; then
-	#		echo "found"
-	#		sudo smc -k BSAC -w 00; echo "set BSAC = 00"
-	#		sleep 1
-	#		bsac=$(read_smc BSAC); echo "BSAC = $bsac"
-	#		break;
-	#	fi
-	#done
-
-
-	#if test -f $smc_list_aldente; then
-	#	sudo smc -k BCLM -w 0a
-	#	test_intel_aldente $smc_list_aldente
-	#	test_intel_aldente $smc_list_aldente
-	#fi
 fi
