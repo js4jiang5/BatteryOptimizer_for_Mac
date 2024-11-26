@@ -1038,6 +1038,7 @@ else
 		is_TW=false
 	fi
 fi
+is_TW=false
 
 # Visudo message
 if [[ "$action" == "visudo" ]]; then
