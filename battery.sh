@@ -1148,7 +1148,7 @@ if [[ "$action" == "update" ]]; then
 		else
 			changelog=$(get_changelog CHANGELOG)
 			battery_new_version=$(get_version CHANGELOG)
-			osascript -e 'display dialog "'"$battery_new_version changes inlude\n\n$changelog"'" buttons {"'"$button_empty"'", "Continue"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+			osascript -e 'display dialog "'"$battery_new_version changes include\n\n$changelog"'" buttons {"'"$button_empty"'", "Continue"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
 		fi
 		if $is_TW; then
 			answer="$(osascript -e 'display dialog "'"你現在要更新到$battery_new_version 嗎?"'" buttons {"立即更新", "跳過此版本"} default button 1 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
