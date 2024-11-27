@@ -7,26 +7,12 @@ assignees: ''
 
 ---
 
-**What is the issue? (required)**
-A clear and concise description of what the bug is.
+**Your macbook model and year:**
 
-**What exactly did you do to produce the issue? (required)**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+**Your version number: (run "battery version" to find out)**
 
-**Expected behavior (required)**
-A clear and concise description of what you expected to happen.
+**Your battery status: (run "battery status" to find out)**
 
-**Screenshots (optional)**
-If applicable, add screenshots to help explain your problem. On a Mac you can click `control`+`command`+`shift`+`4` to create a screenshot that you can paste into this field with `command`+`4`.
+**What is the issue?**
 
-**Error logs**
-If you know how a terminal works, please paste the content of `battery logs` here. This allows me to see potential errors on your device.
-
-Did `battery` fail to install? Use `tail -n 1000 ~/.battery/*/log` instead.
-
-**Additional context (optional)**
-Add any other context about the problem here.
+**Error logs: (run "battery logs" to find out)**
