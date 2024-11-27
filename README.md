@@ -38,6 +38,13 @@
 - battery charging on/off (confusing and better not be used)
 - battery maintain using voltage (not practical because voltage boost abruptly when charging starts)
 
+### Advantages compared to AlDente
+- free and open source
+- extremely light weighted - memory usage is 1/20 of AlDente
+- no icon in menu bar
+- daily notification of battery status. no need for user to manually run this tool
+- daily log of battery status history
+
 ### Requirements
 This is a CLI tool for both Apple and Intel Silicon Macs.<br>
 Please setup your MAC system settings as follows
