@@ -112,7 +112,7 @@ cp -r $batteryfolder/$in_zip_folder_name/* $batteryfolder
 rm $batteryfolder/repo.zip
 
 # update smc for intel macbook if version is less than v2.0.13
-if [[ 10#$(version_number $version_local) -lt 10#$(version_number "v2.0.13") ]]; then
+if [[ 10#$(version_number $battery_version_local) -lt 10#$(version_number "v2.0.13") ]]; then
 	if [[ $(sysctl -n machdep.cpu.brand_string) == *"Intel"* ]]; then # check CPU type
 		sudo mkdir -p $binfolder
 		sudo cp $batteryfolder/dist/smc_intel $binfolder/smc
