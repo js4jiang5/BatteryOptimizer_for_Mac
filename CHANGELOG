@@ -1,5 +1,15 @@
+v2.0.13
+This update needs to enter password
+* fix bugs below
+- LED color is not correct during calibration
+- LED color change not effective for Intel Macbooks
+- schedule calibration is disabled after version update
+
+* new features
+- apply new discharge method to solve discharge failure or stuck at 50% issues for Intel Macbooks
+
 v2.0.12
-This update need to enter password
+This update needs to enter password
 * fix bugs below
 - modification for Intel discharging might affect Apple discharging stability
 - detection of whether calibrate is running is not solid accurate

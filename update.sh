@@ -111,6 +111,17 @@ unzip -qq $batteryfolder/repo.zip -d $batteryfolder
 cp -r $batteryfolder/$in_zip_folder_name/* $batteryfolder
 rm $batteryfolder/repo.zip
 
+# update smc for intel macbook if version is less than v2.0.13
+if [[ 10#$(version_number $battery_version_local) -lt 10#$(version_number "v2.0.13") ]]; then
+	if [[ $(sysctl -n machdep.cpu.brand_string) == *"Intel"* ]]; then # check CPU type
+		sudo mkdir -p $binfolder
+		sudo cp $batteryfolder/dist/smc_intel $binfolder/smc
+		sudo chown $USER $binfolder/smc
+		sudo chmod 755 $binfolder/smc
+		sudo chmod +x $binfolder/smc
+	fi
+fi
+
 echo "[ 2 ] Writing script to $binfolder/battery"
 cp $batteryfolder/battery.sh $binfolder/battery
 chown $USER $binfolder/battery
@@ -151,8 +162,6 @@ echo -e "\n🎉 Battery tool updated.\n"
 echo -e "Restarting battery maintain.\n"
 write_config informed_version "$battery_version_new"
 
-battery maintain stop >> /dev/null
-sleep 1
 pkill -f "$binfolder/battery.*"
 battery maintain recover
 

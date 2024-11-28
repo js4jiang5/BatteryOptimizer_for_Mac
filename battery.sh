@@ -4,8 +4,8 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.12"
-BATTERY_VISUDO_VERSION="v1.0.1"
+BATTERY_CLI_VERSION="v2.0.13"
+BATTERY_VISUDO_VERSION="v1.0.2"
 
 # Path fixes for unexpected environments
 PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
@@ -52,9 +52,8 @@ Battery CLI utility $BATTERY_CLI_VERSION
 Usage:
 
   battery maintain PERCENTAGE[10-100,stop,suspend,recover] SAILING_TARGET[5-99]
-    reboot-persistent battery level maintenance: turn off charging above, and on below a certain value
-	it has the option of a --force-discharge flag that discharges even when plugged in (this does NOT work with clamshell mode)
-	SAILING_TARGET default is PERCENTAGE-5 if not specified
+  - PERCENTAGE is battery level upper bound above which charging is stopped
+  - SAILING_TARGET is battery level lower bound below which charging is started. default value is PERCENTAGE-5 if not specified
 	Examples:
     battery maintain 80 50    # maintain at 80% with sailing to 50%
 	battery maintain 80    # equivalent to battery maintain 80 75
@@ -139,8 +138,8 @@ visudoconfig="
 # intended to be placed in $visudo_file on a mac
 Cmnd_Alias      BATTERYOFF = $binfolder/smc -k CH0B -w 02, $binfolder/smc -k CH0C -w 02, $binfolder/smc -k CH0B -r, $binfolder/smc -k CH0C -r
 Cmnd_Alias      BATTERYON = $binfolder/smc -k CH0B -w 00, $binfolder/smc -k CH0C -w 00
-Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r, $binfolder/smc -k CH0J -w 00, $binfolder/smc -k CH0J -r, $binfolder/smc -k CH0K -w 00, $binfolder/smc -k CH0K -r
-Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01, $binfolder/smc -k CH0J -w 01, $binfolder/smc -k CH0K -w 01
+Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r, $binfolder/smc -k CH0J -w 00, $binfolder/smc -k CH0J -r, $binfolder/smc -k CH0K -w 00, $binfolder/smc -k CH0K -r, $binfolder/smc -d off
+Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01, $binfolder/smc -k CH0J -w 01, $binfolder/smc -k CH0K -w 01, $binfolder/smc -d on
 Cmnd_Alias      LEDCONTROL = $binfolder/smc -k ACLC -w 04, $binfolder/smc -k ACLC -w 03, $binfolder/smc -k ACLC -w 02, $binfolder/smc -k ACLC -w 01, $binfolder/smc -k ACLC -w 00, $binfolder/smc -k ACLC -r
 Cmnd_Alias      BATTERYBCLM = $binfolder/smc -k BCLM -w 0a, $binfolder/smc -k BCLM -w 64, $binfolder/smc -k BCLM -r
 Cmnd_Alias      BATTERYCHWA = $binfolder/smc -k CHWA -w 00, $binfolder/smc -k CHWA -w 01, $binfolder/smc -k CHWA -r
@@ -519,36 +518,59 @@ function show_schedule() {
 # Change magsafe color
 # see community sleuthing: https://github.com/actuallymentor/battery/issues/71
 function change_magsafe_led_color() {
-	if [[ $(get_cpu_type) == "apple" ]]; then
+	color=$1
+
+	if [[ "$color" == "auto" ]]; then
+		charging_status=$(get_charging_status)
+		if $has_ACLC; then 
+			color=$(read_smc_hex ACLC); 
+			if [ "$charging_status" == "1" ] && [ "$color" != "04" ] ; then # orange for charging
+				color="orange"
+			elif [ "$charging_status" == "0" ] && [ "$color" != "03" ] ; then # green for not charging
+				color="green"
+			elif [ "$charging_status" == "2" ] && [ "$color" != "01" ] ; then # none for discharging
+				color="none"
+			else
+				return 0
+			fi
+		elif $has_BFCL; then
+			color=$(read_smc_hex BFCL); 
+			if [ "$charging_status" == "1" ] && [ "$color" != "5f" ] ; then # orange for charging
+				color="orange"
+			elif [ "$charging_status" == "0" ] && [ "$color" != "00" ] ; then # green for not charging
+				color="green"
+			else
+				return 0
+			fi
+		else
+			return 0
+		fi
+	fi
+
+	if $has_ACLC || $has_BFCL; then
 		log "MagSafe LED function invoked"
-		color=$1
+		log "💡 Setting magsafe color to $color"
+	else
+		return 0
+	fi
 
-		# Check whether user can run color changes without password (required for backwards compatibility)
-		if $has_ACLC || $has_BFCL; then
-			log "💡 Setting magsafe color to $color"
-		else
-			log "🚨 Your version of battery is using an old visudo file, please run 'battery visudo' to fix this, until you do battery cannot change magsafe led colors"
-			return
-		fi
-
-		if [[ "$color" == "green" ]]; then
-			log "setting LED to green"
-			if $has_ACLC; then sudo smc -k ACLC -w 03; fi
-			if $has_BFCL; then sudo smc -k BFCL -w 00; fi
-		elif [[ "$color" == "orange" ]]; then
-			log "setting LED to orange"
-			if $has_ACLC; then sudo smc -k ACLC -w 04; fi
-			if $has_BFCL; then sudo smc -k BFCL -w 5f; fi
-		elif [[ "$color" == "none" ]]; then
-			log "setting LED to none"
-			if $has_ACLC; then sudo smc -k ACLC -w 01; fi
-			if $has_BFCL; then sudo smc -k BFCL -w 5f; fi
-		else
-			# Default action: reset. Value 00 is a guess and needs confirmation
-			log "resetting LED"
-			if $has_ACLC; then sudo smc -k ACLC -w 00; fi
-			if $has_BFCL; then sudo smc -k BFCL -w 00; fi
-		fi
+	if [[ "$color" == "green" ]]; then
+		log "setting LED to green"
+		if $has_ACLC; then sudo smc -k ACLC -w 03; fi
+		if $has_BFCL; then sudo smc -k BFCL -w 00; fi
+	elif [[ "$color" == "orange" ]]; then
+		log "setting LED to orange"
+		if $has_ACLC; then sudo smc -k ACLC -w 04; fi
+		if $has_BFCL; then sudo smc -k BFCL -w 5f; fi
+	elif [[ "$color" == "none" ]]; then
+		log "setting LED to none"
+		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
+		if $has_BFCL; then sudo smc -k BFCL -w 5f; fi
+	else
+		# Default action: reset. Value 00 is a guess and needs confirmation
+		log "resetting LED"
+		if $has_ACLC; then sudo smc -k ACLC -w 00; fi
+		if $has_BFCL; then sudo smc -k BFCL -w 00; fi
 	fi
 }
 
@@ -562,8 +584,9 @@ function enable_discharging() {
 		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
 	else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
-		if $has_CH0K; then sudo smc -k CH0K -w 01; fi
+		sudo smc -d on;
+		#if $has_ACEN; then sudo smc -k ACEN -w 00; fi
+		#if $has_CH0K; then sudo smc -k CH0K -w 01; fi
 	fi
 	sleep 1
 }
@@ -573,8 +596,9 @@ function disable_discharging() {
 	if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0I; then sudo smc -k CH0I -w 00; fi
 	else
-		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		if $has_CH0K; then sudo smc -k CH0K -w 00; fi
+		sudo smc -d off;
+		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+		#if $has_CH0K; then sudo smc -k CH0K -w 00; fi
 	fi
 	sleep 1
 
@@ -617,7 +641,7 @@ function enable_charging() {
 		if $has_CH0C; then sudo smc -k CH0C -w 00; fi
 	else
 		if $has_BCLM; then sudo smc -k BCLM -w 64; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 	fi
 	sleep 1
 }
@@ -629,7 +653,7 @@ function disable_charging() {
 		if $has_CH0C; then sudo smc -k CH0C -w 02; fi
 	else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 	fi
 	sleep 1
 }
@@ -841,7 +865,7 @@ function get_changelog() { # get the latest changelog
     echo -e "$changelog" | awk 'NR>=2 && NR<='$n_lines
 }
 
-function get_version { # get the latest version number
+function get_version() { # get the latest version number
 	if [[ -z $1 ]]; then
 		changelog=$(curl -sSL $github_link/CHANGELOG | sed s:\":'\\"':g 2>&1)
 	else
@@ -1145,7 +1169,7 @@ if [[ "$action" == "update" ]]; then
 		else
 			changelog=$(get_changelog CHANGELOG)
 			battery_new_version=$(get_version CHANGELOG)
-			osascript -e 'display dialog "'"$battery_new_version changes inlude\n\n$changelog"'" buttons {"'"$button_empty"'", "Continue"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+			osascript -e 'display dialog "'"$battery_new_version changes include\n\n$changelog"'" buttons {"'"$button_empty"'", "Continue"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
 		fi
 		if $is_TW; then
 			answer="$(osascript -e 'display dialog "'"你現在要更新到$battery_new_version 嗎?"'" buttons {"立即更新", "跳過此版本"} default button 1 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
@@ -1218,7 +1242,8 @@ if [[ "$action" == "charge" ]]; then
 	done
 
 	disable_charging
-	change_magsafe_led_color "green" # LED orange for not charging
+	sleep 5
+	change_magsafe_led_color "auto"
 	if $is_TW; then
 		log "電池已充電至 $battery_percentage%"
 	else
@@ -1269,14 +1294,8 @@ if [[ "$action" == "discharge" ]]; then
 	done
 
 	disable_discharging
-	
-	is_charging=$(get_smc_charging_status)
-
-	if [[ "$is_charging" == "enabled" ]]; then
-		change_magsafe_led_color "orange"
-	else
-		change_magsafe_led_color "green"
-	fi
+	sleep 5
+	change_magsafe_led_color "auto"
 	
 	if $is_TW; then
 		log "電池已放電至 $battery_percentage%"
@@ -1366,17 +1385,6 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 	ac_connection=$(get_charger_connection)
 	pre_ac_connection=$ac_connection
 	sleep_duration=60
-	charging_status=$(get_charging_status)
-	if [ "$charging_status" == "1" ]; then
-		log "Battery is charging"
-		color="orange"
-	elif [ "$charging_status" == "2" ]; then
-		log "Battery is discharging"
-		color="none"
-	else
-		log "Battery is not charging"
-		color="green"
-	fi
 	if ! test -f $daily_log; then
     	echo "Time Capacity Voltage Temperature Health Cycle" | awk '{printf "%-10s, %9s, %9s, %12s, %9s, %9s\n", $1, $2, $3, $4, $5, $6}' > $daily_log
 	fi
@@ -1384,13 +1392,13 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 	now=$(date +%s)
 	check_update_timeout=$((now + (3*24*60*60))) # first check update 3 days later
 	
-
 	informed_version=$(read_config informed_version)
 	if [[ -z $informed_version ]]; then
 		informed_version=$BATTERY_CLI_VERSION
 	fi
 	
-	change_magsafe_led_color $color
+	change_magsafe_led_color "auto"
+
 	trap ack_SIG SIGUSR1
 	while true; do
 		if [ "$maintain_status" != "$pre_maintain_status" ]; then # update state to state_file
@@ -1440,18 +1448,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 
 		if [ "$maintain_status" == "active" ]; then
 			# Keep track of LED status
-			charging_status=$(get_charging_status)
-
-			if [ "$charging_status" == "1" ] && [ "$color" != "orange" ] ; then # orange for charging
-				color="orange"
-				change_magsafe_led_color $color
-			elif [ "$charging_status" == "0" ] && [ "$color" != "green" ] ; then # green for not charging
-				color="green"
-				change_magsafe_led_color $color
-			elif [ "$charging_status" == "2" ] && [ "$color" != "none" ] ; then # none for discharging
-				color="none"
-				change_magsafe_led_color $color
-			fi
+			change_magsafe_led_color "auto"
 
 			# Keep track of SMC charging status
 			smc_charging_status=$(get_smc_charging_status)
@@ -1744,9 +1741,9 @@ if [[ "$action" == "calibrate" ]]; then
 	if [[ $(lid_closed) == "Yes" ]] || [[ $(get_charger_connection) == "0" ]]; then
 		ha_webhook "open_lid_remind"
 		if $is_TW; then
-			osascript -e 'display notification "準備進行電池校正, 請打開筆電上蓋並接上電源" with title "電池校正" sound name "Blow"'
+			osascript -e 'display notification "準備進行電池校正, 您打開筆電上蓋並接上電源後將立刻開始" with title "電池校正" sound name "Blow"'
 		else
-			osascript -e 'display notification "Please open macbook lid and connect AC to start calibration" with title "Battery Calibration" sound name "Blow"'
+			osascript -e 'display notification "Battery calibration will start immediately after you open macbook lid and connect AC power" with title "Battery Calibration" sound name "Blow"'
 		fi
 		
 		log "Calibration: Please open macbook lid and connect AC to start calibration"
@@ -1840,6 +1837,7 @@ if [[ "$action" == "calibrate" ]]; then
 		# Enable battery charging to 100%
 		ha_webhook "charge100_start"
 		enable_charging
+		change_magsafe_led_color "orange"
 		now=$(date +%s)
 		charge100_timeout=$((now + (6*60*60)))
 		while true; do
@@ -1875,6 +1873,7 @@ if [[ "$action" == "calibrate" ]]; then
 		log "Calibration: Calibration has charged to 100%. Waiting for one hour"
 
 		# Wait before discharging to target level
+		change_magsafe_led_color "green"
 		sleep 3600 &
 		wait $!
 		ha_webhook "wait_1hr_done"
@@ -1916,6 +1915,7 @@ if [[ "$action" == "calibrate" ]]; then
 		
 		# Enable battery charging to 100%
 		enable_charging
+		change_magsafe_led_color "orange"
 
 		# Charge battery to 100%
 		ha_webhook "charge100_start"
@@ -1955,6 +1955,7 @@ if [[ "$action" == "calibrate" ]]; then
 		log "Calibration: Calibration has charged to 100%. Waiting for one hour"
 
 		# Wait before discharging to 15%
+		change_magsafe_led_color "green"
 		sleep 3600 &
 		wait $!
 		ha_webhook "wait_1hr_done"
