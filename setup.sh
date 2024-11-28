@@ -45,14 +45,13 @@ else
 fi
 
 # Note: github names zips by <reponame>-<branchname>.replace( '/', '-' )
-update_branch="pre-release"
+update_branch="2.0.12"
 in_zip_folder_name="BatteryOptimizer_for_MAC-$update_branch"
 batteryfolder="$tempfolder/battery"
 echo "[ 2 ] Downloading latest version of battery CLI"
 rm -rf $batteryfolder
 mkdir -p $batteryfolder
-curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/heads/$update_branch.zip"
-#curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/tags/v2.0.12.zip"
+curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/tags/v$update_branch.zip"
 unzip -qq $batteryfolder/repo.zip -d $batteryfolder
 cp -r $batteryfolder/$in_zip_folder_name/* $batteryfolder
 rm $batteryfolder/repo.zip
@@ -216,18 +215,12 @@ notice="Installation completed.
 Please setup your MAC system settings as follows
 1.	system settings > notifications > enable \\\"Allow notifications when mirroring or sharing\\\"
 2.	system settings > notifications > applications > Script Editor > Choose \\\"Alerts\\\"
-3.	system settings > battery > options > enable 
-	\\\"Prevent automatic sleeping on power adapter when the display is off\\\" or
-	system settings > display > advanced > enable 
-	\\\"Prevent your MAC from sleeping when its display is off\\\"
 "
 notice_tw="安裝完成.
 
 請調整 MAC 系統設定如下
 1.	系統設定 > 通知 > 開啟 \\\"在鏡像輸出或共享顯示器時允許通知\\\"
 2.	系統設定 > 通知 > 應用程式通知 > 工序指令編寫程式 > 選擇 \\\"提示\\\"
-3.	系統設定 > 電池 > 進階 > 開啟 \\\"避免在顯示器關閉時自動進入睡眠\\\" 或
-	系統設定 > 顯示器 > 進階 > 開啟 \\\"避免在顯示器關閉時自動進入睡眠\\\"
 "
 
 if $is_TW; then
