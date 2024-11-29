@@ -3,10 +3,10 @@
 [BatteryOptimizer_for_MAC](https://github.com/js4jiang5/BatteryOptimizer_for_MAC) is a fork of [Battery APP v1.2.7](https://github.com/actuallymentor/battery), with new features, enhancements, bug fixes, and removal of confusing or useless comands as follows
 
 ## Other languages
-- [正體中文 README](README_TW.md)<br>
+- [正體中文 說明](README_TW.md)<br>
 
 ### New features
-- support both Apple and Intel CPU Macs (See Note below)
+- support both Apple and Intel CPU Macs
 - sail mode, allowing the battery to sail from maintain percentage to sail target without charging
 - scheduled calibration, starting automatic calibration on specified days per month (at most four days), or specified one day every 1-3 month, or specified weekday every 1-12 weeks
 - new command "suspend", suspending maintain temporarily allowing charging to 100%, and automatically resume maintain when AC adapter is reconnected
@@ -14,8 +14,6 @@
   - Intel CPU: limit is at maintain percentage
   - Apple CPU: limit is fixed at 80%
 - add battery daily log and notification
-
-  Note: For Intel Macs, charge limit works for all models, but discharge and calibrate only works for model 2014 or earlier. I am still searching discharge method for the other Intel Models.
 
 ### Enhancements
 - replace macOS battery percentage with real hardware charging percentage.
