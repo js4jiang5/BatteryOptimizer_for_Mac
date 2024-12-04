@@ -3,19 +3,17 @@
 [BatteryOptimizer_for_MAC](https://github.com/js4jiang5/BatteryOptimizer_for_MAC) is a fork of [Battery APP v1.2.7](https://github.com/actuallymentor/battery), with new features, enhancements, bug fixes, and removal of confusing or useless comands as follows
 
 ## Other languages
-- [正體中文 README](README_TW.md)<br>
+- [正體中文 說明](README_TW.md)<br>
 
 ### New features
-- support both Apple and Intel CPU Macs (See Note below)
+- support both Apple and Intel CPU Macs
 - sail mode, allowing the battery to sail from maintain percentage to sail target without charging
 - scheduled calibration, starting automatic calibration on specified days per month (at most four days), or specified one day every 1-3 month, or specified weekday every 1-12 weeks
 - new command "suspend", suspending maintain temporarily allowing charging to 100%, and automatically resume maintain when AC adapter is reconnected
 - charging limiter still works even when macbook sleep or shutdown
   - Intel CPU: limit is at maintain percentage
-  - Apple CPU: limit is fixed at 80% (Note: MacOS Sequoia not supported because Apple no longer provide this function)
+  - Apple CPU: limit is fixed at 80%
 - add battery daily log and notification
-
-  Note: Discharge and calibrate only available for Intel CPU Macs with model 2014 or earlier. I am still searching discharge method for the other Intel Models.
 
 ### Enhancements
 - replace macOS battery percentage with real hardware charging percentage.
@@ -38,13 +36,18 @@
 - battery charging on/off (confusing and better not be used)
 - battery maintain using voltage (not practical because voltage boost abruptly when charging starts)
 
+### Advantages compared to AlDente
+- free and open source
+- extremely light weighted - memory usage is 1/20 of AlDente
+- no icon in menu bar
+- daily notification of battery status. no need for user to manually run this tool
+- daily log of battery status history
+
 ### Requirements
 This is a CLI tool for both Apple and Intel Silicon Macs.<br>
 Please setup your MAC system settings as follows
 1.	system settings > notifications > enable "Allow notifications when mirroring or sharing"
 2.	system settings > notifications > applications > Script Editor > Choose "Alerts"
-3.	system settings > battery > options > enable "Prevent automatic sleeping on power adapter when the display is off" or<br>
-system settings > display > advanced > enable "Prevent your MAC from sleeping when its display is off"
 
 ### 🖥 Command-line version installation
 
@@ -62,8 +65,44 @@ This will:
 4. Install `brew` for `sleepwatcher` (not required for Intel CPU Macs)
 5. Install `sleepwatcher` (not required for Intel CPU Macs)
 
-### Usage
+### Snapshots
+- `battery status` <br>
+<img src="https://i.imgur.com/VHx5ytq.jpg" /> <br>
 
+- `battery charge upper limit 85% and lower limit 70%` <br>
+<img src="https://i.imgur.com/mWhaVjb.jpg" /> <br>
+
+- `battery calibrate` <br>
+<img src="https://i.imgur.com/Pj87VPN.jpg" /> <br>
+
+- `battery calibrate lid not open notification` <br>
+<img src="https://i.imgur.com/G6R5EnH.jpg" /> <br>
+
+- `battery calibrate start notification` <br>
+<img src="https://i.imgur.com/J2L99Uz.jpg" /> <br>
+
+- `battery calibrate end notification` <br>
+<img src="https://i.imgur.com/FLvcO3h.jpg" /> <br>
+
+- `calibration schedule on Day 12 28 at 21:30` <br>
+<img src="https://i.imgur.com/yl7HxIx.jpg" /> <br>
+
+- `calibration schedule on WED every 2 weeks at 10:50` <br>
+<img src="https://i.imgur.com/yXYeBB1.jpg" /> <br>
+
+- `daily notification` <br>
+<img src="https://i.imgur.com/UvAivHE.jpg" /> <br>
+
+- `show daily log` <br>
+<img src="https://i.imgur.com/ETfjely.jpg" /> <br>
+
+- `new version available notification` <br>
+<img src="https://i.imgur.com/nQttVUL.jpg" /> <br>
+
+- `show changelog before update to the latest version` <br>
+<img src="https://i.imgur.com/hlvnmMW.jpg" /> <br>
+
+### Usage
 For help, run `battery` without parameters or `battery help`:
 
 ```
@@ -112,13 +151,15 @@ Usage:
       6. valid week_period range [1-12]
       7. valid month_period range [1-3]
 
-  battery charge LEVEL[1-100]
+  battery charge LEVEL[1-100, stop]
     charge the battery to a certain percentage, and disable charging when that percentage is reached
     eg: battery charge 90
+    eg: battery charge stop # kill running battery charge process and stop charging
 
-  battery discharge LEVEL[1-100]
+  battery discharge LEVEL[1-100, stop]
     block power input from the adapter until battery falls to this level
     eg: battery discharge 90
+    eg: battery discharge stop # kill running battery discharge process and stop discharging
 
   battery status
     output battery SMC status, capacity, temperature, health, and cycle count 
