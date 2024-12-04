@@ -1,3 +1,13 @@
+v2.0.14
+This update needs to enter password
+* fix bugs below
+- Update notification might be sent due to internet disconnection
+
+* new features
+- add new command "battery charge stop" to stop running charging process
+- add new command "battery discharge stop" to stop running discharging process
+- notify user one day before the scheduled calibration day
+
 v2.0.13
 This update needs to enter password
 * fix bugs below

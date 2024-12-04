@@ -151,13 +151,15 @@ Usage:
       6. valid week_period range [1-12]
       7. valid month_period range [1-3]
 
-  battery charge LEVEL[1-100]
+  battery charge LEVEL[1-100, stop]
     charge the battery to a certain percentage, and disable charging when that percentage is reached
     eg: battery charge 90
+    eg: battery charge stop # kill running battery charge process and stop charging
 
-  battery discharge LEVEL[1-100]
+  battery discharge LEVEL[1-100, stop]
     block power input from the adapter until battery falls to this level
     eg: battery discharge 90
+    eg: battery discharge stop # kill running battery discharge process and stop discharging
 
   battery status
     output battery SMC status, capacity, temperature, health, and cycle count 

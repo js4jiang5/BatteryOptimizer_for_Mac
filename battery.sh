@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.13"
+BATTERY_CLI_VERSION="v2.0.14"
 BATTERY_VISUDO_VERSION="v1.0.2"
 
 # Path fixes for unexpected environments
@@ -93,13 +93,15 @@ Usage:
     	6. valid week_period range [1-12]
 		7. valid month_period range [1-3]
 
-  battery charge LEVEL[1-100]
+  battery charge LEVEL[1-100, stop]
     charge the battery to a certain percentage, and disable charging when that percentage is reached
     eg: battery charge 90
+    eg: battery charge stop # kill running battery charge process and stop charging
 
-  battery discharge LEVEL[1-100]
+  battery discharge LEVEL[1-100, stop]
     block power input from the adapter until battery falls to this level
     eg: battery discharge 90
+    eg: battery discharge stop # kill running battery discharge process and stop discharging
 
   battery status
     output battery SMC status, capacity, temperature, health, and cycle count 
@@ -584,9 +586,7 @@ function enable_discharging() {
 		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
 	else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
-		sudo smc -d on;
-		#if $has_ACEN; then sudo smc -k ACEN -w 00; fi
-		#if $has_CH0K; then sudo smc -k CH0K -w 01; fi
+		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
 	fi
 	sleep 1
 }
@@ -596,9 +596,7 @@ function disable_discharging() {
 	if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0I; then sudo smc -k CH0I -w 00; fi
 	else
-		sudo smc -d off;
-		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
-		#if $has_CH0K; then sudo smc -k CH0K -w 00; fi
+		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 	fi
 	sleep 1
 
@@ -637,11 +635,10 @@ function enable_charging() {
 	disable_discharging
 	if [[ $(get_cpu_type) == "apple" ]]; then
 		log "🔌🔋 Enabling battery charging"
-		if $has_CH0B; then sudo smc -k CH0B -w 00; fi
+		#if $has_CH0B; then sudo smc -k CH0B -w 00; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 00; fi
 	else
 		if $has_BCLM; then sudo smc -k BCLM -w 64; fi
-		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 	fi
 	sleep 1
 }
@@ -649,18 +646,17 @@ function enable_charging() {
 function disable_charging() {
 	log "🔌🪫 Disabling battery charging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		if $has_CH0B; then sudo smc -k CH0B -w 02; fi
+		#if $has_CH0B; then sudo smc -k CH0B -w 02; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 02; fi
 	else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
-		#if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 	fi
 	sleep 1
 }
 
 function get_smc_charging_status() {
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		hex_status=$(read_smc_hex CH0B)
+		hex_status=$(read_smc_hex CH0C)
 		if [[ "$hex_status" == "00" ]]; then
 			echo "enabled"
 		else
@@ -1214,8 +1210,18 @@ if [[ "$action" == "charge" ]]; then
 	trap charge_interrupted SIGINT SIGTERM
 
 	if ! valid_percentage "$setting"; then
-		log "Error: $setting is not a valid setting for battery charge. Please use a number between 0 and 100"
-		exit 1
+		if [[ "$setting" == "stop" ]]; then
+			pids=$(pgrep -f battery)
+			for pid_running in $pids; do
+				if [[ $(ps x | grep $pid_running) =~ " charge" ]]; then
+					kill $pid_running
+				fi 
+			done
+			exit 0
+		else
+			log "Error: $setting is not a valid setting for battery charge. Please use a number between 0 and 100"
+			exit 1
+		fi
 	fi
 
 	# Disable running daemon
@@ -1264,8 +1270,18 @@ if [[ "$action" == "discharge" ]]; then
 	trap discharge_interrupted SIGINT SIGTERM
 
 	if ! valid_percentage "$setting"; then
-		log "Error: $setting is not a valid setting for battery discharge. Please use a number between 0 and 100"
-		exit 1
+		if [[ "$setting" == "stop" ]]; then
+			pids=$(pgrep -f battery)
+			for pid_running in $pids; do
+				if [[ $(ps x | grep $pid_running) =~ " discharge" ]]; then
+					kill $pid_running
+				fi 
+			done
+			exit 0
+		else
+			log "Error: $setting is not a valid setting for battery discharge. Please use a number between 0 and 100"
+			exit 1
+		fi
 	fi
 
 	if [[ $(lid_closed) == "Yes" ]]; then
@@ -1418,6 +1434,28 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 				osascript -e 'display notification "'"Battery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\nHealth $(get_battery_health)%, Cycle $(get_cycle)"'" with title "Battery" sound name "Blow"'
 			fi
 			#fi
+
+			# notify user if tomorrow is next calibration day
+			# check if schedule is enabled
+			enable_exist="$(launchctl print gui/$(id -u $USER) | grep "=> enabled")"
+			if [[ $enable_exist ]]; then # new version that replace => false with => enabled
+				schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep enabled | grep "com.battery_schedule.app")"
+			else # old version that use => false
+				schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep "=> false" | grep "com.battery_schedule.app")"
+				schedule_enabled=${schedule_enabled/false/enabled}
+			fi
+			if [[ $schedule_enabled =~ "enabled" ]]; then
+				schedule_sec=$(check_next_calibration_date)
+				diff_sec=$((schedule_sec - `date +%s`)) 
+				if [[ $diff_sec -gt $((24*60*60)) ]] && [[ $diff_sec -lt $((48*60*60)) ]]; then
+					schedule_time="$(echo `date -j -f "%s" $schedule_sec "+%Y/%m/%d %H:%M"`)"
+					if $is_TW; then
+						osascript -e 'display notification "'"提醒您，明天 ($schedule_time) 將進行電池校正"'" with title "Battery" sound name "Blow"'
+					else
+						osascript -e 'display notification "'"Remind you, tomorrow ($schedule_time) is battery calibration day."'" with title "Battery" sound name "Blow"'
+					fi
+				fi
+			fi
 		fi
 
 		# check if there is update version
@@ -1427,7 +1465,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 			new_version="$(echo $new_version | awk '{print $1}')"
 			new_version=$(echo ${new_version/"BATTERY_CLI_VERSION="} | tr -d \")
 			
-			if [[ -z $updated ]]; then
+			if [[ -z $updated ]] && [[ $new_version ]]; then
 				if $is_TW; then
 					osascript -e 'display notification "'"有新版$new_version, 請在 Terminal 下輸入 \n\\\"battery update\\\" 更新"'" with title "BatteryOptimizer" sound name "Blow"'
 				else

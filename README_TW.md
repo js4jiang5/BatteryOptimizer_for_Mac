@@ -148,13 +148,15 @@ Usage:
       6. 正確星期週期(week_period)範圍 [1-12]
       7. 正確月週期(month_period)範圍 [1-3]
 
-  battery charge LEVEL[1-100]
+  battery charge LEVEL[1-100, stop]
     將電池充電到指定百分比，並在達到該百分比時停止充電
     eg: battery charge 90
+    eg: battery charge stop # 終止進行中的充電程序並停止充電
 
-  battery discharge LEVEL[1-100]
+  battery discharge LEVEL[1-100, stop]
     將電池放電到指定百分比，並在達到該百分比時停止放電
     eg: battery discharge 90
+    eg: battery discharge stop # 終止進行中的放電程序並停止放電
 
   battery status
     顯示電池 SMC 狀態、容量、溫度、運作狀況和循環計數
