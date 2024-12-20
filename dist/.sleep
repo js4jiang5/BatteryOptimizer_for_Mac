@@ -6,6 +6,8 @@ else
 fi
 
 if $chwa_has_data; then
+	sudo smc -k CH0I -w 00 # no discharge
+	sudo smc -k CH0C -w 02 # no charge
 	sudo smc -k CHWA -w 01 # limit at 80% before sleep
 	echo "`date +%Y/%m/%d-%T` sleep"  >> $HOME/.battery/sleepwatcher.log
 fi
