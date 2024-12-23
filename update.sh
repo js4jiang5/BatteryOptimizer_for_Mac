@@ -162,7 +162,7 @@ echo -e "\n🎉 Battery tool updated.\n"
 echo -e "Restarting battery maintain.\n"
 write_config informed_version "$battery_version_new"
 
-pkill -f "$binfolder/battery.*"
+pkill -9 -f "$binfolder/battery.*"
 battery maintain recover
 
 empty="                                                                    "

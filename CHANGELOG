@@ -1,3 +1,16 @@
+v2.0.15
+* fix bugs below
+- calibrate run every month even when month_period is set to 2 or 3
+
+* new features
+- add calibrate log, recording calibrate time and health before and after calibration
+- add new command "battery calibratelog" to show calibrate log 
+- run daily log when wakeup/reboot if daily log is missed due to sleep/shutdown
+- run calibrate when wakeup/reboot if calibrate is missed due to sleep/shutdown
+- notify user one day and two days before the scheduled calibration day
+- charge/discharge abort automatically if charge/discharge is abnormal
+- terminate other charge/discharge processes to avoid conflict
+
 v2.0.14
 This update needs to enter password
 * fix bugs below
