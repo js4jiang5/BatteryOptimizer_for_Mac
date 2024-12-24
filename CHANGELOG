@@ -8,7 +8,7 @@ v2.0.15
 - if calibrate is missed due to sleep/shutdown, run calibrate when wakeup/reboot
 - if daily log is missed due to sleep/shutdown, run daily log when wakeup/reboot 
 - if charge/discharge abnormality is detected, abort charge/discharge automatically
-- terminate other charge/discharge processes to avoid conflict 
+- when run charge/discharge, terminate other running charge/discharge processes first to avoid conflict 
 - notify user one day or two days before the scheduled calibration day
 
 v2.0.14
