@@ -167,6 +167,9 @@ Usage:
   battery changelog
     顯示在 Github 上最新版本的變更內容
 
+  battery calibratelog
+    顯示電池校正歷史記錄
+
   battery logs LINES[integer, optional]
     顯示電池記錄的最末指定行數
     eg: battery logs 100

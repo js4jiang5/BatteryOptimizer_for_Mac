@@ -170,6 +170,9 @@ Usage:
   battery changelog
     show the changelog of the latest version on Github
 
+  battery calibratelog
+    show calibrate history
+
   battery logs LINES[integer, optional]
     output logs of the battery CLI and GUI
     eg: battery logs 100
