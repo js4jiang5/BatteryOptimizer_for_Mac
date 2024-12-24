@@ -45,7 +45,7 @@ else
 fi
 
 # Note: github names zips by <reponame>-<branchname>.replace( '/', '-' )
-update_branch="2.0.13"
+update_branch="2.0.14"
 in_zip_folder_name="BatteryOptimizer_for_MAC-$update_branch"
 batteryfolder="$tempfolder/battery"
 echo "[ 2 ] Downloading latest version of battery CLI"
@@ -116,9 +116,11 @@ version=$(echo $(battery version))
 touch $config_file
 write_config calibrate_method 1
 write_config calibrate_schedule
+write_config calibrate_next
 write_config informed_version $version
 write_config language
 write_config maintain_percentage
+write_config daily_last
 write_config clamshell_discharge
 write_config webhookid
 
