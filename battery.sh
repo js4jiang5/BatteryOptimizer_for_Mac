@@ -594,8 +594,8 @@ function change_magsafe_led_color() {
 # CH0I seems to be the "disable the adapter" key
 function enable_discharging() {
 	disable_charging
+	log "🔽🪫 Enabling battery discharging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		log "🔽🪫 Enabling battery discharging"
 		if $has_CH0I; then sudo smc -k CH0I -w 01; fi
 		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
 	else
@@ -647,8 +647,8 @@ function disable_discharging() {
 # so I'm using both since with only CH0B I noticed sometimes during sleep it does trigger charging
 function enable_charging() {
 	disable_discharging
+	log "🔌🔋 Enabling battery charging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		log "🔌🔋 Enabling battery charging"
 		#if $has_CH0B; then sudo smc -k CH0B -w 00; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 00; fi
 	else
