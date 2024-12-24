@@ -339,13 +339,13 @@ function format00() {
 }
 
 function check_next_calibration_date() {
-    LANG=en_us_8859_1
 	schedule=$(read_config calibrate_schedule)
 	if [[ -z $schedule ]]; then
 		echo 0
 		return
 	fi
 
+	LANG=en_us_8859_1
 	if [[ $schedule == *"every"* ]] && [[ $schedule == *"Week"* ]] && [[ $schedule == *"Year"* ]]; then
         weekday=$(echo $schedule | awk '{print $4}')
         week_period=$(echo $schedule | awk '{print $6}')
@@ -1580,7 +1580,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 				schedule_day=`date -j -f "%s" $schedule_sec "+%d"`
 				 
 				# remind if tomorrow is calibration date
-				if [[ $tomorrow_day == $schedule_day ]] && [[ $diff_sec -lt $((48*60*60)) ]]; then
+				if [[ $tomorrow_day -eq $schedule_day ]] && [[ $diff_sec -lt $((48*60*60)) ]]; then
 					schedule_time="$(echo `date -j -f "%s" $schedule_sec "+%Y/%m/%d %H:%M"`)"
 					if $is_TW; then
 						osascript -e 'display notification "'"提醒您，明天 ($schedule_time) 將進行電池校正"'" with title "Battery" sound name "Blow"'
@@ -1590,7 +1590,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 				fi
 
 				# remind if today is calibration date
-				if [[ $now_day == $schedule_day ]] && [[ $diff_sec -lt $((24*60*60)) ]]; then
+				if [[ $now_day -eq $schedule_day ]] && [[ $diff_sec -lt $((24*60*60)) ]]; then
 					schedule_time="$(echo `date -j -f "%s" $schedule_sec "+%Y/%m/%d %H:%M"`)"
 					if $is_TW; then
 						osascript -e 'display notification "'"提醒您，今天 ($schedule_time) 將進行電池校正"'" with title "Battery" sound name "Blow"'
@@ -2008,10 +2008,9 @@ if [[ "$action" == "calibrate" ]]; then
 		# Discharge battery to 15%
 		ha_webhook "discharge15_start" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
 		$battery_binary discharge 15 &
-		pid_child="$! "
-		wait $! || result=$?
-		pid_child=""
-		if [[ $result != 0 ]]; then
+		pid_child="$!"
+		wait $!
+		if [[ $? != 0 ]]; then
 			ha_webhook "err_discharge15"
 			if $is_TW; then
 				osascript -e 'display notification "未成功放電至15%" with title "電池校正錯誤" sound name "Blow"'
@@ -2027,6 +2026,8 @@ if [[ "$action" == "calibrate" ]]; then
 			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
+		pid_child=""
+		
 		ha_webhook "discharge15_end" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
 		if $is_TW; then
 			osascript -e 'display notification "已放電至15% \n開始充電到100%" with title "電池校正" sound name "Blow"'
@@ -2038,10 +2039,9 @@ if [[ "$action" == "calibrate" ]]; then
 		# Enable battery charging to 100%
 		ha_webhook "charge100_start" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
 		$battery_binary charge 100 &
-		pid_child="$! "
-		wait $! || result=$?
-		pid_child=""
-		if [[ $result != 0 ]]; then
+		pid_child="$!"
+		wait $!
+		if [[ $? != 0 ]]; then
 			ha_webhook "err_charge100"
 			if $is_TW; then
 				osascript -e 'display notification "未成功充電至100%" with title "電池校正錯誤" sound name "Blow"'
@@ -2057,6 +2057,7 @@ if [[ "$action" == "calibrate" ]]; then
 			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
+		pid_child=""
 
 		ha_webhook "charge100_end" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
 		if $is_TW; then
@@ -2081,10 +2082,9 @@ if [[ "$action" == "calibrate" ]]; then
 
 		# Discharge battery to maintain percentage%
 		$battery_binary discharge $setting &
-		pid_child="$! "
-		wait $! || result=$?
-		pid_child=""
-		if [[ $result != 0 ]]; then
+		pid_child="$!"
+		wait $!
+		if [[ $? != 0 ]]; then
 			ha_webhook "err_discharge_target"
 			if $is_TW; then
 				osascript -e 'display notification "'"未成功放電至 $setting%"'" with title "電池校正錯誤" sound name "Blow"'
@@ -2100,6 +2100,7 @@ if [[ "$action" == "calibrate" ]]; then
 			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
+		pid_child=""
 	else
 		ha_webhook "start" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health) # inform HA calibration has started
 		if $is_TW; then
@@ -2114,10 +2115,9 @@ if [[ "$action" == "calibrate" ]]; then
 		
 		# Enable battery charging to 100%
 		$battery_binary charge 100 &
-		pid_child="$! "
-		wait $! || result=$?
-		pid_child=""
-		if [[ $result != 0 ]]; then
+		pid_child="$!"
+		wait $!
+		if [[ $? != 0 ]]; then
 			ha_webhook "err_charge100"
 			if $is_TW; then
 				osascript -e 'display notification "未成功充電至100%" with title "電池校正錯誤" sound name "Blow"'
@@ -2133,6 +2133,7 @@ if [[ "$action" == "calibrate" ]]; then
 			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
+		pid_child=""
 
 		ha_webhook "charge100_end" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
 		if $is_TW; then
@@ -2159,10 +2160,9 @@ if [[ "$action" == "calibrate" ]]; then
 		# Discharge battery to 15%
 		ha_webhook "discharge15_start" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
 		$battery_binary discharge 15 &
-		pid_child="$! "
-		wait $! || result=$?
-		pid_child=""
-		if [[ $result != 0 ]]; then
+		pid_child="$!"
+		wait $!
+		if [[ $? != 0 ]]; then
 			ha_webhook "err_discharge15"
 			if $is_TW; then
 				osascript -e 'display notification "未成功放電至 15%" with title "電池校正錯誤" sound name "Blow"'
@@ -2174,6 +2174,8 @@ if [[ "$action" == "calibrate" ]]; then
 			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
+		pid_child=""
+
 		ha_webhook "discharge15_end" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
 		if $is_TW; then
 			osascript -e 'display notification "'"已放電至 15% \n開始充電至 $setting%"'" with title "電池校正" sound name "Blow"'
@@ -2185,10 +2187,9 @@ if [[ "$action" == "calibrate" ]]; then
 		
 		# Charge battery to maintain percentage%
 		$battery_binary charge $setting &
-		pid_child="$! "
-		wait $! || result=$?
-		pid_child=""
-		if [[ $result != 0 ]]; then
+		pid_child="$!"
+		wait $!
+		if [[ $? != 0 ]]; then
 			ha_webhook "err_charge_target"
 			if $is_TW; then
 				osascript -e 'display notification "'"未成功充電至 $setting%"'" with title "電池校正錯誤" sound name "Blow"'
@@ -2200,6 +2201,7 @@ if [[ "$action" == "calibrate" ]]; then
 			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
+		pid_child=""
 	fi
 
 	ha_webhook "calibration_end" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
