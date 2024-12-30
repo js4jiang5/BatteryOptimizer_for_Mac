@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.15"
+BATTERY_CLI_VERSION="v2.0.16"
 BATTERY_VISUDO_VERSION="v1.0.2"
 
 # Path fixes for unexpected environments
@@ -363,7 +363,11 @@ function check_next_calibration_date() {
             [[ $schedule =~ "SUN" ]]; then weekday=7;
         fi
         start_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$year-$week-$weekday $hour:$minute:00" +%s`)"
-        schedule_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$(date +%Y)-$(date +%V)-$weekday $hour:$minute:00" +%s`)"
+		if [[ `date +%V` -eq 1 ]] && [[ `date -v+7d +%Y` -gt `date +%Y` ]]; then # cross year for Week 1 if year is different after 7 days
+        	schedule_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$(date +%Y)-$(($(date -v-7d +%V)+1))-$weekday $hour:$minute:00" +%s`)"
+		else
+			schedule_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$(date +%Y)-$(date +%V)-$weekday $hour:$minute:00" +%s`)"
+		fi
         now=`date +%s`
 		for i in {0..12}; do # at most 12 weeks
 			schedule_diff_sec=$((schedule_sec - start_sec))
@@ -2635,8 +2639,13 @@ if [[ "$action" == "schedule" ]]; then
 			write_config calibrate_schedule "Schedule calibration on day ${days[0]} every $month_period month at $hour:$minute00 starting from Month `date +%m` of Year `date +%Y`"
 		fi
 	else
-		log "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week `date +%V` of Year `date +%Y`" >> $logfile
-		write_config calibrate_schedule "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week `date +%V` of Year `date +%Y`"
+		if [[ `date +%V` -eq 1 ]] && [[ `date -v+7d +%Y` -gt `date +%Y` ]]; then # cross year for Week 1 if year is different after 7 days
+			log "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week $((`date -v-7d +%V`+1)) of Year `date +%Y`" >> $logfile
+			write_config calibrate_schedule "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week $((`date -v-7d +%V`+1)) of Year `date +%Y`"
+		else
+			log "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week `date +%V` of Year `date +%Y`" >> $logfile
+			write_config calibrate_schedule "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week `date +%V` of Year `date +%Y`"
+		fi
 	fi
 
 	write_config calibrate_next $(check_next_calibration_date)

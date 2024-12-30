@@ -1,3 +1,7 @@
+v2.0.16
+* fix bugs below
+- calculation of next calibration day might be incorrect at the end of the year if schedule using weekday
+
 v2.0.15
 * fix bugs below
 - calibrate run every month even when month_period is set to 2 or 3
