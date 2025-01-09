@@ -1,3 +1,7 @@
+v2.0.18
+* fix bugs below
+- daily log and schedule calibration error on day 08 and 09 per month
+
 v2.0.17
 * fix bugs below
 - calculation of next calibration day might be incorrect at the first week of the year if schedule using weekday

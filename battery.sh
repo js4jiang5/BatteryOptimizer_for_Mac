@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.17"
+BATTERY_CLI_VERSION="v2.0.18"
 BATTERY_VISUDO_VERSION="v1.0.2"
 
 # Path fixes for unexpected environments
@@ -1557,8 +1557,12 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 		fi
 		now_sec=`date +%s`
 		now_day=`date +%d`
+		now_day=${now_day#0}
 		tomorrow_day=`date -v+1d +%d`
+		tomorrow_day=${tomorrow_day#0}
 		timeout_day=`date -j -f "%s" $daily_log_timeout "+%d"`
+		timeout_day=${timeout_day#0}
+
 		if (( $now_sec > $daily_log_timeout || ($now_sec > $(($daily_log_timeout - 86400)) && $now_day == $timeout_day) )); then # if timeout or today is timeout day
 			daily_log_timeout=$((`date +%s` + (24*60*60))) # set next daily_log timeout
 			daily_last=$(read_config daily_last)
@@ -1588,6 +1592,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 				schedule_sec=$(check_next_calibration_date)
 				diff_sec=$((schedule_sec - `date +%s`))
 				schedule_day=`date -j -f "%s" $schedule_sec "+%d"`
+				schedule_day=${schedule_day#0}
 				 
 				# remind if tomorrow is calibration date
 				if [[ $tomorrow_day -eq $schedule_day ]] && [[ $diff_sec -lt $((48*60*60)) ]]; then
