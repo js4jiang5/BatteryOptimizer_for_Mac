@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.18"
+BATTERY_CLI_VERSION="v2.0.19"
 BATTERY_VISUDO_VERSION="v1.0.2"
 
 # Path fixes for unexpected environments
@@ -659,7 +659,7 @@ function enable_charging() {
 	disable_discharging
 	log "🔌🔋 Enabling battery charging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		#if $has_CH0B; then sudo smc -k CH0B -w 00; fi
+		if $has_CH0B; then sudo smc -k CH0B -w 00; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 00; fi
 	else
 		if $has_BCLM; then sudo smc -k BCLM -w 64; fi
@@ -670,7 +670,7 @@ function enable_charging() {
 function disable_charging() {
 	log "🔌🪫 Disabling battery charging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		#if $has_CH0B; then sudo smc -k CH0B -w 02; fi
+		if $has_CH0B; then sudo smc -k CH0B -w 02; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 02; fi
 	else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
@@ -1327,9 +1327,10 @@ if [[ "$action" == "charge" ]]; then
 
 	if [[ "$(calibrate_is_running)" == "0" ]] || [[ "$setting" -ne "100" ]]; then # no need to disable charging in calibration when charging to 100%
 		disable_charging
-		sleep 5
-		change_magsafe_led_color "auto"
 	fi
+	
+	sleep 5
+	change_magsafe_led_color "auto"
 	
 	if ! $charge_error; then
 		if $is_TW; then
@@ -1613,13 +1614,13 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 						osascript -e 'display notification "'"Remind you, today ($schedule_time) is battery calibration day."'" with title "Battery" sound name "Blow"'
 					fi
 				fi
-
-				# run battery calibrate if calibration is missed due to sleep or shutdown at specified time
-				calibrate_next=$(read_config calibrate_next)
-				if [[ $now_sec -gt $calibrate_next ]] && [[ "$(calibrate_is_running)" == "0" ]]; then
-					$battery_binary calibrate force &
-				fi
 			fi
+		fi
+
+		# run battery calibrate if calibration is missed due to sleep or shutdown at specified time
+		calibrate_next=$(read_config calibrate_next)
+		if [[ $now_sec -gt $calibrate_next ]] && [[ "$(calibrate_is_running)" == "0" ]]; then
+			$battery_binary calibrate force &
 		fi
 
 		# check if there is update version
@@ -2434,39 +2435,41 @@ if [[ "$action" == "schedule" ]]; then
 	hour=9
 	minute=0
 
-	if [ $2 == "disable" ]; then
-		if [[ $(read_config calibrate_schedule) ]]; then
-			if $is_TW; then
-				log "電池自動校正時程已暫停"
-				echo
-			else
-				log "Schedule disabled"
-				echo
-			fi
-			log "Disabling schedule at gui/$(id -u $USER)/com.battery_schedule.app" >> $logfile
-			launchctl disable "gui/$(id -u $USER)/com.battery_schedule.app"
-			launchctl unload "$schedule_path" 2> /dev/null
-		fi
-		exit 0
-	fi
-
-	if [ $2 == "enable" ]; then
-		enable_exist="$(launchctl print gui/$(id -u $USER) | grep "=> enabled")"
-		if [[ $enable_exist ]]; then # new version that replace => false with => enabled
-			schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep enabled | grep "com.battery_schedule.app")"
-		else # old version that use => false
-			schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep "=> false" | grep "com.battery_schedule.app")"
-			schedule_enabled=${schedule_enabled/false/enabled}
-		fi
-		if ! [[ $schedule_enabled =~ "enabled" ]]; then
+	if [ $2 ]; then
+		if [ $2 == "disable" ]; then
 			if [[ $(read_config calibrate_schedule) ]]; then
-				write_config calibrate_next $(check_next_calibration_date)
-				log "Enabling schedule at gui/$(id -u $USER)/com.battery_schedule.app" >> $logfile
-				launchctl enable "gui/$(id -u $USER)/com.battery_schedule.app"
+				if $is_TW; then
+					log "電池自動校正時程已暫停"
+					echo
+				else
+					log "Schedule disabled"
+					echo
+				fi
+				log "Disabling schedule at gui/$(id -u $USER)/com.battery_schedule.app" >> $logfile
+				launchctl disable "gui/$(id -u $USER)/com.battery_schedule.app"
+				launchctl unload "$schedule_path" 2> /dev/null
 			fi
+			exit 0
 		fi
-		show_schedule
-		exit 0
+
+		if [ $2 == "enable" ]; then
+			enable_exist="$(launchctl print gui/$(id -u $USER) | grep "=> enabled")"
+			if [[ $enable_exist ]]; then # new version that replace => false with => enabled
+				schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep enabled | grep "com.battery_schedule.app")"
+			else # old version that use => false
+				schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep "=> false" | grep "com.battery_schedule.app")"
+				schedule_enabled=${schedule_enabled/false/enabled}
+			fi
+			if ! [[ $schedule_enabled =~ "enabled" ]]; then
+				if [[ $(read_config calibrate_schedule) ]]; then
+					write_config calibrate_next $(check_next_calibration_date)
+					log "Enabling schedule at gui/$(id -u $USER)/com.battery_schedule.app" >> $logfile
+					launchctl enable "gui/$(id -u $USER)/com.battery_schedule.app"
+				fi
+			fi
+			show_schedule
+			exit 0
+		fi
 	fi
 
 	schedule_day=$@

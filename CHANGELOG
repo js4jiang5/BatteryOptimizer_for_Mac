@@ -1,3 +1,8 @@
+v2.0.19
+* fix bugs below
+- "battery schedule" with default parameters (9:00 on day 1 every month) cause error message
+- when scheduled calibration is missed due to sleep/shutdown, calibrate is not run immediately when wakeup/reboot
+
 v2.0.18
 * fix bugs below
 - daily log and schedule calibration error on day 08 and 09 per month
