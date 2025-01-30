@@ -1,3 +1,7 @@
+v2.0.20
+* fix bugs below
+- calibration keep running for user not setting schedule due to a bug in calibration miss check
+
 v2.0.19
 * fix bugs below
 - "battery schedule" with default parameters (9:00 on day 1 every month) cause error message

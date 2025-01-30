@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.19"
+BATTERY_CLI_VERSION="v2.0.20"
 BATTERY_VISUDO_VERSION="v1.0.2"
 
 # Path fixes for unexpected environments
@@ -1564,6 +1564,16 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 		timeout_day=`date -j -f "%s" $daily_log_timeout "+%d"`
 		timeout_day=${timeout_day#0}
 
+		# check if schedule is enabled
+		enable_exist="$(launchctl print gui/$(id -u $USER) | grep "=> enabled")"
+		
+		if [[ $enable_exist ]] && [[ $(read_config calibrate_schedule) ]]; then # new version that replace => false with => enabled
+			schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep enabled | grep "com.battery_schedule.app")"
+		else # old version that use => false
+			schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep "=> false" | grep "com.battery_schedule.app")"
+			schedule_enabled=${schedule_enabled/false/enabled}
+		fi
+
 		if (( $now_sec > $daily_log_timeout || ($now_sec > $(($daily_log_timeout - 86400)) && $now_day == $timeout_day) )); then # if timeout or today is timeout day
 			daily_log_timeout=$((`date +%s` + (24*60*60))) # set next daily_log timeout
 			daily_last=$(read_config daily_last)
@@ -1581,14 +1591,6 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 			write_config daily_last $now_date
 
 			# notify user if today or tomorrow is next calibration day
-			# check if schedule is enabled
-			enable_exist="$(launchctl print gui/$(id -u $USER) | grep "=> enabled")"
-			if [[ $enable_exist ]]; then # new version that replace => false with => enabled
-				schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep enabled | grep "com.battery_schedule.app")"
-			else # old version that use => false
-				schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep "=> false" | grep "com.battery_schedule.app")"
-				schedule_enabled=${schedule_enabled/false/enabled}
-			fi
 			if [[ $schedule_enabled =~ "enabled" ]]; then
 				schedule_sec=$(check_next_calibration_date)
 				diff_sec=$((schedule_sec - `date +%s`))
@@ -1619,7 +1621,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 
 		# run battery calibrate if calibration is missed due to sleep or shutdown at specified time
 		calibrate_next=$(read_config calibrate_next)
-		if [[ $now_sec -gt $calibrate_next ]] && [[ "$(calibrate_is_running)" == "0" ]]; then
+		if [[ $now_sec -gt $calibrate_next ]] && [[ "$(calibrate_is_running)" == "0" ]] && [[ $schedule_enabled =~ "enabled" ]]; then
 			$battery_binary calibrate force &
 		fi
 
