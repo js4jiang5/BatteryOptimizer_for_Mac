@@ -1,3 +1,7 @@
+v2.0.21
+* fix bugs below
+- schedule error at Week 8 and 9 when scheduling with weekday
+
 v2.0.20
 * fix bugs below
 - calibration keep running for user not setting schedule due to a bug in calibration miss check

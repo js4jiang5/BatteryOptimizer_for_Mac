@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.20"
+BATTERY_CLI_VERSION="v2.0.21"
 BATTERY_VISUDO_VERSION="v1.0.2"
 
 # Path fixes for unexpected environments
@@ -363,7 +363,7 @@ function check_next_calibration_date() {
             [[ $schedule =~ "SUN" ]]; then weekday=7;
         fi
         start_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$year-$week-$weekday $hour:$minute:00" +%s`)"
-		if [[ `date +%V` -eq 1 ]]; then # Week 1 is special, need to check if it is valid
+		if [[ $((10#$(date +%V))) -eq 1 ]]; then # Week 1 is special, need to check if it is valid
 			if [[ `date -v+7d +%Y` -gt `date +%Y` ]]; then # cross year for Week 1 if year is different after 7 days
         		schedule_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$(date +%Y)-$(($(date -v-7d +%V)+1))-$weekday $hour:$minute:00" +%s`)"
 			elif [[ $weekday -lt `date +%u` ]]; then # weekday is before today that might be invalid for Week 1
@@ -2658,7 +2658,7 @@ if [[ "$action" == "schedule" ]]; then
 		if [[ $weekday -eq 0 ]]; then # change sunday to 7
 			weekday=7
 		fi
-		if [[ `date +%V` -eq 1 ]]; then # Week 1 is special, need to check if it is valid
+		if [[ $((10#$(date +%V))) -eq 1 ]]; then # Week 1 is special, need to check if it is valid
 			if [[ `date -v+7d +%Y` -gt `date +%Y` ]]; then # cross year for Week 1 if year is different after 7 days
 				log "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week $((`date -v-7d +%V`+1)) of Year `date +%Y`" >> $logfile
 				write_config calibrate_schedule "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week $((`date -v-7d +%V`+1)) of Year `date +%Y`"
