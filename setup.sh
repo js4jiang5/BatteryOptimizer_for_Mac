@@ -226,8 +226,10 @@ notice_tw="安裝完成.
 "
 
 if $is_TW; then
+	osascript -e 'display notification "安裝完成" with title "BatteryOptimizer" sound name "Blow"'
 	answer="$(osascript -e 'display dialog "'"$notice_tw \n如果您覺得這個小工具對您有幫助,點擊下方按鈕請我喝杯咖啡吧"'" buttons {"'"$button_empty_tw"'", "完成"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
 else
+	osascript -e 'display notification "Installation completed" with title "BatteryOptimizer" sound name "Blow"'
 	answer="$(osascript -e 'display dialog "'"$notice \nIf you feel this tool is helpful, you may click the button below and buy me a coffee."'" buttons {"'"$button_empty"'", "Finish"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
 fi
 if [[ $answer =~ "coffee" ]] || [[ $answer =~ "咖啡" ]]; then
