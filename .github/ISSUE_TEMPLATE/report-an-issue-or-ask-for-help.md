@@ -9,6 +9,8 @@ assignees: ''
 
 **Your macbook model and year:**
 
+**Your macOS: (run "sw_vers" to find out)**
+
 **Your version number: (run "battery version" to find out)**
 
 **Your battery status: (run "battery status" to find out)**
