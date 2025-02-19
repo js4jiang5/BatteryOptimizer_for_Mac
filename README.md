@@ -43,7 +43,7 @@
 - daily notification of battery status. no need for user to manually run this tool
 - daily log of battery status history
 
-### Requirements
+### Required settings after installation
 This is a CLI tool for both Apple and Intel Silicon Macs.<br>
 Please setup your MAC system settings as follows
 1.	system settings > notifications > enable "Allow notifications when mirroring or sharing"
