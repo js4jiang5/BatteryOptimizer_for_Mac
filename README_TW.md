@@ -1,6 +1,6 @@
-# BatteryOptimizer_for_MAC
+# BatteryOptimizer_for_Mac
 
-[BatteryOptimizer_for_MAC](https://github.com/js4jiang5/BatteryOptimizer_for_MAC) 是 [Battery APP v1.2.7](https://github.com/actuallymentor/battery) 的一個分支, 但加入新功能、增強功能、錯誤修復以及刪除令人困惑或無用的命令，如下所示
+[BatteryOptimizer_for_Mac](https://github.com/js4jiang5/BatteryOptimizer_for_Mac) 是 [Battery APP v1.2.7](https://github.com/actuallymentor/battery) 的一個分支, 但加入新功能、增強功能、錯誤修復以及刪除令人困惑或無用的命令，如下所示
 
 ## 多語言版本
 - [English README](README.md)<br>
@@ -45,7 +45,7 @@
 
 ### 安裝完成後的設定需求
 這是適用於 Apple 和 Intel Silicon Mac 的 CLI 工具。<br>
-請調整 MAC 系統設定如下
+請調整 Mac 系統設定如下
 1.	系統設定 > 通知 > 開啟 "在鏡像輸出或共享顯示器時允許通知"
 2.	系統設定 > 通知 > 應用程式通知 > 工序指令編寫程式 > 選擇 "提示"
 
@@ -54,7 +54,7 @@
 單指令安裝:
 
 ```bash
-curl -s https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/setup.sh | bash
+curl -s https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_Mac/main/setup.sh | bash
 ```
 
 安裝過程:
@@ -185,7 +185,7 @@ Usage:
     顯示目前版本
 
   battery reinstall
-    重新安裝 BatteryOptimizer_for_MAC
+    重新安裝 BatteryOptimizer_for_Mac
 
   battery uninstall
     解除安裝，完成後電池會持續充電

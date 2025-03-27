@@ -1,6 +1,6 @@
-# BatteryOptimizer_for_MAC
+# BatteryOptimizer_for_Mac
 
-[BatteryOptimizer_for_MAC](https://github.com/js4jiang5/BatteryOptimizer_for_MAC) is a fork of [Battery APP v1.2.7](https://github.com/actuallymentor/battery), with new features, enhancements, bug fixes, and removal of confusing or useless comands as follows
+[BatteryOptimizer_for_Mac](https://github.com/js4jiang5/BatteryOptimizer_for_Mac) is a fork of [Battery APP v1.2.7](https://github.com/actuallymentor/battery), with new features, enhancements, bug fixes, and removal of confusing or useless commands as follows
 
 ## Other languages
 - [正體中文 說明](README_TW.md)<br>
@@ -45,7 +45,7 @@
 
 ### Required settings after installation
 This is a CLI tool for both Apple and Intel Silicon Macs.<br>
-Please setup your MAC system settings as follows
+Please setup your Mac system settings as follows
 1.	system settings > notifications > enable "Allow notifications when mirroring or sharing"
 2.	system settings > notifications > applications > Script Editor > Choose "Alerts"
 
@@ -54,7 +54,7 @@ Please setup your MAC system settings as follows
 One-line installation:
 
 ```bash
-curl -s https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main/setup.sh | bash
+curl -s https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_Mac/main/setup.sh | bash
 ```
 
 This will:
