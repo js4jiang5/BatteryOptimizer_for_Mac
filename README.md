@@ -49,7 +49,7 @@ Please setup your Mac system settings as follows
 1.	System Settings > Privacy & Security > Accessibility > add "Applications\Utilities\Script Editor" 
 2.	System Settings > Privacy & Security > Accessibility > add "Applications\Utilities\Terminal" 
 3.	System Settings > Notifications > enable "Allow notifications when mirroring or sharing"
-4.	System Settings > Notifications > Applications > Script Editor > Choose "Alerts"
+4.	System Settings > Notifications > Applications > Script Editor > Choose "Alerts"<br>
 If Script Editor is missing in the Notifications list, please reboot your Mac and check again.
 
 ### 🖥 Command-line version installation
