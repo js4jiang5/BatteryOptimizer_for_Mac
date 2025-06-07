@@ -46,8 +46,11 @@
 ### Required settings after installation
 This is a CLI tool for both Apple and Intel Silicon Macs.<br>
 Please setup your Mac system settings as follows
-1.	system settings > notifications > enable "Allow notifications when mirroring or sharing"
-2.	system settings > notifications > applications > Script Editor > Choose "Alerts"
+1.	System Settings > Privacy & Security > Accessibility > add "Applications\Utilities\Script Editor" 
+2.	System Settings > Privacy & Security > Accessibility > add "Applications\Utilities\Terminal" 
+3.	System Settings > Notifications > enable "Allow notifications when mirroring or sharing"
+4.	System Settings > Notifications > Applications > Script Editor > Choose "Alerts"
+If Script Editor is missing in the Notifications list, please reboot your Mac and check again.
 
 ### 🖥 Command-line version installation
 

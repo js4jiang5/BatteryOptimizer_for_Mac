@@ -215,14 +215,20 @@ button_empty_tw="${empty} 請我喝杯咖啡 ☕ ${empty}😀"
 notice="Installation completed.
 
 Please setup your MAC system settings as follows
-1.	system settings > notifications > enable \\\"Allow notifications when mirroring or sharing\\\"
-2.	system settings > notifications > applications > Script Editor > Choose \\\"Alerts\\\"
+1.	System Settings > Privacy & Security > Accessibility > add \\\"Applications\Utilities\Script Editor\\\" 
+2.	System Settings > Privacy & Security > Accessibility > add \\\"Applications\Utilities\Terminal\\\" 
+3.	System Settings > Notifications > enable \\\"Allow notifications when mirroring or sharing\\\"
+4.	System Settings > Notifications > Applications > Script Editor > Choose \\\"Alerts\\\"
+If Script Editor is missing in the Notifications list, please reboot your Mac and check again.
 "
 notice_tw="安裝完成.
 
 請調整 MAC 系統設定如下
-1.	系統設定 > 通知 > 開啟 \\\"在鏡像輸出或共享顯示器時允許通知\\\"
-2.	系統設定 > 通知 > 應用程式通知 > 工序指令編寫程式 > 選擇 \\\"提示\\\"
+1.	系統設定 > 隱私權與安全性 > 輔助使用 > 增加 \\\"應用程式\工具程式\工序指令編寫程式\\\"
+2.	系統設定 > 隱私權與安全性 > 輔助使用 > 增加 \\\"應用程式\工具程式\終端機\\\"
+3.	系統設定 > 通知 > 開啟 \\\"在鏡像輸出或共享顯示器時允許通知\\\"
+4.	系統設定 > 通知 > 應用程式通知 > 工序指令編寫程式 > 選擇 \\\"提示\\\"
+如果通知中沒有工序指令編寫程式，請重啟你的 Mac 再確認一次.
 "
 
 if $is_TW; then
