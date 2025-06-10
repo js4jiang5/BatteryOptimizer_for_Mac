@@ -1,3 +1,7 @@
+v2.0.22
+* fix bugs below
+- use more accurate battery percentage to determine if charge/discharge is completed
+
 v2.0.21
 * fix bugs below
 - schedule error at Week 8 and 9 when scheduling with weekday

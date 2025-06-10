@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.21"
+BATTERY_CLI_VERSION="v2.0.22"
 BATTERY_VISUDO_VERSION="v1.0.2"
 
 # Path fixes for unexpected environments
@@ -1295,7 +1295,8 @@ if [[ "$action" == "charge" ]]; then
 	# Loop until battery percent is exceeded
 	cnt_error=0
 	charge_error=false
-	while [[ "$battery_percentage" -lt "$setting" ]]; do
+	#while [[ "$battery_percentage" -lt "$setting" ]]; do
+	while (( $(echo "$(get_accurate_battery_percentage) < $setting"|bc -l) )); do
 
 		if [[ $battery_percentage -ne $battery_pre ]]; then # print only when there is change
 			log "Battery at $battery_percentage% (target $setting%)"
@@ -1408,7 +1409,8 @@ if [[ "$action" == "discharge" ]]; then
 	# Loop until battery percent is below target
 	cnt_error=0
 	discharge_error=false
-	while [[ "$battery_percentage" -gt "$setting" ]]; do
+	#while [[ "$battery_percentage" -gt "$setting" ]]; do
+	while (( $(echo "$(get_accurate_battery_percentage) > $setting"|bc -l) )); do
 
 		if [[ $battery_percentage -ne $battery_pre ]]; then # print only when there is change
 			log "Battery at $battery_percentage% (target $setting%)"
