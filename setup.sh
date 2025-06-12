@@ -54,6 +54,7 @@ mkdir -p $batteryfolder
 curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/tags/v$update_branch.zip"
 unzip -qq $batteryfolder/repo.zip -d $batteryfolder
 cp -r $batteryfolder/$in_zip_folder_name/* $batteryfolder
+curl -sSL -o $batteryfolder/dist/notification_permission.scpt "https://github.com/js4jiang5/BatteryOptimizer_for_Mac/raw/refs/heads/main/dist/notification_permission.scpt"
 rm $batteryfolder/repo.zip
 
 # Move built file to bin folder
@@ -195,13 +196,6 @@ if [[ $(smc -k BCLM -r) == *"no data"* ]]; then # sleepwatcher only required for
 	fi
 fi
 
-# Remove tempfiles
-cd ../..
-echo "[ Final ] Removing temp folder $tempfolder"
-rm -rf $tempfolder
-
-#echo -e "\n🎉 Battery tool installed. Type \"battery help\" for instructions.\n"
-
 lang=$(defaults read -g AppleLocale)
 if [[ $lang =~ "zh_TW" ]]; then
 	is_TW=true
@@ -209,41 +203,49 @@ else
 	is_TW=false
 fi
 
+# Enable notification permission for Script Editor
+open -a "Script Editor" $batteryfolder/dist/notification_permission.scpt
+
 empty="                                                                    "
 button_empty="${empty} Buy me a coffee ☕ ${empty}😀"
 button_empty_tw="${empty} 請我喝杯咖啡 ☕ ${empty}😀"
 notice="Installation completed.
 
-Please setup your MAC system settings as follows
-1.	System Settings > Privacy & Security > Accessibility > add \\\"Applications\\\\Utilities\\\\Script Editor\\\" 
-2.	System Settings > Privacy & Security > Accessibility > add \\\"Applications\\\\Utilities\\\\Terminal\\\" 
-3.	System Settings > Notifications > enable \\\"Allow notifications when mirroring or sharing\\\"
-4.	System Settings > Notifications > Applications > Script Editor > Choose \\\"Alerts\\\"
+Script Editor is opened. Please manually click ▶️ in Script Editor for permission of notification,
+then setup your MAC system settings as follows
+1.	System Settings > Notifications > enable \\\"Allow notifications when mirroring or sharing\\\"
+2.	System Settings > Notifications > Applications > Script Editor > Choose \\\"Alerts\\\"
 If Script Editor is missing in the Notifications list, please reboot your Mac and check again.
 "
 notice_tw="安裝完成.
 
-請調整 MAC 系統設定如下
-1.	系統設定 > 隱私權與安全性 > 輔助使用 > 增加 \\\"應用程式\\\\工具程式\\\\工序指令編寫程式\\\"
-2.	系統設定 > 隱私權與安全性 > 輔助使用 > 增加 \\\"應用程式\\\\工具程式\\\\終端機\\\"
-3.	系統設定 > 通知 > 開啟 \\\"在鏡像輸出或共享顯示器時允許通知\\\"
-4.	系統設定 > 通知 > 應用程式通知 > 工序指令編寫程式 > 選擇 \\\"提示\\\"
+工序指令編寫程序已打開, 請手動點擊工序指令編寫程序中的 ▶️  以允許通知.
+接著請調整 MAC 系統設定如下
+1.	系統設定 > 通知 > 開啟 \\\"在鏡像輸出或共享顯示器時允許通知\\\"
+2.	系統設定 > 通知 > 應用程式通知 > 工序指令編寫程式 > 選擇 \\\"提示\\\"
 如果通知中沒有工序指令編寫程式，請重啟你的 Mac 再確認一次.
 "
 
 if $is_TW; then
-	osascript <<- EOF
-		display notification "安裝完成" with title "BatteryOptimizer" sound name "Blow"
-		delay .5
-	EOF
+	#osascript <<- EOF
+	#	display notification "安裝完成" with title "BatteryOptimizer" sound name "Blow"
+	#	delay .5
+	#EOF
 	answer="$(osascript -e 'display dialog "'"$notice_tw \n如果您覺得這個小工具對您有幫助,點擊下方按鈕請我喝杯咖啡吧"'" buttons {"'"$button_empty_tw"'", "完成"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
 else
-	osascript <<- EOF
-		display notification "Installation completed" with title "BatteryOptimizer" sound name "Blow"
-		delay .5
-	EOF
+	#osascript <<- EOF
+	#	display notification "Installation completed" with title "BatteryOptimizer" sound name "Blow"
+	#	delay .5
+	#EOF
 	answer="$(osascript -e 'display dialog "'"$notice \nIf you feel this tool is helpful, you may click the button below and buy me a coffee."'" buttons {"'"$button_empty"'", "Finish"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
 fi
 if [[ $answer =~ "coffee" ]] || [[ $answer =~ "咖啡" ]]; then
     open https://buymeacoffee.com/js4jiang5
 fi
+
+# Remove tempfiles
+#cd ../..
+#echo "[ Final ] Removing temp folder $tempfolder"
+rm -rf $tempfolder
+
+#echo -e "\n🎉 Battery tool installed. Type \"battery help\" for instructions.\n"
