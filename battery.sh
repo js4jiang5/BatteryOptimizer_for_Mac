@@ -4,8 +4,8 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.22"
-BATTERY_VISUDO_VERSION="v1.0.2"
+BATTERY_CLI_VERSION="v2.0.23"
+BATTERY_VISUDO_VERSION="v1.0.3"
 
 # Path fixes for unexpected environments
 PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
@@ -142,8 +142,8 @@ Usage:
 visudoconfig="
 # Visudo settings for the battery utility installed from https://github.com/js4jiang5/BatteryOptimizer_for_MAC
 # intended to be placed in $visudo_file on a mac
-Cmnd_Alias      BATTERYOFF = $binfolder/smc -k CH0B -w 02, $binfolder/smc -k CH0C -w 02, $binfolder/smc -k CH0B -r, $binfolder/smc -k CH0C -r
-Cmnd_Alias      BATTERYON = $binfolder/smc -k CH0B -w 00, $binfolder/smc -k CH0C -w 00
+Cmnd_Alias      BATTERYOFF = $binfolder/smc -k CH0B -w 02, $binfolder/smc -k CH0C -w 02, $binfolder/smc -k CHTE -w 01000000, $binfolder/smc -k CH0B -r, $binfolder/smc -k CH0C -r, $binfolder/smc -k CHTE -r
+Cmnd_Alias      BATTERYON = $binfolder/smc -k CH0B -w 00, $binfolder/smc -k CH0C -w 00, $binfolder/smc -k CHTE -w 00000000
 Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r, $binfolder/smc -k CH0J -w 00, $binfolder/smc -k CH0J -r, $binfolder/smc -k CH0K -w 00, $binfolder/smc -k CH0K -r, $binfolder/smc -d off
 Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01, $binfolder/smc -k CH0J -w 01, $binfolder/smc -k CH0K -w 01, $binfolder/smc -d on
 Cmnd_Alias      LEDCONTROL = $binfolder/smc -k ACLC -w 04, $binfolder/smc -k ACLC -w 03, $binfolder/smc -k ACLC -w 02, $binfolder/smc -k ACLC -w 01, $binfolder/smc -k ACLC -w 00, $binfolder/smc -k ACLC -r
@@ -185,6 +185,7 @@ thirdsetting=$4
 [[ $(smc -k CHWA -r) =~ "no data" ]] && has_CHWA=false || has_CHWA=true;
 [[ $(smc -k BFCL -r) =~ "no data" ]] && has_BFCL=false || has_BFCL=true;
 [[ $(smc -k ACFP -r) =~ "no data" ]] && has_ACFP=false || has_ACFP=true;
+[[ $(smc -k CHTE -r) =~ "no data" ]] && has_CHTE=false || has_CHTE=true;
 
 ## ###############
 ## Helpers
@@ -607,6 +608,7 @@ function enable_discharging() {
 	log "🔽🪫 Enabling battery discharging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0I; then sudo smc -k CH0I -w 01; fi
+		if $has_CH0J && ! $has_CH0I; then sudo smc -k CH0J -w 01; fi
 		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
 	else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
@@ -619,6 +621,7 @@ function disable_discharging() {
 	log "🔼🪫 Disabling battery discharging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0I; then sudo smc -k CH0I -w 00; fi
+		if $has_CH0J && ! $has_CH0I; then sudo smc -k CH0J -w 00; fi
 	else
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 	fi
@@ -661,6 +664,7 @@ function enable_charging() {
 	if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0B; then sudo smc -k CH0B -w 00; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 00; fi
+		if $has_CHTE && ! $has_CH0B; then sudo smc -k CHTE -w 00000000; fi
 	else
 		if $has_BCLM; then sudo smc -k BCLM -w 64; fi
 	fi
@@ -672,6 +676,7 @@ function disable_charging() {
 	if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0B; then sudo smc -k CH0B -w 02; fi
 		if $has_CH0C; then sudo smc -k CH0C -w 02; fi
+		if $has_CHTE && ! $has_CH0B; then sudo smc -k CHTE -w 01000000; fi
 	else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
 	fi
@@ -699,11 +704,22 @@ function get_smc_charging_status() {
 
 function get_smc_discharging_status() {
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		hex_status=$(read_smc_hex CH0I)
-		if [[ "$hex_status" == "00" ]]; then
-			echo "not discharging"
+		if $has_CH0I; then
+			hex_status=$(read_smc_hex CH0I)
+			if [[ "$hex_status" == "00" ]]; then
+				echo "not discharging"
+			else
+				echo "discharging"
+			fi
+		elif $has_CH0J; then
+			hex_status=$(read_smc_hex CH0J)
+			if [[ "$hex_status" == "00" ]]; then
+				echo "not discharging"
+			else
+				echo "discharging"
+			fi
 		else
-			echo "discharging"
+			echo "not discharging"
 		fi
 	else
 		acen_hex_status=$(read_smc_hex ACEN)

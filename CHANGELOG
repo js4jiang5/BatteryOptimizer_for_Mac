@@ -1,3 +1,8 @@
+v2.0.23
+This update needs to enter password.
+* new features
+- support macOS 26 Tahoe
+
 v2.0.22
 * fix bugs below
 - use more accurate battery percentage to determine if charge/discharge is completed
