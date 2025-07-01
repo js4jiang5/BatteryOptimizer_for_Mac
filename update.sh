@@ -74,7 +74,7 @@ configfolder=$HOME/.battery
 config_file=$configfolder/config_battery
 batteryfolder="$tempfolder/battery"
 language_file=$configfolder/language.code
-github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
+github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/refs/heads/tahoe"
 mkdir -p $batteryfolder
 
 lang=$(defaults read -g AppleLocale)
@@ -101,7 +101,7 @@ visudo_version_local=$(echo $(get_parameter "$battery_local" "BATTERY_VISUDO_VER
 
 # Write battery function as executable
 echo "[ 1 ] Downloading latest battery version"
-update_branch="main"
+update_branch="tahoe"
 in_zip_folder_name="BatteryOptimizer_for_MAC-$update_branch"
 batteryfolder="$tempfolder/battery"
 rm -rf $batteryfolder
