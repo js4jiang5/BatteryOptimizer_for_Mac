@@ -46,8 +46,9 @@
 ### Required settings after installation
 This is a CLI tool for both Apple and Intel Silicon Macs.<br>
 Please setup your Mac system settings as follows
-1.	System Settings > Notifications > enable "Allow notifications when mirroring or sharing"
-2.	System Settings > Notifications > Applications > Script Editor > Choose "Alerts"<br>
+1.	System Settings > Battery > Battery Health > click the ⓘ icon > toggle off "Optimize Battery Charging"
+2.	System Settings > Notifications > enable "Allow notifications when mirroring or sharing"
+3.	System Settings > Notifications > Applications > Script Editor > Choose "Alerts"<br>
 
 ### 🖥 Command-line version installation
 

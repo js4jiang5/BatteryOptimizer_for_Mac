@@ -4,8 +4,8 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.23"
-BATTERY_VISUDO_VERSION="v1.0.3"
+BATTERY_CLI_VERSION="v2.0.24"
+BATTERY_VISUDO_VERSION="v1.0.4"
 
 # Path fixes for unexpected environments
 PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
@@ -144,8 +144,8 @@ visudoconfig="
 # intended to be placed in $visudo_file on a mac
 Cmnd_Alias      BATTERYOFF = $binfolder/smc -k CH0B -w 02, $binfolder/smc -k CH0C -w 02, $binfolder/smc -k CHTE -w 01000000, $binfolder/smc -k CH0B -r, $binfolder/smc -k CH0C -r, $binfolder/smc -k CHTE -r
 Cmnd_Alias      BATTERYON = $binfolder/smc -k CH0B -w 00, $binfolder/smc -k CH0C -w 00, $binfolder/smc -k CHTE -w 00000000
-Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r, $binfolder/smc -k CH0J -w 00, $binfolder/smc -k CH0J -r, $binfolder/smc -k CH0K -w 00, $binfolder/smc -k CH0K -r, $binfolder/smc -d off
-Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01, $binfolder/smc -k CH0J -w 01, $binfolder/smc -k CH0K -w 01, $binfolder/smc -d on
+Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r, $binfolder/smc -k CH0J -w 00, $binfolder/smc -k CH0J -r, $binfolder/smc -k CH0K -w 00, $binfolder/smc -k CH0K -r, $binfolder/smc -k CHIE -w 00, $binfolder/smc -k CHIE -r, $binfolder/smc -d off
+Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01, $binfolder/smc -k CH0J -w 01, $binfolder/smc -k CH0K -w 01, $binfolder/smc -k CHIE -w 08, $binfolder/smc -d on
 Cmnd_Alias      LEDCONTROL = $binfolder/smc -k ACLC -w 04, $binfolder/smc -k ACLC -w 03, $binfolder/smc -k ACLC -w 02, $binfolder/smc -k ACLC -w 01, $binfolder/smc -k ACLC -w 00, $binfolder/smc -k ACLC -r
 Cmnd_Alias      BATTERYBCLM = $binfolder/smc -k BCLM -w 0a, $binfolder/smc -k BCLM -w 64, $binfolder/smc -k BCLM -r
 Cmnd_Alias      BATTERYCHWA = $binfolder/smc -k CHWA -w 00, $binfolder/smc -k CHWA -w 01, $binfolder/smc -k CHWA -r
@@ -178,7 +178,7 @@ thirdsetting=$4
 [[ $(smc -k CH0B -r) =~ "no data" ]] && has_CH0B=false || has_CH0B=true;
 [[ $(smc -k CH0C -r) =~ "no data" ]] && has_CH0C=false || has_CH0C=true;
 [[ $(smc -k CH0I -r) =~ "no data" ]] && has_CH0I=false || has_CH0I=true;
-[[ $(smc -k CH0J -r) =~ "no data" ]] && has_CH0J=false || has_CH0J=true;
+[[ $(smc -k CH0J -r) =~ "no data" || $(smc -k CH0J -r) =~ "Error" ]] && has_CH0J=false || has_CH0J=true;
 [[ $(smc -k CH0K -r) =~ "no data" ]] && has_CH0K=false || has_CH0K=true;
 [[ $(smc -k ACEN -r) =~ "no data" ]] && has_ACEN=false || has_ACEN=true;
 [[ $(smc -k ACLC -r) =~ "no data" ]] && has_ACLC=false || has_ACLC=true;
@@ -186,6 +186,7 @@ thirdsetting=$4
 [[ $(smc -k BFCL -r) =~ "no data" ]] && has_BFCL=false || has_BFCL=true;
 [[ $(smc -k ACFP -r) =~ "no data" ]] && has_ACFP=false || has_ACFP=true;
 [[ $(smc -k CHTE -r) =~ "no data" ]] && has_CHTE=false || has_CHTE=true;
+[[ $(smc -k CHIE -r) =~ "no data" ]] && has_CHIE=false || has_CHIE=true;
 
 ## ###############
 ## Helpers
@@ -414,10 +415,10 @@ function check_next_calibration_date() {
 			done 
 		fi
 
-        time=${schedule#*" at "}
+		time=${schedule#*" at "}
 		time=${time%" starting"*}
-        hour=${time%:*}
-        minute=${time#*:}
+		hour=${time%:*}
+		minute=${time#*:}
 
 		month_loc=$(echo "$schedule" | tr " " "\n" | grep -n "Month" | cut -d: -f1)
 		if [[ $month_loc ]]; then
@@ -440,10 +441,10 @@ function check_next_calibration_date() {
 			month_diff=0
 		fi
 
-        now=`date +%s`
+		now=`date +%s`
 
-        diff_min=$((86400*100)) # need to find the min in case users put larger day in front
-        for i_month in {0..3}; do # at most 3 months
+		diff_min=$((86400*100)) # need to find the min in case users put larger day in front
+		for i_month in {0..3}; do # at most 3 months
 			if [[ $((($month_diff + $i_month) % $month_period)) -eq 0 ]]; then
 				for i_day in $(seq 0 $((n_days-1))); do # check this month
 					if [[ $((`date +%m` + i_month)) -gt 12 ]]; then # cross year
@@ -607,8 +608,12 @@ function enable_discharging() {
 	disable_charging
 	log "🔽🪫 Enabling battery discharging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		if $has_CH0I; then sudo smc -k CH0I -w 01; fi
-		if $has_CH0J && ! $has_CH0I; then sudo smc -k CH0J -w 01; fi
+		if $has_CH0I; then 
+			sudo smc -k CH0I -w 01;
+		else
+			if $has_CH0J; then sudo smc -k CH0J -w 01; fi
+			if $has_CHIE; then sudo smc -k CHIE -w 08; fi
+		fi
 		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
 	else
 		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
@@ -620,8 +625,12 @@ function enable_discharging() {
 function disable_discharging() {
 	log "🔼🪫 Disabling battery discharging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		if $has_CH0I; then sudo smc -k CH0I -w 00; fi
-		if $has_CH0J && ! $has_CH0I; then sudo smc -k CH0J -w 00; fi
+		if $has_CH0I; then 
+			sudo smc -k CH0I -w 00;
+		else
+			if $has_CH0J; then sudo smc -k CH0J -w 00; fi
+			if $has_CHIE; then sudo smc -k CHIE -w 00; fi
+		fi
 	else
 		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
 	fi
@@ -718,6 +727,13 @@ function get_smc_discharging_status() {
 			else
 				echo "discharging"
 			fi
+		elif $has_CHIE; then
+			hex_status=$(read_smc_hex CHIE)
+			if [[ "$hex_status" == "00" ]]; then
+				echo "not discharging"
+			else
+				echo "discharging"
+			fi
 		else
 			echo "not discharging"
 		fi
@@ -746,8 +762,8 @@ function get_battery_percentage() {
 function get_accurate_battery_percentage() {
 	MaxCapacity=$(ioreg -l -n AppleSmartBattery -r | grep "\"AppleRawMaxCapacity\" =" | awk '{ print $3 }' | tr ',' '.')
 	CurrentCapacity=$(ioreg -l -n AppleSmartBattery -r | grep "\"AppleRawCurrentCapacity\" =" | awk '{ print $3 }' | tr ',' '.')
-    accurate_battery_percentage=$(echo "scale=1; $CurrentCapacity*100/$MaxCapacity" | bc)
-    echo $accurate_battery_percentage
+	accurate_battery_percentage=$(echo "scale=1; $CurrentCapacity*100/$MaxCapacity" | bc)
+	echo $accurate_battery_percentage
 }
 
 function get_remaining_time() {
@@ -801,8 +817,8 @@ function get_voltage() {
 function get_battery_health() {
 	MaxCapacity=$(ioreg -l -n AppleSmartBattery -r | grep "\"AppleRawMaxCapacity\" =" | awk '{ print $3 }' | tr ',' '.')
 	DesignCapacity=$(ioreg -l -n AppleSmartBattery -r | grep "\"DesignCapacity\" =" | awk '{ print $3 }' | tr ',' '.')
-    health=$(echo "scale=1; $MaxCapacity*100/$DesignCapacity" | bc)
-    echo $health
+	health=$(echo "scale=1; $MaxCapacity*100/$DesignCapacity" | bc)
+	echo $health
 }
 
 function get_battery_temperature() {
@@ -816,8 +832,8 @@ function get_battery_temperature() {
 		temperature=$(echo $(smc -k TB0T -r) | awk '{print $3}') # this value is closer to coconutBattery and AlDente
 		temperature=$(echo "scale=1; ($temperature*1000+50)/1000" | bc)
 	fi
-    
-    echo $temperature
+
+	echo $temperature
 }
 
 function get_cycle() {
@@ -850,20 +866,20 @@ function get_cpu_type() {
 	else
 		echo "intel"
 	fi
-    #if [[ $(sysctl -n machdep.cpu.brand_string) == *"Intel"* ]]; then
-    #    echo "intel"
-    #else
-    #    echo "apple"
-    #fi
+	#if [[ $(sysctl -n machdep.cpu.brand_string) == *"Intel"* ]]; then
+	#    echo "intel"
+	#else
+	#    echo "apple"
+	#fi
 }
 
 function get_parameter() { # get parameter value from configuration file. the format is var=value or var= value or var = value
-    var_loc=$(echo $(echo "$1" | tr " " "\n" | grep -n "$2" | cut -d: -f1) | awk '{print $1}')
-    if [ -z $var_loc ]; then
-        echo
-    else
-        echo $1 | awk '{print $"'"$((var_loc))"'"}' | tr '=' ' ' | awk '{print $2}'
-    fi
+	var_loc=$(echo $(echo "$1" | tr " " "\n" | grep -n "$2" | cut -d: -f1) | awk '{print $1}')
+	if [ -z $var_loc ]; then
+		echo
+	else
+		echo $1 | awk '{print $"'"$((var_loc))"'"}' | tr '=' ' ' | awk '{print $2}'
+	fi
 }
 
 function get_changelog() { # get the latest changelog
@@ -873,7 +889,7 @@ function get_changelog() { # get the latest changelog
 		changelog=$(curl -sSL $github_link/$1 | sed s:\":'\\"':g 2>&1)
 	fi
 
-    n_lines=0
+	n_lines=0
 	while read -r "line"; do
 		line="v${line#*v}" # remove any words before v
 		num=$(echo $line | tr '.' ' '| tr 'v' ' ') # extract number parts
@@ -893,12 +909,12 @@ function get_changelog() { # get the latest changelog
 			is_version=false
 		fi
 
-        if $is_version; then # found the start of 2nd version
+		if $is_version; then # found the start of 2nd version
 			break
 		fi
-        n_lines=$((n_lines+1))
-    done <<< "$changelog"
-    echo -e "$changelog" | awk 'NR>=2 && NR<='$n_lines
+		n_lines=$((n_lines+1))
+	done <<< "$changelog"
+	echo -e "$changelog" | awk 'NR>=2 && NR<='$n_lines
 }
 
 function get_version() { # get the latest version number
@@ -910,7 +926,7 @@ function get_version() { # get the latest version number
 
 	while read -r "line"; do
 		break
-    done <<< "$changelog"
+	done <<< "$changelog"
 	echo $line
 }
 
@@ -2246,7 +2262,7 @@ if [[ "$action" == "calibrate" ]]; then
 	diff=$((end_t-$start_t))
 	
 	if $is_TW; then
-	    n_days=$(echo $((diff/(24*60*60)))  | awk '{if ( $1 > 0) print $1 " 天 "}')
+		n_days=$(echo $((diff/(24*60*60)))  | awk '{if ( $1 > 0) print $1 " 天 "}')
 		n_hours=$(echo $(((diff/(60*60)) % 24)) | awk '{print $1 " 小時"}')
 		n_minutes=$(echo $(((diff/60) % 60)) | awk '{print $1 " 分"}')
 		n_seconds=$(echo $((diff % 60)) | awk '{print $1 " 秒"}')
@@ -2255,10 +2271,10 @@ if [[ "$action" == "calibrate" ]]; then
 		log "電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C"
 		log "健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"	
 	else
-	    n_days=$(echo $((diff/(24*60*60)))  | awk '{if ( $1 > 0) print $1 " day "}')
-    	n_hours=$(echo $(((diff/(60*60)) % 24)) | awk '{print $1 " hour"}')
-    	n_minutes=$(echo $(((diff/60) % 60)) | awk '{print $1 " min"}')
-    	n_seconds=$(echo $((diff % 60)) | awk '{print $1 " sec"}')
+		n_days=$(echo $((diff/(24*60*60)))  | awk '{if ( $1 > 0) print $1 " day "}')
+		n_hours=$(echo $(((diff/(60*60)) % 24)) | awk '{print $1 " hour"}')
+		n_minutes=$(echo $(((diff/60) % 60)) | awk '{print $1 " min"}')
+		n_seconds=$(echo $((diff % 60)) | awk '{print $1 " sec"}')
 		osascript -e 'display notification "'"Calibration completed in $n_days$n_hours $n_minutes.\nBattery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\nHealth $(get_battery_health)%, Cycle $(get_cycle)"'" with title "Battery Calibration" sound name "Blow"'
 		log "Calibration completed in $n_days$n_hours $n_minutes $n_seconds."
 		log "Battery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C"
@@ -2494,13 +2510,13 @@ if [[ "$action" == "schedule" ]]; then
 
 	schedule_day=$@
 	schedule_day=${schedule_day/weekday}
-    day_loc=$(echo "$schedule_day" | tr " " "\n" | grep -n "day" | cut -d: -f1)
+	day_loc=$(echo "$schedule_day" | tr " " "\n" | grep -n "day" | cut -d: -f1)
 	weekday_loc=$(echo "$@" | tr " " "\n" | grep -n "weekday" | cut -d: -f1)
-    month_period_loc=$(echo "$@" | tr " " "\n" | grep -n "month_period" | cut -d: -f1)
+	month_period_loc=$(echo "$@" | tr " " "\n" | grep -n "month_period" | cut -d: -f1)
 	week_period_loc=$(echo "$@" | tr " " "\n" | grep -n "week_period" | cut -d: -f1)
-    hour_loc=$(echo "$@" | tr " " "\n" | grep -n "hour" | cut -d: -f1)
-    minute_loc=$(echo "$@" | tr " " "\n" | grep -n "minute" | cut -d: -f1)
-    n_words=$(echo "$@" | awk '{print NF}')
+	hour_loc=$(echo "$@" | tr " " "\n" | grep -n "hour" | cut -d: -f1)
+	minute_loc=$(echo "$@" | tr " " "\n" | grep -n "minute" | cut -d: -f1)
+	n_words=$(echo "$@" | awk '{print NF}')
 
 	if [[ $weekday_loc ]]; then
 		weekday=$(echo $@ | awk '{print $"'"$((weekday_loc+1))"'"}');
