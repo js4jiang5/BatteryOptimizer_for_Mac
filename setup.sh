@@ -45,7 +45,7 @@ else
 fi
 
 # Note: github names zips by <reponame>-<branchname>.replace( '/', '-' )
-update_branch="2.0.24"
+update_branch="2.0.25"
 in_zip_folder_name="BatteryOptimizer_for_MAC-$update_branch"
 batteryfolder="$tempfolder/battery"
 echo "[ 2 ] Downloading latest version of battery CLI"

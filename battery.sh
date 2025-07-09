@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.24"
+BATTERY_CLI_VERSION="v2.0.25"
 BATTERY_VISUDO_VERSION="v1.0.4"
 
 # Path fixes for unexpected environments
@@ -694,11 +694,24 @@ function disable_charging() {
 
 function get_smc_charging_status() {
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		hex_status=$(read_smc_hex CH0C)
-		if [[ "$hex_status" == "00" ]]; then
-			echo "enabled"
+		if $has_CH0C; then
+			hex_status=$(read_smc_hex CH0C)
+			if [[ "$hex_status" == "00" ]]; then
+				echo "enabled"
+			else
+				echo "disabled"
+			fi
 		else
-			echo "disabled"
+			if $has_CHTE; then
+				hex_status=$(read_smc_hex CHTE)
+				if [[ "$hex_status" == "00000000" ]]; then
+					echo "enabled"
+				else
+					echo "disabled"
+				fi
+			else
+				echo "enabled"
+			fi
 		fi
 	else
 		bclm_hex_status=$(read_smc_hex BCLM)
