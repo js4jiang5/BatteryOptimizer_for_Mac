@@ -14,6 +14,7 @@
   - Intel CPU: limit is at maintain percentage
   - Apple CPU: limit is fixed at 80%
 - add battery daily log and notification
+- support macOS 26 Tahoe
 
 ### Enhancements
 - replace macOS battery percentage with real hardware charging percentage.
