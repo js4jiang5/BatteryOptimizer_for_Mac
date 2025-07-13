@@ -7,7 +7,7 @@
 
 ### New features
 - support both Apple and Intel CPU Macs
-- sail mode, allowing the battery to sail from maintain percentage to sail target without charging
+- sail mode, allowing the battery to sail from maintain percentage to sail target without charging to avoid frequent micro charging
 - scheduled calibration, starting automatic calibration on specified days per month (at most four days), or specified one day every 1-3 month, or specified weekday every 1-12 weeks
 - new command "suspend", suspending maintain temporarily allowing charging to 100%, and automatically resume maintain when AC adapter is reconnected
 - charging limiter still works even when macbook sleep or shutdown
@@ -65,6 +65,13 @@ This will:
 3. Install `battery` to `/usr/local/bin`
 4. Install `brew` for `sleepwatcher` (not required for Intel CPU Macs)
 5. Install `sleepwatcher` (not required for Intel CPU Macs)
+
+### FAQ
+1. Why is the battery percentage shown in this app different from macOS battery percentage?
+Ans: macOS battery percentage is 0~7% higher than real percentage. It's probably a way for macOS to avoid frequent charging after the battery is fully charged. Since macOS battery percentage is not consistent, it's not a good reference for charging/discharging control.
+
+2. Why does this app stop working after reboot?
+Ans: It usually implies that you are not login as an admistrator. 
 
 ### Snapshots
 - `battery status` <br>

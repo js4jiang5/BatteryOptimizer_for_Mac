@@ -7,7 +7,7 @@
 
 ### 新功能
 - 支援 Apple 和 Intel CPU Macs
-- 航行模式 (sail mode)，允許電池從維持百分比航行到航行目標而無需充電
+- 航行模式 (sail mode)，允許電池從維持百分比航行到航行目標而無需充電，如此可避免頻繁的微量充電
 - 定時電池校正，每月指定日（最多四日）開始自動電池校正，或每1-3個月指定一日，或每1-12週指定星期幾開始自動電池校正
 - 新指令“suspend”，暫時電池維護，允許充電至 100%，並在重新連接交流電源供應器時自動恢復維護
 - 即使 MacBook 睡眠或關機時，充電限制器仍然有效
@@ -65,6 +65,13 @@ curl -s https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_Mac/mai
 3. 安裝 `battery` 至 `/usr/local/bin`
 4. 安裝 `brew` 以安裝 `sleepwatcher` (Intel CPU Macs 不需要，會自動跳過)
 5. 安裝 `sleepwatcher` (Intel CPU Macs 不需要，會自動跳過)
+
+### 常見問題
+1. 為什麼此應用程式顯示的電池百分比與 macOS 電池百分比不同？
+答：macOS 電池百分比比實際百分比高 0~7%。這可能是 macOS 避免電池充滿後頻繁充電的一種方式。由於 macOS 電池百分比並不一致，因此它無法作為充放電控制的良好參考。
+
+2. 為什麼這個應用程式重啟後就停止運作了？
+答：這通常表示您沒有以管理員身分登入。
 
 ### 快照
 - `電池狀態` <br>
