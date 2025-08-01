@@ -1,3 +1,10 @@
+v2.0.26
+* fix bugs below
+- fix the problem of error message caused by values exceeding octal base max
+
+* new features
+- log status at the end of each stage during calibration
+
 v2.0.25
 This update needs to enter password.
 * fix bugs below

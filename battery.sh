@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.25"
+BATTERY_CLI_VERSION="v2.0.26"
 BATTERY_VISUDO_VERSION="v1.0.4"
 
 # Path fixes for unexpected environments
@@ -367,9 +367,9 @@ function check_next_calibration_date() {
         start_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$year-$week-$weekday $hour:$minute:00" +%s`)"
 		if [[ $((10#$(date +%V))) -eq 1 ]]; then # Week 1 is special, need to check if it is valid
 			if [[ `date -v+7d +%Y` -gt `date +%Y` ]]; then # cross year for Week 1 if year is different after 7 days
-        		schedule_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$(date +%Y)-$(($(date -v-7d +%V)+1))-$weekday $hour:$minute:00" +%s`)"
+        		schedule_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$(date +%Y)-$((10#$(date -v-7d +%V)+1))-$weekday $hour:$minute:00" +%s`)"
 			elif [[ $weekday -lt `date +%u` ]]; then # weekday is before today that might be invalid for Week 1
-				schedule_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$(date +%Y)-$(($(date +%V)+1))-$weekday $hour:$minute:00" +%s`)"
+				schedule_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$(date +%Y)-$((10#$(date +%V)+1))-$weekday $hour:$minute:00" +%s`)"
 			else
 				schedule_sec="$(echo `date -j -f "%Y-%V-%u %H:%M:%S" "$(date +%Y)-$(date +%V)-$weekday $hour:$minute:00" +%s`)"
 			fi
@@ -435,7 +435,7 @@ function check_next_calibration_date() {
 
 		if [[ $month_period_loc ]]; then
 			month_period=$(echo $schedule | awk '{print $"'"$((month_period_loc+1))"'"}');
-			month_diff=$(((`date +%Y` - $year)*12 + `date +%m` - $month))
+			month_diff=$(((`date +%Y` - $year)*12 + 10#`date +%m` - 10#$month))
 		else # calibrate every month case
 			month_period=1 
 			month_diff=0
@@ -447,7 +447,7 @@ function check_next_calibration_date() {
 		for i_month in {0..3}; do # at most 3 months
 			if [[ $((($month_diff + $i_month) % $month_period)) -eq 0 ]]; then
 				for i_day in $(seq 0 $((n_days-1))); do # check this month
-					if [[ $((`date +%m` + i_month)) -gt 12 ]]; then # cross year
+					if [[ $((10#`date +%m` + i_month)) -gt 12 ]]; then # cross year
 						year=$(date -v+1y +%Y)
 					else
 						year=$(date +%Y)
@@ -1604,12 +1604,9 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 			pre_maintain_status=$maintain_status 
 		fi
 		now_sec=`date +%s`
-		now_day=`date +%d`
-		now_day=${now_day#0}
-		tomorrow_day=`date -v+1d +%d`
-		tomorrow_day=${tomorrow_day#0}
-		timeout_day=`date -j -f "%s" $daily_log_timeout "+%d"`
-		timeout_day=${timeout_day#0}
+		now_day=$((10#`date +%d`))
+		tomorrow_day=$((10#`date -v+1d +%d`))
+		timeout_day=$((10#`date -j -f "%s" $daily_log_timeout "+%d"`))
 
 		# check if schedule is enabled
 		enable_exist="$(launchctl print gui/$(id -u $USER) | grep "=> enabled")"
@@ -1641,8 +1638,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 			if [[ $schedule_enabled =~ "enabled" ]]; then
 				schedule_sec=$(check_next_calibration_date)
 				diff_sec=$((schedule_sec - `date +%s`))
-				schedule_day=`date -j -f "%s" $schedule_sec "+%d"`
-				schedule_day=${schedule_day#0}
+				schedule_day=$((10#`date -j -f "%s" $schedule_sec "+%d"`))
 				 
 				# remind if tomorrow is calibration date
 				if [[ $tomorrow_day -eq $schedule_day ]] && [[ $diff_sec -lt $((48*60*60)) ]]; then
@@ -2100,6 +2096,7 @@ if [[ "$action" == "calibrate" ]]; then
 			osascript -e 'display notification "Calibration has discharged to 15% \nStart charging to 100%" with title "Battery Calibration" sound name "Blow"'
 		fi
 		log "Calibration: Calibration has discharged to 15%. Start charging to 100%"
+		log "Battery health $(get_battery_health)%, $(get_voltage)V, $(get_battery_temperature)°C"
 
 		# Enable battery charging to 100%
 		ha_webhook "charge100_start" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
@@ -2131,6 +2128,7 @@ if [[ "$action" == "calibrate" ]]; then
 			osascript -e 'display notification "Calibration has charged to 100% \nWaiting for one hour" with title "Battery Calibration" sound name "Blow"'
 		fi
 		log "Calibration: Calibration has charged to 100%. Waiting for one hour"
+		log "Battery health $(get_battery_health)%, $(get_voltage)V, $(get_battery_temperature)°C"
 
 		# Wait before discharging to target level
 		change_magsafe_led_color "green"
@@ -2144,6 +2142,7 @@ if [[ "$action" == "calibrate" ]]; then
 		fi
 		log "Calibration: Battery has been maintained at 100% for one hour"
 		log "Calibration: Start discharging to maintain percentage"
+		log "Battery health $(get_battery_health)%, $(get_voltage)V, $(get_battery_temperature)°C"
 
 		# Discharge battery to maintain percentage%
 		$battery_binary discharge $setting &
@@ -2207,6 +2206,7 @@ if [[ "$action" == "calibrate" ]]; then
 			osascript -e 'display notification "Calibration has charged to 100% \nWaiting for one hour" with title "Battery Calibration" sound name "Blow"'
 		fi
 		log "Calibration: Calibration has charged to 100%. Waiting for one hour"
+		log "Battery health $(get_battery_health)%, $(get_voltage)V, $(get_battery_temperature)°C"
 
 		# Wait before discharging to 15%
 		change_magsafe_led_color "green"
@@ -2221,6 +2221,7 @@ if [[ "$action" == "calibrate" ]]; then
 		fi
 		log "Calibration: Battery has been maintained at 100% for one hour"
 		log "Calibration: Start discharging to 15%"
+		log "Battery health $(get_battery_health)%, $(get_voltage)V, $(get_battery_temperature)°C"
 
 		# Discharge battery to 15%
 		ha_webhook "discharge15_start" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
@@ -2249,6 +2250,7 @@ if [[ "$action" == "calibrate" ]]; then
 		fi
 		log "Calibration: Calibration has discharged to 15%"
 		log "Calibration: Start charging to maintain percentage"
+		log "Battery health $(get_battery_health)%, $(get_voltage)V, $(get_battery_temperature)°C"
 		
 		# Charge battery to maintain percentage%
 		$battery_binary charge $setting &
@@ -2707,11 +2709,11 @@ if [[ "$action" == "schedule" ]]; then
 		fi
 		if [[ $((10#$(date +%V))) -eq 1 ]]; then # Week 1 is special, need to check if it is valid
 			if [[ `date -v+7d +%Y` -gt `date +%Y` ]]; then # cross year for Week 1 if year is different after 7 days
-				log "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week $((`date -v-7d +%V`+1)) of Year `date +%Y`" >> $logfile
-				write_config calibrate_schedule "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week $((`date -v-7d +%V`+1)) of Year `date +%Y`"
-			elif [[ $weekday -lt `date +%u` ]]; then # weekday is before today that might be invalid for Week 1
-				log "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week $((`date +%V`+1)) of Year `date +%Y`" >> $logfile
-				write_config calibrate_schedule "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week $((`date +%V`+1)) of Year `date +%Y`"
+				log "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week $((10#`date -v-7d +%V`+1)) of Year `date +%Y`" >> $logfile
+				write_config calibrate_schedule "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week $((10#`date -v-7d +%V`+1)) of Year `date +%Y`"
+			elif [[ $weekday -lt 10#`date +%u` ]]; then # weekday is before today that might be invalid for Week 1
+				log "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week $((10#`date +%V`+1)) of Year `date +%Y`" >> $logfile
+				write_config calibrate_schedule "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week $((10#`date +%V`+1)) of Year `date +%Y`"
 			else
 				log "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week `date +%V` of Year `date +%Y`" >> $logfile
 				write_config calibrate_schedule "Schedule calibration on $weekday_name every $week_period week at $hour:$minute00 starting from Week `date +%V` of Year `date +%Y`"
