@@ -127,7 +127,7 @@ write_config webhookid
 
 $binfolder/battery maintain 80 >/dev/null &
 
-if [[ $(smc -k BCLM -r) == *"no data"* ]]; then # sleepwatcher only required for Apple CPU Macbook
+if [[ $(smc -k BCLM -r) == *"no data"* ]] && [[ $(smc -k CHWA -r) != *"no data"* ]]; then # sleepwatcher only required for Apple CPU Macbook when CHWA is available
 	echo "[ 8 ] Setup for power limit when Macs shutdown"
 	sudo cp $batteryfolder/dist/.reboot $HOME/.reboot
 	sudo cp $batteryfolder/dist/.shutdown $HOME/.shutdown
