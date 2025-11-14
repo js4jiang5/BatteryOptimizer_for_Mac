@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.26"
+BATTERY_CLI_VERSION="v2.0.27"
 BATTERY_VISUDO_VERSION="v1.0.4"
 
 # Path fixes for unexpected environments
@@ -379,8 +379,20 @@ function check_next_calibration_date() {
         now=`date +%s`
 		for i in {0..12}; do # at most 12 weeks
 			schedule_diff_sec=$((schedule_sec - start_sec))
-			if [[ $((schedule_diff_sec % (week_period*7*24*60*60))) == 0 ]] && [[ $schedule_sec -gt $now ]]; then
-				next_s=$schedule_sec
+			mod=$((schedule_diff_sec % (week_period*7*24*60*60)))
+			
+			# take into consideration daylight saving time of advance or lag of 1 hour
+			if (( (mod <= 3600 || mod >= $(( week_period*7*24*60*60 - 3600))) && schedule_sec > now )); then
+				# adjust hour for daylight saving time
+				hour_schedule=`date -j -f "%s" "$schedule_sec" +%H`
+				hour_diff=$(( 10#$hour_schedule - 10#$hour ))
+				if (( hour_diff == 1 || hour_diff == -23 )); then # adjust for advance of 1 hour
+					next_s=$(( schedule_sec - 3600 ))
+				elif (( hour_diff == -1 || hour_diff == 23 )); then # adjust for lag of 1 hour
+					next_s=$(( schedule_sec + 3600 ))
+				else
+					next_s=$schedule_sec
+				fi
 				break;
 			else
 				schedule_sec=$((schedule_sec+ (7*24*60*60)))

@@ -1,3 +1,7 @@
+v2.0.27
+* fix bugs below
+- fix the problem of wrong calibration date calculation in regions adopting daylight saving time (DST)
+
 v2.0.26
 * fix bugs below
 - fix the problem of error message caused by values exceeding octal base max
