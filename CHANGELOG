@@ -1,3 +1,8 @@
+v2.0.28
+* new features
+- add new command "battery ssd" to show current health status of SSD disk0
+- add new command "battery ssdlog" to show daily log of health status of SSD disk0
+
 v2.0.27
 * fix bugs below
 - fix the problem of wrong calibration date calculation in regions adopting daylight saving time (DST)

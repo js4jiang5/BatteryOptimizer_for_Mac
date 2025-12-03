@@ -186,7 +186,13 @@ Usage:
   battery language LANG[tw,us]
     eg: battery language tw  # 電池狀態與通知以中文顯示
     eg: battery language us  # 電池狀態與通知以英文顯示
-  
+
+  battery ssd
+    顯示 SSD disk0 健康狀況
+
+  battery ssdlog
+    顯示 SSD disk0 健康狀況日誌
+
   battery update
     更新至最新版本
 

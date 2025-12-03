@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.27"
+BATTERY_CLI_VERSION="v2.0.28"
 BATTERY_VISUDO_VERSION="v1.0.4"
 
 # Path fixes for unexpected environments
@@ -27,6 +27,7 @@ schedule_path=$HOME/Library/LaunchAgents/battery_schedule.plist
 shutdown_path=$HOME/Library/LaunchAgents/battery_shutdown.plist
 daily_log=$configfolder/daily.log
 calibrate_log=$configfolder/calibrate.log
+ssd_log=$configfolder/ssd.log
 github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
 
 ## ###############
@@ -55,44 +56,44 @@ Usage:
   battery maintain PERCENTAGE[10-100,stop,suspend,recover] SAILING_TARGET[5-99]
   - PERCENTAGE is battery level upper bound above which charging is stopped
   - SAILING_TARGET is battery level lower bound below which charging is started. default value is PERCENTAGE-5 if not specified
-	Examples:
+    Examples:
     battery maintain 80 50    # maintain at 80% with sailing to 50%
-	battery maintain 80    # equivalent to battery maintain 80 75
+    battery maintain 80    # equivalent to battery maintain 80 75
     battery maintain stop   # kill running battery maintain process, disable daemon, and enable charging. maintain will not run after reboot
-	battery maintain suspend   # suspend running battery maintain process and enable charging. maintain is automatically resumed after AC adapter is reconnected. used for temporary charging to 100% before travel
-	battery maintain recover   # recover battery maintain process
+    battery maintain suspend   # suspend running battery maintain process and enable charging. maintain is automatically resumed after AC adapter is reconnected. used for temporary charging to 100% before travel
+    battery maintain recover   # recover battery maintain process
 
   battery calibrate 
     calibrate the battery by discharging it to 15%, then recharging it to 100%, and keeping it there for 1 hour, then discharge to maintained percentage level
-	if macbook lid is not open or AC adapter is not connected, a remind notification will be received.
-	calibration will be started automatically once macbook lid is open and AC adapter is connected
-	notification will be received when each step is completed or error occurs till the end of calibration
-	if you prefer the notifications to stay on until you dismiss it, setup notifications as follows
-		system settings > notifications > applications > Script Editor > Choose "Alerts"
-	when external monitor is used, you must setup notifications as follows in order to receive notification successfully
-		system settings > notifications > check 'Allow notifications when mirroring or sharing the display'
-	eg: battery calibrate   # start calibration
-	eg: battery calibrate stop # stop calibration and resume maintain
+    if macbook lid is not open or AC adapter is not connected, a remind notification will be received.
+    calibration will be started automatically once macbook lid is open and AC adapter is connected
+    notification will be received when each step is completed or error occurs till the end of calibration
+    if you prefer the notifications to stay on until you dismiss it, setup notifications as follows
+        settings > notifications > applications > Script Editor > Choose "Alerts"
+    when external monitor is used, you must setup notifications as follows in order to receive notification successfully
+        system settings > notifications > check 'Allow notifications when mirroring or sharing the display'
+    eg: battery calibrate   # start calibration
+    eg: battery calibrate stop # stop calibration and resume maintain
 	
   battery schedule
-	schedule periodic calibration at most 4 separate days per month, or specified weekday every 1~12 weeks, or specified one day every 1~3 month. default is one day per month on Day 1 at 9am.
-	Examples:
-	battery schedule    # calibrate on Day 1 at 9am
-	battery schedule day 1 8 15 22    # calibrate on Day 1, 8, 15, 22 at 9am.
-	battery schedule day 3 18 hour 13    # calibrate on Day 3, 18 at 13:00
-	battery schedule day 6 16 26 hour 18 minute 30    # calibrate on Day 6, 16, 26 at 18:30
+    schedule periodic calibration at most 4 separate days per month, or specified weekday every 1~12 weeks, or specified one day every 1~3 month. default is one day per month on Day 1 at 9am.
+    Examples:
+    battery schedule    # calibrate on Day 1 at 9am
+    battery schedule day 1 8 15 22    # calibrate on Day 1, 8, 15, 22 at 9am.
+    battery schedule day 3 18 hour 13    # calibrate on Day 3, 18 at 13:00
+    battery schedule day 6 16 26 hour 18 minute 30    # calibrate on Day 6, 16, 26 at 18:30
     battery schedule weekday 0 week_period 2 hour 21 minute 30 # calibrate on Sunday every 2 weeks at 21:30
-	battery schedule day 5 month_period 3 hour 21 minute 30 # calibrate every 3 month on Day 5 at 21:00
+    battery schedule day 5 month_period 3 hour 21 minute 30 # calibrate every 3 month on Day 5 at 21:00
     battery schedule disable    # disable periodic calibration
-	battery schedule enable    # enable periodic calibration
-	Restrictions:
-		1. at most 4 days per month are allowed
-		2. valid day range [1-28]
-		3. valid hour range [0-23]
-		4. valid minute range [0-59]
-    	5. valid weekday range [0-6] 0:Sunday, 1:Monday, ...
-    	6. valid week_period range [1-12]
-		7. valid month_period range [1-3]
+    battery schedule enable    # enable periodic calibration
+    Restrictions:
+        1. at most 4 days per month are allowed
+        2. valid day range [1-28]
+        3. valid hour range [0-23]
+        4. valid minute range [0-59]
+        5. valid weekday range [0-6] 0:Sunday, 1:Monday, ...
+        6. valid week_period range [1-12]
+        7. valid month_period range [1-3]
 
   battery charge LEVEL[1-100, stop]
     charge the battery to a certain percentage, and disable charging when that percentage is reached
@@ -111,24 +112,30 @@ Usage:
     output daily log and show daily log store location
 
   battery changelog
-	show the changelog of the latest version on Github
+    show the changelog of the latest version on Github
 
   battery calibratelog
-	show calibrate history
+    show calibrate history
 
   battery logs LINES[integer, optional]
     output logs of the battery CLI and GUI
-	eg: battery logs 100
+    eg: battery logs 100
 
   battery language LANG[tw,us]
     eg: battery language tw  # show status and notification in traditional Chinese if available
-	eg: battery language us  # show status and notification in English
+    eg: battery language us  # show status and notification in English
+
+  battery ssd
+    show SSD disk0 status
+
+  battery ssdlog
+    show SSD disk0 dailylog
 
   battery update
     update the battery utility to the latest version
 
   battery version
-	show current version
+    show current version
 
   battery reinstall
     reinstall the battery utility to the latest version (reruns the installation script)
@@ -152,7 +159,7 @@ Cmnd_Alias      BATTERYCHWA = $binfolder/smc -k CHWA -w 00, $binfolder/smc -k CH
 Cmnd_Alias      BATTERYACEN = $binfolder/smc -k ACEN -w 00, $binfolder/smc -k ACEN -w 01, $binfolder/smc -k ACEN -r
 Cmnd_Alias      BATTERYBFCL = $binfolder/smc -k BFCL -w 00, $binfolder/smc -k BFCL -w 5f, $binfolder/smc -k BFCL -r
 Cmnd_Alias      BATTERYCHBI = $binfolder/smc -k CHBI -r
-Cmnd_Alias      BATTERYB0AC = $binfolder/smc -k B0AC -r 
+Cmnd_Alias      BATTERYB0AC = $binfolder/smc -k B0AC -r
 ALL ALL = NOPASSWD: BATTERYOFF
 ALL ALL = NOPASSWD: BATTERYON
 ALL ALL = NOPASSWD: DISCHARGEOFF
@@ -199,10 +206,10 @@ function valid_action() {
     # List of valid actions
     VALID_ACTIONS=("" "visudo" "maintain" "calibrate" "schedule" "charge" "discharge" 
 	"status" "dailylog" "calibratelog" "logs" "language" "update" "version" "reinstall" "uninstall" 
-	"maintain_synchronous" "status_csv" "create_daemon" "disable_daemon" "remove_daemon" "changelog")
+	"maintain_synchronous" "status_csv" "create_daemon" "disable_daemon" "remove_daemon" "changelog" "ssd" "ssdlog")
     
     VALID_ACTIONS_USER=("" "visudo" "maintain" "calibrate" "schedule" "charge" "discharge" 
-	"status" "dailylog" "calibratelog" "logs" "language" "update" "version" "reinstall" "uninstall" "changelog")
+	"status" "dailylog" "calibratelog" "logs" "language" "update" "version" "reinstall" "uninstall" "changelog" "ssd" "ssdlog")
 
     # Check if action is valid
     local action_valid=false
@@ -955,6 +962,57 @@ function get_version() { # get the latest version number
 	echo $line
 }
 
+function get_ssd() { # get SSD status
+	[[ -z $(which smartctl 2>&1) ]] && has_smartctl=false || has_smartctl=true # check if smartctl is available
+	if $has_smartctl; then
+		enable_smart=$(smartctl -s on disk0) # enable SMART on disk0
+		smartinfo=$(smartctl -x disk0)
+		#[[ -z $(echo "$smartinfo" | grep "Data Units Read:") ]] && firmware_support=false || firmware_support=true
+		if [[ $(echo "$smartinfo" | grep "Data Units Read:") ]]; then
+			firmware=1
+			firmware_support=true
+		elif [[ $(echo "$smartinfo" | grep "Logical Sectors Read") ]]; then
+			firmware=2
+			firmware_support=true
+		else
+			firmware_support=false
+		fi
+		if $firmware_support; then # run SSD log only when firmware support
+			if [[ $firmware == 1 ]]; then
+				result=$(echo "$smartinfo" | grep "test result:" | awk '{print $6}')
+				read_unit=$(echo "$smartinfo" | grep "Data Units Read:"); [[ -z $read_unit ]] && read_unit= || read_unit=${read_unit#*"["}; read_unit=${read_unit%" TB"*}"TB"
+				write_unit=$(echo "$smartinfo" | grep "Data Units Written:"); [[ -z $write_unit ]] && write_unit= || write_unit=${write_unit#*"["}; write_unit=${write_unit%" TB"*}"TB"
+				used=$(echo "$smartinfo" | grep "Percentage Used:" | awk '{print $3}')
+				power_cycles=$(echo "$smartinfo" | grep "Power Cycles:" | awk '{print $3}')
+				power_hours=$(echo "$smartinfo" | grep "Power On Hours:" | awk '{print $4}')
+				unsafe_shutdowns=$(echo "$smartinfo" | grep "Unsafe Shutdowns:" | awk '{print $3}')
+				temperature=$(echo "$smartinfo" | grep "Temperature:" | awk '{print $2"°C"}')
+				error=$(echo "$smartinfo" | grep "Media and Data Integrity Errors:" | awk '{print $6}')
+			else
+				result=$(echo "$smartinfo" | grep "test result:" | awk '{print $6}')
+				read_unit=$(echo "$smartinfo" | grep "Host_Reads_MiB" | awk '{print $8}'); [[ "$read_unit" =~ ^[0-9]+$ ]] && read_unit=$(echo "scale=2; $read_unit/1048576" | bc)"TB" || read_unit=
+				write_unit=$(echo "$smartinfo" | grep "Host_Writes_MiB" | awk '{print $8}'); [[ "$write_unit" =~ ^[0-9]+$ ]] && write_unit=$(echo "scale=2; $write_unit/1048576" | bc)"TB" || write_unit=
+				used=$(echo "$smartinfo" | grep "Percentage Used" | awk '{print $4"%"}')
+				power_cycles=$(echo "$smartinfo" | grep "Power_Cycle_Count" | awk '{print $8}')
+				power_hours=$(echo "$smartinfo" | grep "Power_On_Hours" | awk '{print $8}')
+				unsafe_shutdowns=$(echo "$smartinfo" | grep "Power-Off_Retract_Count" | awk '{print $8}')
+				temperature=$(echo "$smartinfo" | grep "Temperature" | awk '{print $8"°C"}')
+				error=$(echo "$smartinfo" | grep "Uncorrectable Errors" | awk '{print $4}')
+			fi
+			if [[ -z $result ]]; then result="NA"; fi
+			if [[ -z $read_unit ]]; then read_unit="NA"; fi
+			if [[ -z $write_unit ]]; then write_unit="NA"; fi
+			if [[ -z $used ]]; then used="NA"; fi
+			if [[ -z $power_cycles ]]; then power_cycles="NA"; fi
+			if [[ -z $power_hours ]]; then power_hours="NA"; fi
+			if [[ -z $unsafe_shutdowns ]]; then unsafe_shutdowns="NA"; fi
+			if [[ -z $temperature ]]; then temperature="NA"; fi
+			if [[ -z $error ]]; then error="NA"; fi
+		fi
+	fi
+	echo $has_smartctl $firmware_support $result $read_unit $write_unit $used $power_cycles $power_hours $unsafe_shutdowns $temperature $error
+}
+
 function lid_closed() { # 20241013 by JS
 	lid_is_closed=$(ioreg -r -k AppleClamshellState -d 1 | grep AppleClamshellState | tail -n1 | awk '{print $3}')
 	echo "$lid_is_closed"
@@ -1643,6 +1701,20 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 					osascript -e 'display notification "'"Battery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\nHealth $(get_battery_health)%, Cycle $(get_cycle)"'" with title "Battery" sound name "Blow"'
 				fi
 				#fi
+
+				# SSD log
+				ssd_result=$(echo $(get_ssd))
+				has_smartctl=$(echo $ssd_result | awk '{print $1}')
+				firmware_support=$(echo $ssd_result | awk '{print $2}')
+				smartinfo=$(echo $ssd_result | awk '{print $3, $4, $5, $6, $7, $8, $9, $10, $11}')
+				if [[ $has_smartctl == true ]]; then
+					if [[ $firmware_support == true ]]; then # run SSD log only when firmware support
+						if ! test -f $ssd_log; then
+							echo "Date Result Data_Read Data_Written Used Power_Cycles Power_Hours Unsafe_Shutdowns Temperature Error" | awk '{printf "%-10s, %6s, %11s, %12s, %5s, %12s, %11s, %16s, %11s, %5s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}' > $ssd_log
+						fi
+						logd "$smartinfo" | awk '{printf "%-10s, %6s, %11s, %12s, %5s, %12s, %11s, %16s, %12s, %5s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}' >> $ssd_log
+					fi
+				fi
 			fi
 			write_config daily_last $now_date
 
@@ -2859,6 +2931,19 @@ if [[ "$action" == "dailylog" ]]; then
 	exit 0
 fi
 
+# Display ssdlog
+if [[ "$action" == "ssdlog" ]]; then
+
+	if test -f $ssd_log; then
+		echo
+		echo -e "SSD daily log ($ssd_log)\n"
+		echo "$(cat $ssd_log 2>/dev/null)"
+		echo
+	fi
+
+	exit 0
+fi
+
 # Display calibrate logs
 if [[ "$action" == "calibratelog" ]]; then
 
@@ -2906,4 +2991,22 @@ if [[ "$action"  == "language" ]]; then
 		log "Specified language is not recognized. Only [tw, us] are allowed"
 	fi
 	exit 0
+fi
+
+# Get SSD status
+if [[ "$action"  == "ssd" ]]; then
+	ssd_result=$(echo $(get_ssd))
+	has_smartctl=$(echo $ssd_result | awk '{print $1}')
+	firmware_support=$(echo $ssd_result | awk '{print $2}')
+	smartinfo=$(echo $ssd_result | awk '{print $3, $4, $5, $6, $7, $8, $9, $10, $11}')
+	if [[ $has_smartctl == true ]]; then
+		if [[ $firmware_support == true ]]; then # run SSD log only when firmware support
+			echo "Date Result Data_Read Data_Written Used Power_Cycles Power_Hours Unsafe_Shutdowns Temperature Error" | awk '{printf "%-10s, %6s, %11s, %12s, %5s, %12s, %11s, %16s, %11s, %5s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}'
+			logd "$smartinfo" | awk '{printf "%-10s, %6s, %11s, %12s, %5s, %12s, %11s, %16s, %12s, %5s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}'
+		else
+			echo "Your SMART firmware is not supported."
+		fi
+	else
+		echo 'SMART monitor tool is not available in your Mac. You may run "brew install smartmontools" to get it.'
+	fi
 fi

@@ -190,6 +190,12 @@ Usage:
     eg: battery language tw  # show status and notification in traditional Chinese if available
     eg: battery language us  # show status and notification in English
   
+  battery ssd
+    show SSD disk0 status
+
+  battery ssdlog
+    show SSD disk0 dailylog
+
   battery update
     update the battery utility to the latest version
 
