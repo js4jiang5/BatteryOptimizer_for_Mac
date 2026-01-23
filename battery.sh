@@ -980,8 +980,8 @@ function get_ssd() { # get SSD status
 		if $firmware_support; then # run SSD log only when firmware support
 			if [[ $firmware == 1 ]]; then
 				result=$(echo "$smartinfo" | grep "test result:" | awk '{print $6}')
-				read_unit=$(echo "$smartinfo" | grep "Data Units Read:"); [[ -z $read_unit ]] && read_unit= || read_unit=${read_unit#*"["}; read_unit=${read_unit%" TB"*}"TB"
-				write_unit=$(echo "$smartinfo" | grep "Data Units Written:"); [[ -z $write_unit ]] && write_unit= || write_unit=${write_unit#*"["}; write_unit=${write_unit%" TB"*}"TB"
+				read_unit=$(echo "$smartinfo" | grep "Data Units Read:" | sed -n 's/.*\[\(.*\)\]/\1/p' | tr -d ' ')
+				write_unit=$(echo "$smartinfo" | grep "Data Units Written:" | sed -n 's/.*\[\(.*\)\]/\1/p' | tr -d ' ')
 				used=$(echo "$smartinfo" | grep "Percentage Used:" | awk '{print $3}')
 				power_cycles=$(echo "$smartinfo" | grep "Power Cycles:" | awk '{print $3}')
 				power_hours=$(echo "$smartinfo" | grep "Power On Hours:" | awk '{print $4}')
