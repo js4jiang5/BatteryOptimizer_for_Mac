@@ -1784,13 +1784,13 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 
 			# Keep track of SMC charging status
 			smc_charging_status=$(get_smc_charging_status)
-			if [[ "$battery_percentage" -ge "$setting" ]] && [[ "$smc_charging_status" == "enabled" ]]; then
+			if [[ "$battery_percentage" -ge "$setting" ]] && [[ "$smc_charging_status" == "enabled" ]] && [[ "$maintain_status" == "active" ]]; then
 
 				log "Stop charge above $setting"
 				disable_charging
 				sleep_duration=60
 
-			elif [[ "$battery_percentage" -lt "$lower_limit" ]] && [[ "$smc_charging_status" == "disabled" ]]; then
+			elif [[ "$battery_percentage" -lt "$lower_limit" ]] && [[ "$smc_charging_status" == "disabled" ]] && [[ "$maintain_status" == "active" ]]; then
 
 				log "Charge below $lower_limit"
 				enable_charging
