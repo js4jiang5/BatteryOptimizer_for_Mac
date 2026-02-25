@@ -144,15 +144,15 @@ echo "[ 4 ] Setting up battery configuration"
 if ! test -f $config_file; then # config file not exist
 	touch $config_file
 fi
-if [[ -z $(read_config calibrate_method) ]]; then write_config calibrate_method "$(cat $configfolder/calibrate_method 2>/dev/null)"; rm -rf $configfolder/calibrate_method; fi
-if [[ -z $(read_config calibrate_schedule) ]]; then write_config calibrate_schedule "$(cat $configfolder/calibrate_schedule 2>/dev/null)"; rm -rf $configfolder/calibrate_schedule; fi
-if [[ -z $(read_config informed_version) ]]; then write_config informed_version "$(cat $configfolder/informed.version 2>/dev/null)"; rm -rf $configfolder/informed.version; fi
-if [[ -z $(read_config language) ]]; then write_config language "$(cat $configfolder/language.code 2>/dev/null)"; rm -rf $configfolder/language.code; fi
-if [[ -z $(read_config maintain_percentage) ]]; then write_config maintain_percentage "$(cat $configfolder/maintain.percentage 2>/dev/null)"; rm -rf $configfolder/maintain.percentage; fi
-if [[ -z $(read_config clamshell_discharge) ]]; then write_config clamshell_discharge "$(cat $configfolder/clamshell_discharge 2>/dev/null)"; rm -rf $configfolder/clamshell_discharge; fi
-if [[ -z $(read_config webhookid) ]]; then write_config webhookid "$(cat $configfolder/ha_webhook.id 2>/dev/null)"; rm -rf $configfolder/ha_webhook.id; fi
-if test -f $configfolder/sig; then rm -rf $configfolder/sig; fi
-if test -f $configfolder/state; then rm -rf $configfolder/state; fi
+if [[ -z $(read_config calibrate_method) ]]; then write_config calibrate_method "$(cat "$configfolder/calibrate_method" 2>/dev/null)"; rm -rf "$configfolder/calibrate_method"; fi
+if [[ -z $(read_config calibrate_schedule) ]]; then write_config calibrate_schedule "$(cat "$configfolder/calibrate_schedule" 2>/dev/null)"; rm -rf "$configfolder/calibrate_schedule"; fi
+if [[ -z $(read_config informed_version) ]]; then write_config informed_version "$(cat "$configfolder/informed.version" 2>/dev/null)"; rm -rf "$configfolder/informed.version"; fi
+if [[ -z $(read_config language) ]]; then write_config language "$(cat "$configfolder/language.code" 2>/dev/null)"; rm -rf "$configfolder/language.code"; fi
+if [[ -z $(read_config maintain_percentage) ]]; then write_config maintain_percentage "$(cat "$configfolder/maintain.percentage" 2>/dev/null)"; rm -rf "$configfolder/maintain.percentage"; fi
+if [[ -z $(read_config clamshell_discharge) ]]; then write_config clamshell_discharge "$(cat "$configfolder/clamshell_discharge" 2>/dev/null)"; rm -rf "$configfolder/clamshell_discharge"; fi
+if [[ -z $(read_config webhookid) ]]; then write_config webhookid "$(cat "$configfolder/ha_webhook.id" 2>/dev/null)"; rm -rf "$configfolder/ha_webhook.id"; fi
+if test -f "$configfolder/sig"; then rm -rf "$configfolder/sig"; fi
+if test -f "$configfolder/state"; then rm -rf "$configfolder/state"; fi
 
 # Remove tempfiles
 cd
