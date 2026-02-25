@@ -68,12 +68,12 @@ function write_config() { # write $val to $name in config_file
 }
 
 # Force-set path to include sbin
-PATH="$PATH:/usr/sbin"
+PATH="/usr/local/co.battery-optimizer:$PATH:/usr/sbin"
 
 # Set environment variables
 tempfolder=$(mktemp -d "${TMPDIR:-/tmp}/battery-update.XXXXXX")
 trap 'rm -rf "$tempfolder"' EXIT
-binfolder=/usr/local/bin
+binfolder=/usr/local/co.battery-optimizer
 configfolder=$HOME/.battery
 config_file=$configfolder/config_battery
 batteryfolder="$tempfolder/battery"
@@ -99,6 +99,23 @@ fi
 
 echo -e "🔋 Starting battery update\n"
 
+# Cleanup old installations from /usr/local/bin (migration from vulnerable versions)
+# Only remove if they are regular files (not symlinks to our new location)
+if [[ -f /usr/local/bin/battery && ! -L /usr/local/bin/battery ]]; then
+	sudo rm -f /usr/local/bin/battery
+fi
+if [[ -f /usr/local/bin/smc && ! -L /usr/local/bin/smc ]]; then
+	sudo rm -f /usr/local/bin/smc
+fi
+if [[ -f /usr/local/bin/shutdown.sh && ! -L /usr/local/bin/shutdown.sh ]]; then
+	sudo rm -f /usr/local/bin/shutdown.sh
+fi
+
+# Ensure binfolder exists with correct ownership (for migration from old versions)
+if [[ ! -d "$binfolder" ]]; then
+	sudo install -d -m 755 -o root -g wheel "$binfolder"
+fi
+
 battery_local=$(echo $(cat $binfolder/battery 2>/dev/null))
 battery_version_local=$(echo $(get_parameter "$battery_local" "BATTERY_CLI_VERSION") | tr -d \")
 visudo_version_local=$(echo $(get_parameter "$battery_local" "BATTERY_VISUDO_VERSION") | tr -d \")
@@ -118,19 +135,30 @@ rm $batteryfolder/repo.zip
 # update smc for intel macbook if version is less than v2.0.14
 if [[ 10#$(version_number $battery_version_local) -lt 10#$(version_number "v2.0.14") ]]; then
 	if [[ $(sysctl -n machdep.cpu.brand_string) == *"Intel"* ]]; then # check CPU type
-		sudo mkdir -p $binfolder
+		if [[ ! -d "$binfolder" ]]; then
+			sudo install -d -m 755 -o root -g wheel "$binfolder"
+		fi
 		sudo cp $batteryfolder/dist/smc_intel $binfolder/smc
-		sudo chown $USER $binfolder/smc
+		sudo chown root:wheel $binfolder/smc
 		sudo chmod 755 $binfolder/smc
-		sudo chmod +x $binfolder/smc
 	fi
 fi
 
 echo "[ 2 ] Writing script to $binfolder/battery"
-cp $batteryfolder/battery.sh $binfolder/battery
-chown $USER $binfolder/battery
-chmod 755 $binfolder/battery
-chmod u+x $binfolder/battery
+sudo cp $batteryfolder/battery.sh $binfolder/battery
+sudo chown root:wheel $binfolder/battery
+sudo chmod 755 $binfolder/battery
+
+# Create/update symlinks in /usr/local/bin for PATH accessibility
+sudo mkdir -p /usr/local/bin
+sudo ln -sf "$binfolder/battery" /usr/local/bin/battery
+sudo chown -h root:wheel /usr/local/bin/battery
+sudo ln -sf "$binfolder/smc" /usr/local/bin/smc
+sudo chown -h root:wheel /usr/local/bin/smc
+if [[ -f "$binfolder/shutdown.sh" ]]; then
+	sudo ln -sf "$binfolder/shutdown.sh" /usr/local/bin/shutdown.sh
+	sudo chown -h root:wheel /usr/local/bin/shutdown.sh
+fi
 
 battery_new=$(echo $(cat $binfolder/battery 2>/dev/null))
 battery_version_new=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")

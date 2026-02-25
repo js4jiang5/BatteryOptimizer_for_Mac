@@ -1,5 +1,27 @@
 #!/bin/bash
 
+#
+# SECURITY NOTES FOR MAINTAINERS:
+#
+# This app uses a visudo configuration that allows a background script running as
+# an unprivileged user to execute battery management commands without requiring a
+# user password. This requires careful installation and design to avoid potential
+# privilege-escalation vulnerabilities.
+#
+# Rule of thumb:
+# - Unprivileged users must not be able to modify, replace, or inject any code
+#   that can be executed with root privileges.
+#
+# For this reason:
+# - All battery-related binaries and scripts that can be executed via sudo,
+#   including those that prompt for a user password, must be owned by root.
+# - They must not be writable by group or others.
+# - Their parent directories must also be owned by root and not be writable by
+#   unprivileged users, to prevent the replacement of executables.
+#
+# See: https://github.com/actuallymentor/battery/issues/443
+#
+
 function write_config() { # write $val to $name in config_file
 	name=$1
 	val=$2
@@ -23,7 +45,8 @@ echo -e "####################################################################\n\
 # Set environment variables
 tempfolder=$(mktemp -d "${TMPDIR:-/tmp}/battery-install.XXXXXX")
 trap 'rm -rf "$tempfolder"' EXIT
-binfolder=/usr/local/bin
+readonly EXPECTED_BINFOLDER="/usr/local/co.battery-optimizer"
+binfolder="$EXPECTED_BINFOLDER"
 
 # Set script value
 calling_user=${1:-"$USER"}
@@ -36,6 +59,11 @@ sleepwatcher_log=$configfolder/sleepwatcher.log
 # Ask for sudo once, in most systems this will cache the permissions for a bit
 sudo echo "🔋 Starting battery installation"
 echo -e "[ 1 ] Superuser permissions acquired."
+
+# Cleanup after older versions that installed to /usr/local/bin
+sudo rm -f /usr/local/bin/battery
+sudo rm -f /usr/local/bin/smc
+sudo rm -f /usr/local/bin/shutdown.sh
 
 # check CPU type
 if [[ $(sysctl -n machdep.cpu.brand_string) == *"Intel"* ]]; then
@@ -57,40 +85,52 @@ cp -r "$batteryfolder/$in_zip_folder_name/"* "$batteryfolder"
 curl -sSL -o "$batteryfolder/dist/notification_permission.scpt" "https://github.com/js4jiang5/BatteryOptimizer_for_Mac/raw/refs/heads/main/dist/notification_permission.scpt"
 rm "$batteryfolder/repo.zip"
 
-# Move built file to bin folder
-echo "[ 3 ] Move smc to executable folder"
-sudo mkdir -p "$binfolder"
+# Create dedicated bin folder with root ownership (security requirement)
+# Safety check: verify binfolder hasn't been modified (defense against code injection)
+echo "[ 3 ] Create root-owned executable folder"
+if [[ "$binfolder" != "$EXPECTED_BINFOLDER" ]]; then
+	echo "Error: invalid binfolder path"
+	exit 1
+fi
+if [[ -d "$binfolder" ]]; then
+	sudo rm -rf "$binfolder"
+fi
+sudo install -d -m 755 -o root -g wheel "$binfolder"
 if [[ $cpu_type == "apple" ]]; then
 	sudo cp "$batteryfolder/dist/smc" "$binfolder/smc"
 else
 	sudo cp "$batteryfolder/dist/smc_intel" "$binfolder/smc"
 fi
-sudo chown "$calling_user" "$binfolder/smc"
+sudo chown root:wheel "$binfolder/smc"
 sudo chmod 755 "$binfolder/smc"
-sudo chmod +x "$binfolder/smc"
-# Check if smc works
-check_smc=$(smc 2>&1)
+# Check if smc works (use explicit path since symlinks not created yet)
+check_smc=$("$binfolder/smc" 2>&1)
 if [[ $check_smc =~ " Bad " ]] || [[ $check_smc =~ " bad " ]] ; then # current is not a right version
 	sudo cp "$batteryfolder/dist/smc_intel" "$binfolder/smc"
-	sudo chown "$USER" "$binfolder/smc"
+	sudo chown root:wheel "$binfolder/smc"
 	sudo chmod 755 "$binfolder/smc"
-	sudo chmod +x "$binfolder/smc"
 	# check again
-	check_smc=$(smc 2>&1)
+	check_smc=$($binfolder/smc 2>&1)
 	if [[ $check_smc =~ " Bad " ]] || [[ $check_smc =~ " bad " ]] ; then # current is not a right version
 		echo "Error: BatteryOptimizer seems not compatible with your MAC yet"
-		exit
+		exit 1
 	fi
 fi
 
 echo "[ 4 ] Writing script to $binfolder/battery for user $calling_user"
 sudo cp "$batteryfolder/battery.sh" "$binfolder/battery"
 
-echo "[ 5 ] Setting correct file permissions for $calling_user"
-# Set permissions for battery executables
-sudo chown -R "$calling_user" "$binfolder/battery"
+echo "[ 5 ] Setting correct file permissions"
+# Set permissions for battery executables (must be root-owned for security)
+sudo chown root:wheel "$binfolder/battery"
 sudo chmod 755 "$binfolder/battery"
-sudo chmod +x "$binfolder/battery"
+
+# Create symlinks in /usr/local/bin for PATH accessibility
+sudo mkdir -p /usr/local/bin
+sudo ln -sf "$binfolder/battery" /usr/local/bin/battery
+sudo chown -h root:wheel /usr/local/bin/battery
+sudo ln -sf "$binfolder/smc" /usr/local/bin/smc
+sudo chown -h root:wheel /usr/local/bin/smc
 
 # Set permissions for logfiles
 mkdir -p "$configfolder" || { echo "Failed to create config directory"; exit 1; }
@@ -103,8 +143,6 @@ sudo chmod 755 "$logfile"
 touch "$pidfile"
 sudo chown "$calling_user" "$pidfile"
 sudo chmod 755 "$pidfile"
-
-sudo chown "$calling_user" "$binfolder/battery"
 
 echo "[ 6 ] Setting up visudo declarations"
 sudo "$batteryfolder/battery.sh" visudo "$USER"
@@ -142,9 +180,11 @@ if [[ $(smc -k BCLM -r) == *"no data"* ]] && [[ $(smc -k CHWA -r) != *"no data"*
 	sudo chown -R $calling_user $HOME/.shutdown
 	sudo chmod 755 $HOME/.shutdown
 	sudo chmod +x $HOME/.shutdown
-	sudo chown -R $calling_user $binfolder/shutdown.sh
+	sudo chown root:wheel $binfolder/shutdown.sh
 	sudo chmod 755 $binfolder/shutdown.sh
-	sudo chmod +x $binfolder/shutdown.sh
+	# Create symlink for shutdown.sh (only when the file is installed)
+	sudo ln -sf "$binfolder/shutdown.sh" /usr/local/bin/shutdown.sh
+	sudo chown -h root:wheel /usr/local/bin/shutdown.sh
 
 	# Install homebrew
 	if [[ -z $(which brew 2>&1) ]]; then

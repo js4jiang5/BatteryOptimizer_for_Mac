@@ -10,15 +10,15 @@
 ## variables are used by this binary as well at the update script
 ## ###############
 BATTERY_CLI_VERSION="v2.0.28"
-BATTERY_VISUDO_VERSION="v1.0.4"
+BATTERY_VISUDO_VERSION="v1.0.5"
 
 # Path fixes for unexpected environments
-PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+PATH=/usr/local/co.battery-optimizer:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
 ## ###############
 ## Variables
 ## ###############
-binfolder=/usr/local/bin
+binfolder=/usr/local/co.battery-optimizer
 visudo_folder=/private/etc/sudoers.d
 visudo_file=${visudo_folder}/battery
 configfolder=$HOME/.battery
