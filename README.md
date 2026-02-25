@@ -8,7 +8,7 @@
 ### New features
 - support both Apple and Intel CPU Macs
 - sail mode, allowing the battery to sail from maintain percentage to sail target without charging to avoid frequent micro charging
-- longevity mode preset optimized for maximum battery lifespan with automatic calibration and cell imbalance monitoring
+- longevity mode preset optimized for maximum battery lifespan with automatic balance and cell imbalance monitoring
 - scheduled calibration, starting automatic calibration on specified days per month (at most four days), or specified one day every 1-3 month, or specified weekday every 1-12 weeks
 - new command "suspend", suspending maintain temporarily allowing charging to 100%, and automatically resume maintain when AC adapter is reconnected
 - charging limiter still works even when macbook sleep or shutdown
