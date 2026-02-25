@@ -3,13 +3,15 @@
 function write_config() { # write $val to $name in config_file
 	name=$1
 	val=$2
-	if test -f $config_file; then
-		config=$(cat $config_file 2>/dev/null)
+	if test -f "$config_file"; then
+		config=$(cat "$config_file" 2>/dev/null)
 		name_loc=$(echo "$config" | grep -n "$name" | cut -d: -f1)
 		if [[ $name_loc ]]; then
-			sed -i '' ''"$name_loc"'s/.*/'"$name"' = '"$val"'/' $config_file
+			# Escape sed special characters in value
+			val_escaped=$(printf '%s\n' "$val" | sed 's/[&/\]/\\&/g')
+			sed -i '' "${name_loc}s/.*/${name} = ${val_escaped}/" "$config_file"
 		else # not exist yet
-			echo "$name = $val" >> $config_file
+			echo "$name = $val" >> "$config_file"
 		fi
 	fi
 }
