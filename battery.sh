@@ -40,7 +40,7 @@ github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MA
 ## ###############
 
 # Create config folder if needed
-mkdir -p $configfolder
+mkdir -p "$configfolder" || { echo "Failed to create config directory"; exit 1; }
 
 # create logfile if needed
 touch $logfile
@@ -710,11 +710,19 @@ function enable_charging() {
 	disable_discharging
 	log "🔌🔋 Enabling battery charging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		if $has_CH0B; then sudo smc -k CH0B -w 00; fi
-		if $has_CH0C; then sudo smc -k CH0C -w 00; fi
-		if $has_CHTE && ! $has_CH0B; then sudo smc -k CHTE -w 00000000; fi
+		if $has_CH0B; then
+			if ! sudo smc -k CH0B -w 00; then log "Warning: Failed to set CH0B"; fi
+		fi
+		if $has_CH0C; then
+			if ! sudo smc -k CH0C -w 00; then log "Warning: Failed to set CH0C"; fi
+		fi
+		if $has_CHTE && ! $has_CH0B; then
+			if ! sudo smc -k CHTE -w 00000000; then log "Warning: Failed to set CHTE"; fi
+		fi
 	else
-		if $has_BCLM; then sudo smc -k BCLM -w 64; fi
+		if $has_BCLM; then
+			if ! sudo smc -k BCLM -w 64; then log "Warning: Failed to set BCLM"; fi
+		fi
 	fi
 	sleep 1
 }
@@ -722,11 +730,19 @@ function enable_charging() {
 function disable_charging() {
 	log "🔌🪫 Disabling battery charging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		if $has_CH0B; then sudo smc -k CH0B -w 02; fi
-		if $has_CH0C; then sudo smc -k CH0C -w 02; fi
-		if $has_CHTE && ! $has_CH0B; then sudo smc -k CHTE -w 01000000; fi
+		if $has_CH0B; then
+			if ! sudo smc -k CH0B -w 02; then log "Warning: Failed to set CH0B"; fi
+		fi
+		if $has_CH0C; then
+			if ! sudo smc -k CH0C -w 02; then log "Warning: Failed to set CH0C"; fi
+		fi
+		if $has_CHTE && ! $has_CH0B; then
+			if ! sudo smc -k CHTE -w 01000000; then log "Warning: Failed to set CHTE"; fi
+		fi
 	else
-		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
+		if $has_BCLM; then
+			if ! sudo smc -k BCLM -w 0a; then log "Warning: Failed to set BCLM"; fi
+		fi
 	fi
 	sleep 1
 }
@@ -805,7 +821,11 @@ function get_smc_discharging_status() {
 
 function get_battery_percentage() {
 	battery_percentage=$(read_smc BRSC)
-	if [ $battery_percentage -gt 100 ]; then
+	if [[ -z "$battery_percentage" ]] || ! [[ "$battery_percentage" =~ ^[0-9]+$ ]]; then
+		echo "0"
+		return
+	fi
+	if [[ "$battery_percentage" -gt 100 ]]; then
 		battery_percentage=$((battery_percentage/256)) # BRSC is battery_level in some system, but bettery_level in others
 	fi
 	echo $battery_percentage
@@ -814,7 +834,11 @@ function get_battery_percentage() {
 function get_accurate_battery_percentage() {
 	MaxCapacity=$(ioreg -l -n AppleSmartBattery -r | grep "\"AppleRawMaxCapacity\" =" | awk '{ print $3 }' | tr ',' '.')
 	CurrentCapacity=$(ioreg -l -n AppleSmartBattery -r | grep "\"AppleRawCurrentCapacity\" =" | awk '{ print $3 }' | tr ',' '.')
-	accurate_battery_percentage=$(echo "scale=1; $CurrentCapacity*100/$MaxCapacity" | bc)
+	if [[ -n "$MaxCapacity" ]] && [[ "$MaxCapacity" =~ ^[0-9]+$ ]] && [[ "$MaxCapacity" -gt 0 ]]; then
+		accurate_battery_percentage=$(echo "scale=1; $CurrentCapacity*100/$MaxCapacity" | bc)
+	else
+		accurate_battery_percentage="0"
+	fi
 	echo $accurate_battery_percentage
 }
 
@@ -893,7 +917,11 @@ function get_cell_imbalance() {
 function get_battery_health() {
 	MaxCapacity=$(ioreg -l -n AppleSmartBattery -r | grep "\"AppleRawMaxCapacity\" =" | awk '{ print $3 }' | tr ',' '.')
 	DesignCapacity=$(ioreg -l -n AppleSmartBattery -r | grep "\"DesignCapacity\" =" | awk '{ print $3 }' | tr ',' '.')
-	health=$(echo "scale=1; $MaxCapacity*100/$DesignCapacity" | bc)
+	if [[ -n "$DesignCapacity" ]] && [[ "$DesignCapacity" =~ ^[0-9]+$ ]] && [[ "$DesignCapacity" -gt 0 ]]; then
+		health=$(echo "scale=1; $MaxCapacity*100/$DesignCapacity" | bc)
+	else
+		health="0"
+	fi
 	echo $health
 }
 
@@ -959,11 +987,18 @@ function get_parameter() { # get parameter value from configuration file. the fo
 }
 
 function get_changelog() { # get the latest changelog
+	local url
 	if [[ -z $1 ]]; then
-		changelog=$(curl -sSL $github_link/CHANGELOG | sed s:\":'\\"':g 2>&1)
+		url="$github_link/CHANGELOG"
 	else
-		changelog=$(curl -sSL $github_link/$1 | sed s:\":'\\"':g 2>&1)
+		url="$github_link/$1"
 	fi
+	if ! changelog=$(curl -sSLf "$url" 2>&1); then
+		log "Error: Failed to fetch changelog from $url"
+		echo ""
+		return 1
+	fi
+	changelog=$(echo "$changelog" | sed s:\":'\\"':g)
 
 	n_lines=0
 	while read -r "line"; do
@@ -994,11 +1029,18 @@ function get_changelog() { # get the latest changelog
 }
 
 function get_version() { # get the latest version number
+	local url
 	if [[ -z $1 ]]; then
-		changelog=$(curl -sSL $github_link/CHANGELOG | sed s:\":'\\"':g 2>&1)
+		url="$github_link/CHANGELOG"
 	else
-		changelog=$(curl -sSL $github_link/$1 | sed s:\":'\\"':g 2>&1)
+		url="$github_link/$1"
 	fi
+	if ! changelog=$(curl -sSLf "$url" 2>&1); then
+		log "Error: Failed to fetch version from $url"
+		echo ""
+		return 1
+	fi
+	changelog=$(echo "$changelog" | sed s:\":'\\"':g)
 
 	while read -r "line"; do
 		break
@@ -1072,8 +1114,16 @@ function ack_SIG() {
 	# Block signals during handler execution for re-entrancy safety (Issue #18)
 	trap '' SIGUSR1
 	local sigpid sig
-	sigpid=$(echo $(cat "$pid_sig" 2>/dev/null) | awk '{print $1}')
-	sig=$(echo $(cat "$pid_sig" 2>/dev/null) | awk '{print $2}')
+	local content=$(cat "$pid_sig" 2>/dev/null)
+	# Validate signal file content before processing
+	if [[ "$content" =~ ^[0-9]+\ (suspend|recover|suspend_no_charging)$ ]]; then
+		sigpid=${content%% *}
+		sig=${content#* }
+	else
+		log "Invalid signal file format"
+		trap ack_SIG SIGUSR1
+		return 1
+	fi
 	if [ "$sig" == "suspend" ]; then # if suspend is called by user, enable charging to 100%
 		maintain_status="suspended"
 		enable_charging
@@ -1203,7 +1253,7 @@ function read_config() { # read $val of $name in config_file
 	val=
 	if test -f $config_file; then
 		while read -r "line" || [[ -n "$line" ]]; do
-			if [[ "$line" =~  "$name = " ]]; then
+			if [[ "$line" == "$name = "* ]]; then
 				val=${line#*'= '}
 				break
 			fi
@@ -1761,6 +1811,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 
 	change_magsafe_led_color "auto"
 
+	consecutive_failures=0
 	trap ack_SIG SIGUSR1
 	while true; do
 		if [ "$maintain_status" != "$pre_maintain_status" ]; then # update state to state_file
@@ -1938,6 +1989,16 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 		fi
 
 		battery_percentage=$(get_battery_percentage)
+		if [[ -z "$battery_percentage" ]] || ! [[ "$battery_percentage" =~ ^[0-9]+$ ]]; then
+			((consecutive_failures++))
+			if [[ $consecutive_failures -gt 10 ]]; then
+				log "Error: Too many consecutive failures reading battery percentage, exiting maintain loop"
+				exit 1
+			fi
+			sleep 60
+			continue
+		fi
+		consecutive_failures=0
 
 	done
 

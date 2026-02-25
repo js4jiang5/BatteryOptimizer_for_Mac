@@ -41,7 +41,7 @@ function read_config() { # read $val of $name in config_file
 	val=
 	if test -f $config_file; then
 		while read -r "line" || [[ -n "$line" ]]; do
-			if [[ "$line" =~  "$name = " ]]; then
+			if [[ "$line" == "$name = "* ]]; then
 				val=${line#*'= '}
 				break
 			fi
@@ -71,14 +71,15 @@ function write_config() { # write $val to $name in config_file
 PATH="$PATH:/usr/sbin"
 
 # Set environment variables
-tempfolder=~/.battery-tmp
+tempfolder=$(mktemp -d "${TMPDIR:-/tmp}/battery-update.XXXXXX")
+trap 'rm -rf "$tempfolder"' EXIT
 binfolder=/usr/local/bin
 configfolder=$HOME/.battery
 config_file=$configfolder/config_battery
 batteryfolder="$tempfolder/battery"
 language_file=$configfolder/language.code
 github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
-mkdir -p $batteryfolder
+mkdir -p "$batteryfolder" || { echo "Failed to create temp directory"; exit 1; }
 
 lang=$(defaults read -g AppleLocale)
 if test -f $language_file; then
@@ -156,7 +157,7 @@ if test -f "$configfolder/state"; then rm -rf "$configfolder/state"; fi
 
 # Remove tempfiles
 cd
-rm -rf $tempfolder
+# Note: tempfolder is cleaned up by trap on EXIT
 echo "[ Final ] Removed temporary folder"
 
 echo -e "\n🎉 Battery tool updated.\n"
