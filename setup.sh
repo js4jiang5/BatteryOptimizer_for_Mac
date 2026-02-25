@@ -7,10 +7,7 @@ function write_config() { # write $val to $name in config_file
 		config=$(cat "$config_file" 2>/dev/null)
 		name_loc=$(echo "$config" | grep -n "$name" | cut -d: -f1)
 		if [[ $name_loc ]]; then
-			# Escape sed special characters in both name and value
-			name_escaped=$(printf '%s\n' "$name" | sed 's/[&/\]/\\&/g')
-			val_escaped=$(printf '%s\n' "$val" | sed 's/[&/\]/\\&/g')
-			sed -i '' "${name_loc}s/.*/${name_escaped} = ${val_escaped}/" "$config_file"
+			sed -i '' ''"$name_loc"'s/.*/'"$name"' = '"$val"'/' "$config_file"
 		else # not exist yet
 			echo "$name = $val" >> "$config_file"
 		fi
@@ -26,7 +23,7 @@ echo -e "####################################################################\n\
 # Set environment variables
 tempfolder=~/.battery-tmp
 binfolder=/usr/local/bin
-mkdir -p $tempfolder
+mkdir -p "$tempfolder"
 
 # Set script value
 calling_user=${1:-"$USER"}
@@ -52,32 +49,32 @@ update_branch="2.0.27"
 in_zip_folder_name="BatteryOptimizer_for_MAC-$update_branch"
 batteryfolder="$tempfolder/battery"
 echo "[ 2 ] Downloading latest version of battery CLI"
-rm -rf $batteryfolder
-mkdir -p $batteryfolder
-curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/tags/v$update_branch.zip"
-unzip -qq $batteryfolder/repo.zip -d $batteryfolder
-cp -r $batteryfolder/$in_zip_folder_name/* $batteryfolder
-curl -sSL -o $batteryfolder/dist/notification_permission.scpt "https://github.com/js4jiang5/BatteryOptimizer_for_Mac/raw/refs/heads/main/dist/notification_permission.scpt"
-rm $batteryfolder/repo.zip
+rm -rf "$batteryfolder"
+mkdir -p "$batteryfolder"
+curl -sSL -o "$batteryfolder/repo.zip" "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/tags/v$update_branch.zip"
+unzip -qq "$batteryfolder/repo.zip" -d "$batteryfolder"
+cp -r "$batteryfolder/$in_zip_folder_name/"* "$batteryfolder"
+curl -sSL -o "$batteryfolder/dist/notification_permission.scpt" "https://github.com/js4jiang5/BatteryOptimizer_for_Mac/raw/refs/heads/main/dist/notification_permission.scpt"
+rm "$batteryfolder/repo.zip"
 
 # Move built file to bin folder
 echo "[ 3 ] Move smc to executable folder"
-sudo mkdir -p $binfolder
+sudo mkdir -p "$binfolder"
 if [[ $cpu_type == "apple" ]]; then
-	sudo cp $batteryfolder/dist/smc $binfolder/smc
+	sudo cp "$batteryfolder/dist/smc" "$binfolder/smc"
 else
-	sudo cp $batteryfolder/dist/smc_intel $binfolder/smc
+	sudo cp "$batteryfolder/dist/smc_intel" "$binfolder/smc"
 fi
-sudo chown $calling_user $binfolder/smc
-sudo chmod 755 $binfolder/smc
-sudo chmod +x $binfolder/smc
+sudo chown "$calling_user" "$binfolder/smc"
+sudo chmod 755 "$binfolder/smc"
+sudo chmod +x "$binfolder/smc"
 # Check if smc works
 check_smc=$(smc 2>&1)
 if [[ $check_smc =~ " Bad " ]] || [[ $check_smc =~ " bad " ]] ; then # current is not a right version
-	sudo cp $batteryfolder/dist/smc_intel $binfolder/smc
-	sudo chown $USER $binfolder/smc
-	sudo chmod 755 $binfolder/smc
-	sudo chmod +x $binfolder/smc
+	sudo cp "$batteryfolder/dist/smc_intel" "$binfolder/smc"
+	sudo chown "$USER" "$binfolder/smc"
+	sudo chmod 755 "$binfolder/smc"
+	sudo chmod +x "$binfolder/smc"
 	# check again
 	check_smc=$(smc 2>&1)
 	if [[ $check_smc =~ " Bad " ]] || [[ $check_smc =~ " bad " ]] ; then # current is not a right version
@@ -87,37 +84,37 @@ if [[ $check_smc =~ " Bad " ]] || [[ $check_smc =~ " bad " ]] ; then # current i
 fi
 
 echo "[ 4 ] Writing script to $binfolder/battery for user $calling_user"
-sudo cp $batteryfolder/battery.sh $binfolder/battery
+sudo cp "$batteryfolder/battery.sh" "$binfolder/battery"
 
 echo "[ 5 ] Setting correct file permissions for $calling_user"
 # Set permissions for battery executables
-sudo chown -R $calling_user $binfolder/battery
-sudo chmod 755 $binfolder/battery
-sudo chmod +x $binfolder/battery
+sudo chown -R "$calling_user" "$binfolder/battery"
+sudo chmod 755 "$binfolder/battery"
+sudo chmod +x "$binfolder/battery"
 
 # Set permissions for logfiles
-mkdir -p $configfolder
-sudo chown -R $calling_user $configfolder
+mkdir -p "$configfolder"
+sudo chown -R "$calling_user" "$configfolder"
 
-touch $logfile
-sudo chown $calling_user $logfile
-sudo chmod 755 $logfile
+touch "$logfile"
+sudo chown "$calling_user" "$logfile"
+sudo chmod 755 "$logfile"
 
-touch $pidfile
-sudo chown $calling_user $pidfile
-sudo chmod 755 $pidfile
+touch "$pidfile"
+sudo chown "$calling_user" "$pidfile"
+sudo chmod 755 "$pidfile"
 
-sudo chown $calling_user $binfolder/battery
+sudo chown "$calling_user" "$binfolder/battery"
 
 echo "[ 6 ] Setting up visudo declarations"
-sudo $batteryfolder/battery.sh visudo $USER
-sudo chown -R $calling_user $configfolder
+sudo "$batteryfolder/battery.sh" visudo "$USER"
+sudo chown -R "$calling_user" "$configfolder"
 
 # Run battery maintain with default percentage 80
 echo "[ 7 ] Set default battery maintain percentage to 80%, can be changed afterwards"
 # Setup configuration file
 version=$(echo $(battery version))
-touch $config_file
+touch "$config_file"
 write_config calibrate_method 1
 write_config calibrate_schedule
 write_config calibrate_next
@@ -251,6 +248,6 @@ fi
 # Remove tempfiles
 #cd ../..
 #echo "[ Final ] Removing temp folder $tempfolder"
-rm -rf $tempfolder
+rm -rf "$tempfolder"
 
 #echo -e "\n🎉 Battery tool installed. Type \"battery help\" for instructions.\n"
