@@ -2017,8 +2017,9 @@ if [[ "$action" == "maintain" ]]; then
 		fi
 		# Enable schedule if disabled
 		$battery_binary schedule enable > /dev/null 2>&1
-	else
-		# Clear longevity mode if using a different percentage
+	elif [[ "$setting" != "recover" ]]; then
+		# Clear longevity mode if switching to a different percentage
+		# (but preserve it for recover, which resumes previous settings)
 		write_config longevity_mode ""
 	fi
 
