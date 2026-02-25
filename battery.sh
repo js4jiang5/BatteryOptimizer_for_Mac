@@ -217,7 +217,7 @@ function valid_action() {
 	"status" "dailylog" "calibratelog" "logs" "language" "update" "version" "reinstall" "uninstall"
 	"maintain_synchronous" "status_csv" "create_daemon" "disable_daemon" "remove_daemon" "changelog" "ssd" "ssdlog")
     
-    VALID_ACTIONS_USER=("" "visudo" "maintain" "calibrate" "schedule" "charge" "discharge" 
+    VALID_ACTIONS_USER=("" "visudo" "maintain" "calibrate" "balance" "schedule" "charge" "discharge"
 	"status" "dailylog" "calibratelog" "logs" "language" "update" "version" "reinstall" "uninstall" "changelog" "ssd" "ssdlog")
 
     # Check if action is valid
@@ -1689,6 +1689,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 	fi
 	check_update_timeout=$((now + (3*24*60*60))) # first check update 3 days later
 	cell_balance_check_timeout=$((now + (60*60))) # check cell balance every hour in longevity mode
+	cell_voltage_warning_shown=0
 
 	informed_version=$(read_config informed_version)
 	if [[ -z $informed_version ]]; then
@@ -1792,7 +1793,13 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 			cell_balance_check_timeout=$((`date +%s` + (60*60))) # next check in 1 hour
 			if [[ "$(read_config longevity_mode)" == "enabled" ]] && [[ "$(calibrate_is_running)" == "0" ]]; then
 				cell_imbalance=$(get_cell_imbalance)
-				if [[ -n "$cell_imbalance" ]] && [[ $cell_imbalance -gt 200 ]]; then
+				if [[ -z "$cell_imbalance" ]]; then
+					# Warn once if cell voltage data unavailable
+					if [[ $cell_voltage_warning_shown -eq 0 ]]; then
+						log "Warning: Cell voltage data unavailable - imbalance monitoring disabled"
+						cell_voltage_warning_shown=1
+					fi
+				elif [[ $cell_imbalance -gt 200 ]]; then
 					cell_voltages=$(get_cell_voltages)
 					log "Cell imbalance detected: ${cell_imbalance}mV (cells: ${cell_voltages}mV). Triggering balance for BMS cell balancing."
 					$battery_binary balance &
@@ -2495,7 +2502,6 @@ if [[ "$action" == "balance" ]]; then
 	# Suspend maintain and charge to 100%
 	$battery_binary maintain suspend
 	$battery_binary charge 100 &
-	pid_child="$!"
 	wait $!
 	if [[ $? != 0 ]]; then
 		log "Balance Error: Charge to 100% failed"
@@ -2530,7 +2536,6 @@ if [[ "$action" == "balance" ]]; then
 
 	# Discharge to maintain percentage
 	$battery_binary discharge $target_percentage &
-	pid_child="$!"
 	wait $!
 	if [[ $? != 0 ]]; then
 		log "Balance Error: Discharge to ${target_percentage}% failed"
