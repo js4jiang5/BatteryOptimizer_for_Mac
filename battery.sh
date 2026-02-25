@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Note: set -euo pipefail is intentionally not used because this script
+# relies on checking return values explicitly and some commands are expected
+# to fail (e.g., grep returning no matches). Adding strict mode would require
+# significant refactoring.
+
 ## ###############
 ## Update management
 ## variables are used by this binary as well at the update script
@@ -199,6 +204,11 @@ thirdsetting=$4
 ## Helpers
 ## ###############
 
+# Escape single quotes for safe use in osascript commands
+# This prevents injection when variables contain user-controlled data
+function escape_osascript() {
+    printf '%s' "$1" | sed "s/'/'\\\\''/g"
+}
 
 function valid_action() {
     local action=$1
@@ -237,7 +247,8 @@ function valid_action() {
 }
 
 function ha_webhook() {
-	DST=http://homeassistant.local:8123
+	local ha_url=$(read_config ha_url)
+	DST=${ha_url:-"http://homeassistant.local:8123"}
 	WEBHOOKID=$(read_config webhookid)
 	if [[ $WEBHOOKID ]]; then
 		if [ $4 ]; then
@@ -1281,12 +1292,22 @@ fi
 
 # Reinstall helper
 if [[ "$action" == "reinstall" ]]; then
-	echo "This will run curl -sS $github_link/setup.sh   | bash"
+	# Security note: Downloading to a file first allows inspection before execution.
+	# For full security, checksum verification would be needed.
+	tempfile=$(mktemp)
+	echo "Downloading setup script to $tempfile..."
+	curl -sSL "$github_link/setup.sh" -o "$tempfile"
+	if [[ $? -ne 0 ]]; then
+		echo "Error: Failed to download setup script"
+		rm -f "$tempfile"
+		exit 1
+	fi
 	if [[ ! "$setting" == "silent" ]]; then
-		echo "Press any key to continue"
+		echo "Review the script at $tempfile before proceeding, or press Enter to continue"
 		read
 	fi
-	curl -sS $github_link/setup.sh | bash
+	bash "$tempfile"
+	rm -f "$tempfile"
 	exit 0
 fi
 
@@ -1337,7 +1358,16 @@ if [[ "$action" == "update" ]]; then
 		fi
 		
 		if [[ $answer == "Yes" ]]; then
-			curl -sS "$github_link/update.sh" | bash
+			# Security note: Downloading to a file first allows inspection before execution.
+			# For full security, checksum verification would be needed.
+			update_tempfile=$(mktemp)
+			curl -sSL "$github_link/update.sh" -o "$update_tempfile"
+			if [[ $? -eq 0 ]]; then
+				bash "$update_tempfile"
+			else
+				echo "Error: Failed to download update script"
+			fi
+			rm -f "$update_tempfile"
 		fi
 	fi
 	exit 0
@@ -2093,29 +2123,32 @@ if [[ "$action" == "calibrate" ]]; then
 	# check if lid is open or not
 	if [[ $(lid_closed) == "Yes" ]] || [[ $(get_charger_connection) == "0" ]]; then # lid is still closed, terminate the calibration
 		ha_webhook "err_lid_closed"
-		if [[ $(lid_closed) == "Yes" ]]; then
-			if $is_TW; then
-				osascript -e 'display notification "筆電上蓋沒打開" with title "電池校正錯誤" sound name "Blow"'
-			else
-				osascript -e 'display notification "Macbook lid is not open!" with title "Battery Calibration Error" sound name "Blow"'
-			fi
-			log "Calibration Error: Macbook lid is not open!"
+		local lid_error=""
+		local ac_error=""
+		local errors=""
+		local errors_tw=""
 
-			print_calibrate_log $calibrate_time No $health_before %
-			echo "Macbook lid is not open!" >> $calibrate_log
-			
-		fi
-		if [[ $(get_charger_connection) == "0" ]]; then
-			if $is_TW; then
-				osascript -e 'display notification "電源沒接" with title "電池校正錯誤" sound name "Blow"'
-			else
-				osascript -e 'display notification "No AC power!" with title "Battery Calibration Error" sound name "Blow"'
-			fi
-			log "Calibration Error: Macbook has no AC power!"
+		[[ $(lid_closed) == "Yes" ]] && lid_error="Macbook lid is not open" && errors_tw="筆電上蓋沒打開"
+		[[ $(get_charger_connection) == "0" ]] && ac_error="No AC power" && errors_tw="${errors_tw:+$errors_tw, }電源沒接"
 
-			print_calibrate_log $calibrate_time No $health_before %
-			echo "Macbook has no AC power!" >> $calibrate_log
+		# Combine errors for single log entry
+		if [[ -n "$lid_error" ]] && [[ -n "$ac_error" ]]; then
+			errors="$lid_error and $ac_error"
+		elif [[ -n "$lid_error" ]]; then
+			errors="$lid_error"
+		else
+			errors="$ac_error"
 		fi
+
+		if $is_TW; then
+			osascript -e 'display notification "'"$errors_tw"'" with title "電池校正錯誤" sound name "Blow"'
+		else
+			osascript -e 'display notification "'"$errors!"'" with title "Battery Calibration Error" sound name "Blow"'
+		fi
+		log "Calibration Error: $errors!"
+
+		print_calibrate_log $calibrate_time No $health_before %
+		echo "$errors" >> $calibrate_log
 		exit 1
 	fi
 
