@@ -1342,19 +1342,25 @@ if [[ "$action" == "update" ]]; then
 		if $is_TW; then
 			changelog=$(get_changelog CHANGELOG_TW)
 			battery_new_version=$(get_version CHANGELOG_TW)
-			osascript -e 'display dialog "'"$battery_new_version 更新內容如下\n\n$changelog"'" buttons {"'"$button_empty"'", "繼續"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+			safe_version=$(escape_osascript "$battery_new_version")
+			safe_changelog=$(escape_osascript "$changelog")
+			osascript -e 'display dialog "'"$safe_version 更新內容如下\n\n$safe_changelog"'" buttons {"'"$button_empty"'", "繼續"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
 		else
 			changelog=$(get_changelog CHANGELOG)
 			battery_new_version=$(get_version CHANGELOG)
-			osascript -e 'display dialog "'"$battery_new_version changes include\n\n$changelog"'" buttons {"'"$button_empty"'", "Continue"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+			safe_version=$(escape_osascript "$battery_new_version")
+			safe_changelog=$(escape_osascript "$changelog")
+			osascript -e 'display dialog "'"$safe_version changes include\n\n$safe_changelog"'" buttons {"'"$button_empty"'", "Continue"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
 		fi
 		if $is_TW; then
-			answer="$(osascript -e 'display dialog "'"你現在要更新到$battery_new_version 嗎?"'" buttons {"立即更新", "跳過此版本"} default button 1 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+			safe_version=$(escape_osascript "$battery_new_version")
+			answer="$(osascript -e 'display dialog "'"你現在要更新到$safe_version 嗎?"'" buttons {"立即更新", "跳過此版本"} default button 1 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
 			if [[ $answer == "立即更新" ]]; then
 				answer="Yes"
-			fi	
+			fi
 		else
-			answer="$(osascript -e 'display dialog "'"Do you want to update to version $battery_new_version now?"'" buttons {"Yes", "No"} default button 1 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+			safe_version=$(escape_osascript "$battery_new_version")
+			answer="$(osascript -e 'display dialog "'"Do you want to update to version $safe_version now?"'" buttons {"Yes", "No"} default button 1 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
 		fi
 		
 		if [[ $answer == "Yes" ]]; then
@@ -1790,10 +1796,11 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 			new_version=$(echo ${new_version/"BATTERY_CLI_VERSION="} | tr -d \")
 			
 			if [[ -z $updated ]] && [[ $new_version ]]; then
+				safe_new_version=$(escape_osascript "$new_version")
 				if $is_TW; then
-					osascript -e 'display notification "'"有新版$new_version, 請在 Terminal 下輸入 \n\\\"battery update\\\" 更新"'" with title "BatteryOptimizer" sound name "Blow"'
+					osascript -e 'display notification "'"有新版$safe_new_version, 請在 Terminal 下輸入 \n\\\"battery update\\\" 更新"'" with title "BatteryOptimizer" sound name "Blow"'
 				else
-					osascript -e 'display notification "'"New version $new_version available \nUpdate with command \\\"battery update\\\""'" with title "BatteryOptimizer" sound name "Blow"'
+					osascript -e 'display notification "'"New version $safe_new_version available \nUpdate with command \\\"battery update\\\""'" with title "BatteryOptimizer" sound name "Blow"'
 				fi
 				informed_version=$new_version
 				write_config informed_version $informed_version
@@ -2141,9 +2148,11 @@ if [[ "$action" == "calibrate" ]]; then
 		fi
 
 		if $is_TW; then
-			osascript -e 'display notification "'"$errors_tw"'" with title "電池校正錯誤" sound name "Blow"'
+			safe_errors_tw=$(escape_osascript "$errors_tw")
+			osascript -e 'display notification "'"$safe_errors_tw"'" with title "電池校正錯誤" sound name "Blow"'
 		else
-			osascript -e 'display notification "'"$errors!"'" with title "Battery Calibration Error" sound name "Blow"'
+			safe_errors=$(escape_osascript "$errors")
+			osascript -e 'display notification "'"$safe_errors!"'" with title "Battery Calibration Error" sound name "Blow"'
 		fi
 		log "Calibration Error: $errors!"
 
@@ -2995,11 +3004,15 @@ if [[ "$action" == "changelog" ]]; then
 	if $is_TW; then
 		changelog=$(get_changelog CHANGELOG_TW)
 		battery_new_version=$(get_version CHANGELOG_TW)
-		osascript -e 'display dialog "'"$battery_new_version 更新內容如下\n\n$changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+		safe_version=$(escape_osascript "$battery_new_version")
+		safe_changelog=$(escape_osascript "$changelog")
+		osascript -e 'display dialog "'"$safe_version 更新內容如下\n\n$safe_changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
 	else
 		changelog=$(get_changelog CHANGELOG)
 		battery_new_version=$(get_version CHANGELOG)
-		osascript -e 'display dialog "'"$battery_new_version changes inlude\n\n$changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+		safe_version=$(escape_osascript "$battery_new_version")
+		safe_changelog=$(escape_osascript "$changelog")
+		osascript -e 'display dialog "'"$safe_version changes inlude\n\n$safe_changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
 	fi
 	exit 0
 fi
