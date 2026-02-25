@@ -63,6 +63,15 @@ Usage:
     battery maintain suspend   # suspend running battery maintain process and enable charging. maintain is automatically resumed after AC adapter is reconnected. used for temporary charging to 100% before travel
     battery maintain recover   # recover battery maintain process
 
+  battery maintain longevity
+  - Preset optimized for maximum battery lifespan
+  - Equivalent to 'battery maintain 65 60' (~3.85V per cell, well below stress threshold)
+  - Provides 4-8x cycle life vs 100% charge, minimal calendar aging
+  - Best for always-plugged-in use where max capacity isn't needed
+  - Auto-enables monthly calibration for BMS cell balancing and fuel gauge accuracy
+  - Monitors cell voltage imbalance hourly; triggers calibration if >0.2V difference detected
+  - Reference: https://batteryuniversity.com/article/bu-808-how-to-prolong-lithium-based-batteries
+
   battery calibrate 
     calibrate the battery by discharging it to 15%, then recharging it to 100%, and keeping it there for 1 hour, then discharge to maintained percentage level
     if macbook lid is not open or AC adapter is not connected, a remind notification will be received.
@@ -204,8 +213,8 @@ function valid_action() {
     local action=$1
     
     # List of valid actions
-    VALID_ACTIONS=("" "visudo" "maintain" "calibrate" "schedule" "charge" "discharge" 
-	"status" "dailylog" "calibratelog" "logs" "language" "update" "version" "reinstall" "uninstall" 
+    VALID_ACTIONS=("" "visudo" "maintain" "calibrate" "balance" "schedule" "charge" "discharge"
+	"status" "dailylog" "calibratelog" "logs" "language" "update" "version" "reinstall" "uninstall"
 	"maintain_synchronous" "status_csv" "create_daemon" "disable_daemon" "remove_daemon" "changelog" "ssd" "ssdlog")
     
     VALID_ACTIONS_USER=("" "visudo" "maintain" "calibrate" "schedule" "charge" "discharge" 
@@ -844,6 +853,30 @@ function get_maintain_percentage() {
 function get_voltage() {
 	voltage=$(ioreg -l -n AppleSmartBattery -r | grep "\"Voltage\" =" | awk '{ print $3/1000 }' | tr ',' '.')
 	echo "$voltage"
+}
+
+# Get individual cell voltages in mV (works with 2S, 3S, or any cell count)
+# Returns space-separated values, e.g., "3886 3889 3877"
+function get_cell_voltages() {
+	local cell_data=$(ioreg -l -n AppleSmartBattery -r | grep -o '"CellVoltage"=([^)]*)')
+	if [[ -z "$cell_data" ]]; then
+		echo ""
+		return
+	fi
+	# Extract numbers from format like "CellVoltage"=(3886,3889,3877)
+	echo "$cell_data" | sed 's/.*=(\([^)]*\))/\1/' | tr ',' ' '
+}
+
+# Get cell voltage imbalance in mV (max - min)
+# Returns empty string if cell voltages unavailable
+function get_cell_imbalance() {
+	local voltages=$(get_cell_voltages)
+	if [[ -z "$voltages" ]]; then
+		echo ""
+		return
+	fi
+	# Find min and max using awk (portable across bash/zsh)
+	echo "$voltages" | tr ' ' '\n' | awk 'NR==1{min=max=$1} {if($1<min)min=$1; if($1>max)max=$1} END{print max-min}'
 }
 
 function get_battery_health() {
@@ -1655,7 +1688,8 @@ if [[ "$action" == "maintain_synchronous" ]]; then
     	echo "Time Capacity Voltage Temperature Health Cycle" | awk '{printf "%-10s, %9s, %9s, %12s, %9s, %9s\n", $1, $2, $3, $4, $5, $6}' > $daily_log
 	fi
 	check_update_timeout=$((now + (3*24*60*60))) # first check update 3 days later
-	
+	cell_balance_check_timeout=$((now + (60*60))) # check cell balance every hour in longevity mode
+
 	informed_version=$(read_config informed_version)
 	if [[ -z $informed_version ]]; then
 		informed_version=$BATTERY_CLI_VERSION
@@ -1750,6 +1784,20 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 		calibrate_next=$(read_config calibrate_next)
 		if [[ $now_sec -gt $calibrate_next ]] && [[ "$(calibrate_is_running)" == "0" ]] && [[ $schedule_enabled =~ "enabled" ]]; then
 			$battery_binary calibrate force &
+		fi
+
+		# Check cell voltage imbalance in longevity mode (hourly)
+		# Trigger immediate calibration if imbalance > 200mV (0.2V)
+		if [[ $(date +%s) -gt $cell_balance_check_timeout ]]; then
+			cell_balance_check_timeout=$((`date +%s` + (60*60))) # next check in 1 hour
+			if [[ "$(read_config longevity_mode)" == "enabled" ]] && [[ "$(calibrate_is_running)" == "0" ]]; then
+				cell_imbalance=$(get_cell_imbalance)
+				if [[ -n "$cell_imbalance" ]] && [[ $cell_imbalance -gt 200 ]]; then
+					cell_voltages=$(get_cell_voltages)
+					log "Cell imbalance detected: ${cell_imbalance}mV (cells: ${cell_voltages}mV). Triggering balance for BMS cell balancing."
+					$battery_binary balance &
+				fi
+			fi
 		fi
 
 		# check if there is update version
@@ -1942,13 +1990,37 @@ if [[ "$action" == "maintain" ]]; then
 		rm $calibrate_pidfile 2>/dev/null
 		log "🚨 Calibration process have been stopped"
 	fi
-	
+
+	# Handle longevity preset - based on Battery University research
+	# 65% SOC (~3.85V/cell) provides optimal longevity for lithium-ion batteries
+	# with 4-8x cycle life compared to 100% charge
+	if [[ "$setting" == "longevity" ]]; then
+		log "Using longevity preset: 65% with sailing to 60% (optimal for battery lifespan)"
+		setting="65"
+		subsetting="60"
+
+		# Enable longevity mode features (cell imbalance monitoring)
+		write_config longevity_mode "enabled"
+
+		# Auto-enable monthly calibration for longevity mode
+		# Periodic full charges are recommended for BMS cell balancing and fuel gauge accuracy
+		if [[ -z "$(read_config calibrate_schedule)" ]]; then
+			log "Setting up monthly calibration (recommended for longevity mode)"
+			$battery_binary schedule > /dev/null 2>&1
+		fi
+		# Enable schedule if disabled
+		$battery_binary schedule enable > /dev/null 2>&1
+	else
+		# Clear longevity mode if using a different percentage
+		write_config longevity_mode ""
+	fi
+
 	# Check if setting is value between 0 and 100
 	if ! valid_percentage "$setting"; then
 		# log "Called with $setting $action"
 		# If non 0-100 setting is not a special keyword, exit with an error.
 		if ! { [[ "$setting" == "stop" ]] || [[ "$setting" == "recover" ]]; }; then
-			log "Error: $setting is not a valid setting for battery maintain. Please use a number between 0 and 100, or an action keyword like 'stop' or 'recover'."
+			log "Error: $setting is not a valid setting for battery maintain. Please use a number between 0 and 100, 'longevity' for optimal lifespan, or 'stop'/'recover'."
 			exit 1
 		fi
 	fi
@@ -2385,6 +2457,97 @@ if [[ "$action" == "calibrate" ]]; then
 
 	rm $calibrate_pidfile 2>/dev/null
 	$battery_binary maintain recover # Recover old maintain status
+	exit 0
+fi
+
+# Battery balance - simplified cell balancing without full discharge cycle
+# Used by longevity mode when cell imbalance is detected
+# Charges to 100%, holds for 1.5hr for BMS balancing, then returns to maintain%
+if [[ "$action" == "balance" ]]; then
+
+	# Get maintain percentage for return target
+	maintain_percentage=$(read_config maintain_percentage)
+	if [[ -z "$maintain_percentage" ]]; then
+		log "Error: Battery maintain must be running before balance"
+		exit 1
+	fi
+	target_percentage=$(echo $maintain_percentage | awk '{print $1}')
+
+	# Check if balance is already running
+	if test -f "$calibrate_pidfile"; then
+		pid=$(cat "$calibrate_pidfile" 2>/dev/null)
+		if ps -p $pid > /dev/null 2>&1; then
+			log "Balance or calibration already running"
+			exit 0
+		fi
+	fi
+
+	# Store pid
+	echo $$ >$calibrate_pidfile
+
+	log "Balance: Starting cell balance (charge to 100%, hold 1.5hr, return to ${target_percentage}%)"
+	if $is_TW; then
+		osascript -e 'display notification "開始電芯平衡：充電至100%，維持1.5小時" with title "電池平衡" sound name "Blow"'
+	else
+		osascript -e 'display notification "Starting cell balance: charging to 100%, holding 1.5hr" with title "Battery Balance" sound name "Blow"'
+	fi
+
+	# Suspend maintain and charge to 100%
+	$battery_binary maintain suspend
+	$battery_binary charge 100 &
+	pid_child="$!"
+	wait $!
+	if [[ $? != 0 ]]; then
+		log "Balance Error: Charge to 100% failed"
+		if $is_TW; then
+			osascript -e 'display notification "充電至100%失敗" with title "電池平衡錯誤" sound name "Blow"'
+		else
+			osascript -e 'display notification "Charge to 100% failed" with title "Battery Balance Error" sound name "Blow"'
+		fi
+		rm $calibrate_pidfile 2>/dev/null
+		$battery_binary maintain recover
+		exit 1
+	fi
+
+	log "Balance: Charged to 100%, holding for 1.5hr for BMS cell balancing"
+	if $is_TW; then
+		osascript -e 'display notification "已充電至100%，維持1.5小時進行電芯平衡" with title "電池平衡" sound name "Blow"'
+	else
+		osascript -e 'display notification "Charged to 100%, holding 1.5hr for cell balancing" with title "Battery Balance" sound name "Blow"'
+	fi
+
+	# Hold at 100% for 1.5 hours (5400 seconds) for BMS balancing
+	change_magsafe_led_color "green"
+	sleep 5400 &
+	wait $!
+
+	log "Balance: Hold complete, discharging to ${target_percentage}%"
+	if $is_TW; then
+		osascript -e 'display notification "'"平衡完成，放電至 ${target_percentage}%"'" with title "電池平衡" sound name "Blow"'
+	else
+		osascript -e 'display notification "'"Balance complete, discharging to ${target_percentage}%"'" with title "Battery Balance" sound name "Blow"'
+	fi
+
+	# Discharge to maintain percentage
+	$battery_binary discharge $target_percentage &
+	pid_child="$!"
+	wait $!
+	if [[ $? != 0 ]]; then
+		log "Balance Error: Discharge to ${target_percentage}% failed"
+		rm $calibrate_pidfile 2>/dev/null
+		$battery_binary maintain recover
+		exit 1
+	fi
+
+	log "Balance: Complete. Cells balanced, returning to normal maintain."
+	if $is_TW; then
+		osascript -e 'display notification "電芯平衡完成" with title "電池平衡" sound name "Blow"'
+	else
+		osascript -e 'display notification "Cell balance complete" with title "Battery Balance" sound name "Blow"'
+	fi
+
+	rm $calibrate_pidfile 2>/dev/null
+	$battery_binary maintain recover
 	exit 0
 fi
 
