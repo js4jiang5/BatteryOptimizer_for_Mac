@@ -165,7 +165,10 @@ echo -e "\n🎉 Battery tool updated.\n"
 echo -e "Restarting battery maintain.\n"
 write_config informed_version "$battery_version_new"
 
-pkill -9 -f "$binfolder/battery.*"
+# Try graceful shutdown first, then force kill (Issue #28)
+pkill -f "$binfolder/battery " 2>/dev/null
+sleep 1
+pkill -9 -f "$binfolder/battery " 2>/dev/null
 battery maintain recover
 
 empty="                                                                    "

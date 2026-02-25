@@ -1025,6 +1025,9 @@ function confirm_SIG() {
 }
 
 function ack_SIG() {
+	# Block signals during handler execution for re-entrancy safety (Issue #18)
+	trap '' SIGUSR1
+	local sigpid sig
 	sigpid=$(echo $(cat "$pid_sig" 2>/dev/null) | awk '{print $1}')
 	sig=$(echo $(cat "$pid_sig" 2>/dev/null) | awk '{print $2}')
 	if [ "$sig" == "suspend" ]; then # if suspend is called by user, enable charging to 100%
@@ -1039,7 +1042,12 @@ function ack_SIG() {
 		disable_discharging
 		log 'ack battery maintain recover' # send ack
 	fi
-	kill -s USR1 $sigpid 2> /dev/null;
+	# Validate PID before sending signal (Issue #6, #7)
+	if [[ -n "$sigpid" ]] && [[ "$sigpid" =~ ^[0-9]+$ ]] && kill -0 "$sigpid" 2>/dev/null; then
+		kill -s USR1 "$sigpid" 2>/dev/null
+	fi
+	# Re-enable signal handler
+	trap ack_SIG SIGUSR1
 }
 
 function calibrate_interrupted() {
@@ -1047,10 +1055,15 @@ function calibrate_interrupted() {
 	if [[ "$(maintain_is_running)" == "1" ]] && [[ "$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $2}')" == "suspended" ]]; then
 		$battery_binary maintain recover
 	fi
-	#kill 0 # kill all child processes
+	# Kill child processes to prevent orphans (Issue #29)
 	for pid in $pid_child; do
-		kill -s USR1 $pid
+		if [[ -n "$pid" ]] && [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+			kill -s USR1 "$pid" 2>/dev/null
+		fi
 	done
+	# Also kill any sleep/caffeinate processes spawned by this script
+	pkill -P $$ sleep 2>/dev/null
+	pkill -P $$ caffeinate 2>/dev/null
 	exit 1
 }
 
@@ -1059,11 +1072,17 @@ function charge_interrupted() {
 	if [[ "$(maintain_is_running)" == "1" ]] && [[ "$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $2}')" == "suspended" ]] && [[ "$original_maintain_status" == "active" ]]; then
 		$battery_binary maintain recover
 	fi
+	# Kill any sleep/caffeinate processes spawned by this script (Issue #29)
+	pkill -P $$ sleep 2>/dev/null
+	pkill -P $$ caffeinate 2>/dev/null
 	exit 1
 }
 
 function charge_terminated() { # terminated by another battery process, no need to handle maintain process
 	disable_charging
+	# Kill any sleep/caffeinate processes spawned by this script (Issue #29)
+	pkill -P $$ sleep 2>/dev/null
+	pkill -P $$ caffeinate 2>/dev/null
 	exit 1
 }
 
@@ -1072,66 +1091,52 @@ function discharge_interrupted() {
 	if [[ "$(maintain_is_running)" == "1" ]] && [[ "$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $2}')" == "suspended" ]] && [[ "$original_maintain_status" == "active" ]]; then
 		$battery_binary maintain recover
 	fi
+	# Kill any sleep/caffeinate processes spawned by this script (Issue #29)
+	pkill -P $$ sleep 2>/dev/null
+	pkill -P $$ caffeinate 2>/dev/null
 	exit 1
 }
 
 function discharge_terminated() { # terminated by another battery process, no need to handle maintain process
 	disable_discharging
+	# Kill any sleep/caffeinate processes spawned by this script (Issue #29)
+	pkill -P $$ sleep 2>/dev/null
+	pkill -P $$ caffeinate 2>/dev/null
 	exit 1
 }
 
 function maintain_is_running() {
 	# check if battery maintain is running
-	if test -f "$pidfile"; then # if maintain is ongoing
-		local pid=$(cat "$pidfile" 2>/dev/null | awk '{print $1}')
-		#n_pid=$(pgrep -f $battery_binary | awk 'END{print NR}')
-		#pid_found=0
-		#for ((i = 1; i <= n_pid; i++)); do
-		#	pid_running=$(pgrep -f $battery_binary | head -n$i | tail -n1 | awk '{print $1}')
-		#	if [ "$pid" == "$pid_running" ]; then # battery maintain is running
-		#		pid_found=1
-		#		break
-		#	fi
-		#done
-		local pid_found=false
-		local pids=$(ps x | grep battery | awk '{print $1}')
-		for pid_running in $pids; do
-			if [ "$pid" == "$pid_running" ]; then # battery maintain is running
-				pid_found=true
-				break
+	if [[ -f "$pidfile" ]]; then
+		local pid
+		pid=$(cat "$pidfile" 2>/dev/null | awk '{print $1}')
+		# Use kill -0 for atomic process existence check (Issue #5: TOCTOU fix)
+		if [[ -n "$pid" ]] && [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+			# Verify it's actually a battery process
+			if ps -p "$pid" -o comm= 2>/dev/null | grep -q battery; then
+				echo 1
+				return
 			fi
-		done
-
-		if $pid_found; then
-			echo 1
-		else
-			echo 0
 		fi
-	else
-		echo 0
 	fi
+	echo 0
 }
 
 function calibrate_is_running() {
 	# check if battery calibrate is running
-	if test -f "$calibrate_pidfile"; then # if calibration is ongoing
-		local pid_calibrate=$(cat "$calibrate_pidfile" 2>/dev/null)
-		local pid_found=false
-		local pids=$(ps x | grep battery | awk '{print $1}')
-		for pid_running in $pids; do
-			if [ "$pid_calibrate" == "$pid_running" ]; then # battery maintain is running
-				pid_found=true
-				break
+	if [[ -f "$calibrate_pidfile" ]]; then
+		local pid_calibrate
+		pid_calibrate=$(cat "$calibrate_pidfile" 2>/dev/null)
+		# Use kill -0 for atomic process existence check (Issue #5: TOCTOU fix)
+		if [[ -n "$pid_calibrate" ]] && [[ "$pid_calibrate" =~ ^[0-9]+$ ]] && kill -0 "$pid_calibrate" 2>/dev/null; then
+			# Verify it's actually a battery process
+			if ps -p "$pid_calibrate" -o comm= 2>/dev/null | grep -q battery; then
+				echo 1
+				return
 			fi
-		done
-		if $pid_found; then
-			echo 1
-		else
-			echo 0
 		fi
-	else
-		echo 0
 	fi
+	echo 0
 }
 
 function read_smc() { # read smc decimal value
@@ -1362,8 +1367,11 @@ if [[ "$action" == "uninstall" ]]; then
 	rm $shutdown_path 2>/dev/null
 	sudo rm -v "$binfolder/smc" "$binfolder/battery" $visudo_file "$binfolder/shutdown.sh"
 	sudo rm -v -r "$configfolder"
-	sudo rm -rf $HOME/.sleep $HOME/.wakeup $HOME/.shutdown $HOME/.reboot 
-	pkill -9 -f "/usr/local/bin/battery.*"
+	sudo rm -rf $HOME/.sleep $HOME/.wakeup $HOME/.shutdown $HOME/.reboot
+	# Use graceful shutdown first, then force kill (Issue #8)
+	pkill -f "^$binfolder/battery " 2>/dev/null
+	sleep 1
+	pkill -9 -f "^$binfolder/battery " 2>/dev/null
 	exit 0
 fi
 
@@ -1374,11 +1382,14 @@ if [[ "$action" == "charge" ]]; then
 	trap charge_terminated SIGUSR1
 
 	# kill running charge process
-	pids=$(pgrep -f battery)
+	pids=$(pgrep -f "battery charge")
 	for pid_running in $pids; do
-		if [[ $(ps x | grep $pid_running) =~ " charge" ]]; then
-			kill $pid_running
-		fi 
+		# Validate PID and verify it's a battery charge process (Issue #6, #7, #25)
+		if [[ -n "$pid_running" ]] && [[ "$pid_running" =~ ^[0-9]+$ ]] && kill -0 "$pid_running" 2>/dev/null; then
+			if ps -p "$pid_running" -o args= 2>/dev/null | grep -q "[b]attery charge"; then
+				kill "$pid_running" 2>/dev/null
+			fi
+		fi
 	done
 
 	if ! valid_percentage "$setting"; then
@@ -1391,11 +1402,14 @@ if [[ "$action" == "charge" ]]; then
 	fi
 
 	# kill running discharge processes
-	pids=$(pgrep -f battery)
+	pids=$(pgrep -f "battery discharge")
 	for pid_running in $pids; do
-		if [[ $(ps x | grep $pid_running) =~ " discharge" ]]; then
-			kill $pid_running
-		fi 
+		# Validate PID and verify it's a battery discharge process (Issue #6, #7, #25)
+		if [[ -n "$pid_running" ]] && [[ "$pid_running" =~ ^[0-9]+$ ]] && kill -0 "$pid_running" 2>/dev/null; then
+			if ps -p "$pid_running" -o args= 2>/dev/null | grep -q "[b]attery discharge"; then
+				kill "$pid_running" 2>/dev/null
+			fi
+		fi
 	done
 
 	# Disable running daemon
@@ -1483,11 +1497,14 @@ if [[ "$action" == "discharge" ]]; then
 	trap discharge_terminated SIGUSR1
 
 	# kill running discharge process
-	pids=$(pgrep -f battery)
+	pids=$(pgrep -f "battery discharge")
 	for pid_running in $pids; do
-		if [[ $(ps x | grep $pid_running) =~ " discharge" ]]; then
-			kill $pid_running
-		fi 
+		# Validate PID and verify it's a battery discharge process (Issue #6, #7, #25)
+		if [[ -n "$pid_running" ]] && [[ "$pid_running" =~ ^[0-9]+$ ]] && kill -0 "$pid_running" 2>/dev/null; then
+			if ps -p "$pid_running" -o args= 2>/dev/null | grep -q "[b]attery discharge"; then
+				kill "$pid_running" 2>/dev/null
+			fi
+		fi
 	done
 
 	if ! valid_percentage "$setting"; then
@@ -1505,11 +1522,14 @@ if [[ "$action" == "discharge" ]]; then
 	fi
 
 	# kill running charge processes
-	pids=$(pgrep -f battery)
+	pids=$(pgrep -f "battery charge")
 	for pid_running in $pids; do
-		if [[ $(ps x | grep $pid_running) =~ " charge" ]]; then
-			kill $pid_running
-		fi 
+		# Validate PID and verify it's a battery charge process (Issue #6, #7, #25)
+		if [[ -n "$pid_running" ]] && [[ "$pid_running" =~ ^[0-9]+$ ]] && kill -0 "$pid_running" 2>/dev/null; then
+			if ps -p "$pid_running" -o args= 2>/dev/null | grep -q "[b]attery charge"; then
+				kill "$pid_running" 2>/dev/null
+			fi
+		fi
 	done
 
 	# Disable running daemon
@@ -1925,7 +1945,10 @@ if [[ "$action" == "maintain" ]]; then
 	if test -f "$pidfile"; then
 		log "Killing old maintain process at $(cat $pidfile)" >> $logfile
 		pid=$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $1}')
-		kill $pid &>/dev/null
+		# Validate PID before sending signal (Issue #6, #7)
+		if [[ -n "$pid" ]] && [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+			kill "$pid" 2>/dev/null
+		fi
 	fi
 
 	if [[ "$setting" == "stop" ]]; then
@@ -1941,9 +1964,12 @@ if [[ "$action" == "maintain" ]]; then
 	# kill running calibration process
 	if test -f "$calibrate_pidfile"; then
 		pid=$(cat "$calibrate_pidfile" 2>/dev/null)
-		kill $pid &>/dev/null
+		# Validate PID before sending signal (Issue #6, #7)
+		if [[ -n "$pid" ]] && [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+			kill "$pid" 2>/dev/null
+		fi
 		rm $calibrate_pidfile 2>/dev/null
-		log "🚨 Calibration process have been stopped"
+		log "Calibration process have been stopped"
 	fi
 	
 	# Check if setting is value between 0 and 100
@@ -2021,7 +2047,10 @@ if [[ "$action" == "calibrate" ]]; then
 	# Kill old process silently
 	if test -f "$calibrate_pidfile"; then
 		pid=$(cat "$calibrate_pidfile" 2>/dev/null)
-		kill $pid &>/dev/null
+		# Validate PID before sending signal (Issue #6, #7)
+		if [[ -n "$pid" ]] && [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+			kill "$pid" 2>/dev/null
+		fi
 	fi
 
 	if [[ "$setting" == "stop" ]]; then
