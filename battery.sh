@@ -44,7 +44,7 @@ touch $logfile
 logsize=$(stat -f%z "$logfile")
 max_logsize_bytes=5000000
 if ((logsize > max_logsize_bytes)); then
-	tail -n 100 $logfile >$logfile
+	tail -n 100 "$logfile" > "${logfile}.tmp" && mv "${logfile}.tmp" "$logfile"
 fi
 
 # CLI help message
@@ -1166,13 +1166,16 @@ function read_config() { # read $val of $name in config_file
 function write_config() { # write $val to $name in config_file
 	name=$1
 	val=$2
-	if test -f $config_file; then
-		config=$(cat $config_file 2>/dev/null)
+	if test -f "$config_file"; then
+		config=$(cat "$config_file" 2>/dev/null)
 		name_loc=$(echo "$config" | grep -n "$name" | cut -d: -f1)
 		if [[ $name_loc ]]; then
-			sed -i '' ''"$name_loc"'s/.*/'"$name"' = '"$val"'/' $config_file
+			# Escape sed special characters in both name and value
+			name_escaped=$(printf '%s\n' "$name" | sed 's/[&/\]/\\&/g')
+			val_escaped=$(printf '%s\n' "$val" | sed 's/[&/\]/\\&/g')
+			sed -i '' "${name_loc}s/.*/${name_escaped} = ${val_escaped}/" "$config_file"
 		else # not exist yet
-			echo "$name = $val" >> $config_file
+			echo "$name = $val" >> "$config_file"
 		fi
 	fi
 }
