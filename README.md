@@ -43,12 +43,14 @@
 <br>
 
 ```bash
+brew install MoonBoi9001/tap/apple-juice
+sudo battery visudo $USER
 battery maintain longevity
 ```
 
 <br>
 
-After [setup](#%EF%B8%8F-setup), this is all you need. Set it and forget it.
+Three commands. Set it and forget it. Configure [macOS settings](#%EF%B8%8F-setup) for notifications.
 
 <br>
 
