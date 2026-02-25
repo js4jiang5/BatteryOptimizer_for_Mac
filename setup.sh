@@ -21,9 +21,9 @@ echo -e "# Note: this script will ask for your password once or multiple times."
 echo -e "####################################################################\n\n"
 
 # Set environment variables
-tempfolder=~/.battery-tmp
+tempfolder=$(mktemp -d "${TMPDIR:-/tmp}/battery-install.XXXXXX")
+trap 'rm -rf "$tempfolder"' EXIT
 binfolder=/usr/local/bin
-mkdir -p "$tempfolder"
 
 # Set script value
 calling_user=${1:-"$USER"}
@@ -93,7 +93,7 @@ sudo chmod 755 "$binfolder/battery"
 sudo chmod +x "$binfolder/battery"
 
 # Set permissions for logfiles
-mkdir -p "$configfolder"
+mkdir -p "$configfolder" || { echo "Failed to create config directory"; exit 1; }
 sudo chown -R "$calling_user" "$configfolder"
 
 touch "$logfile"
@@ -248,6 +248,6 @@ fi
 # Remove tempfiles
 #cd ../..
 #echo "[ Final ] Removing temp folder $tempfolder"
-rm -rf "$tempfolder"
+# Note: tempfolder is cleaned up by trap on EXIT
 
 #echo -e "\n🎉 Battery tool installed. Type \"battery help\" for instructions.\n"
