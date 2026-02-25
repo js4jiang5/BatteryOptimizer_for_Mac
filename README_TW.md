@@ -8,6 +8,7 @@
 ### 新功能
 - 支援 Apple 和 Intel CPU Macs
 - 航行模式 (sail mode)，允許電池從維持百分比航行到航行目標而無需充電，如此可避免頻繁的微量充電
+- 長壽模式 (longevity mode)，針對電池壽命最佳化的預設值，包含自動平衡和電芯電壓不平衡監測
 - 定時電池校正，每月指定日（最多四日）開始自動電池校正，或每1-3個月指定一日，或每1-12週指定星期幾開始自動電池校正
 - 新指令“suspend”，暫時電池維護，允許充電至 100%，並在重新連接交流電源供應器時自動恢復維護
 - 即使 MacBook 睡眠或關機時，充電限制器仍然有效
@@ -120,15 +121,30 @@ Battery CLI utility v2.0.0
 
 Usage:
 
-  battery maintain PERCENTAGE[10-100,stop,suspend,recover] SAILING_TARGET[5-99]
+  battery maintain PERCENTAGE[10-100,longevity,stop,suspend,recover] SAILING_TARGET[5-99]
   - PERCENTAGE 為充電上限，超過則停止充電
   - SAILING_TARGET 為航行目標，低於此值則開始充電。若未指定則默認值為 (充電上限-5)
   - 範例:
     battery maintain 80 50    # 高於80% 停止充電，低於 50% 開始充電
     battery maintain 80    # 相當於 battery maintain 80 75
+    battery maintain longevity    # 長壽模式：65% 航行至 60%，每月自動平衡，電芯不平衡監測
     battery maintain stop   # 終止進行中的 battery maintain 並立即充電。重開機後也不會進行 battery maintain
     battery maintain suspend   # 暫停 battery maintain 並立即充電。如果電源拔掉後重新連上 maintain 就會恢復，適合暫時需充電到 100% 的場合，例如外出旅遊時
     battery maintain recover   # 恢復 battery maintain
+
+  battery maintain longevity
+  - 針對電池壽命最佳化的預設值
+  - 相當於 'battery maintain 65 60'（每顆電芯約 3.85V，遠低於壓力閾值）
+  - 相較於 100% 充電，可提供 4-8 倍的循環壽命，並減少日曆老化
+  - 最適合長期插電使用且不需要最大電量的情況
+  - 自動啟用每月平衡（充電至 100%，維持 1.5 小時進行 BMS 電芯平衡）
+  - 每小時監測電芯電壓不平衡；若差異超過 0.2V 則觸發平衡
+  - 參考資料：https://batteryuniversity.com/article/bu-808-how-to-prolong-lithium-based-batteries
+
+  battery balance
+  - 簡化的電芯平衡：充電至 100%，維持 1.5 小時進行 BMS 平衡，然後返回維護百分比
+  - 當長壽模式偵測到電芯不平衡超過 0.2V 時自動觸發
+  - 也可在 battery maintain 運行時手動執行
 
   battery calibrate
   - 電池校正會將電池放電至 15%, 然後充電到 100%, 保持一小時後, 放電到所設定的充電上限

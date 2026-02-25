@@ -8,6 +8,7 @@
 ### New features
 - support both Apple and Intel CPU Macs
 - sail mode, allowing the battery to sail from maintain percentage to sail target without charging to avoid frequent micro charging
+- longevity mode preset optimized for maximum battery lifespan with automatic balance and cell imbalance monitoring
 - scheduled calibration, starting automatic calibration on specified days per month (at most four days), or specified one day every 1-3 month, or specified weekday every 1-12 weeks
 - new command "suspend", suspending maintain temporarily allowing charging to 100%, and automatically resume maintain when AC adapter is reconnected
 - charging limiter still works even when macbook sleep or shutdown
@@ -119,15 +120,21 @@ Battery CLI utility v2.0.0
 
 Usage:
 
-  battery maintain PERCENTAGE[10-100,stop,suspend,recover] SAILING_TARGET[5-99]
+  battery maintain PERCENTAGE[10-100,longevity,stop,suspend,recover] SAILING_TARGET[5-99]
   - PERCENTAGE is battery level upper bound above which charging is stopped
   - SAILING_TARGET is battery level lower bound below which charging is started. default value is PERCENTAGE-5 if not specified
   - Examples:
     battery maintain 80 50    # maintain at 80% with sailing to 50%
     battery maintain 80    # equivalent to battery maintain 80 75
+    battery maintain longevity    # preset for max lifespan: 65% with sailing to 60%, monthly balance, cell imbalance monitoring
     battery maintain stop   # kill running battery maintain process, disable daemon, and enable charging. maintain will not run after reboot
     battery maintain suspend   # suspend running battery maintain process and enable charging. maintain is automatically resumed after AC adapter is reconnected. used for temporary charging to 100% before travel
     battery maintain recover   # recover battery maintain process
+
+  battery balance
+  - simplified cell balancing: charges to 100%, holds 1.5hr for BMS balancing, returns to maintain%
+  - automatically triggered by longevity mode when cell imbalance >0.2V detected
+  - can also be run manually when battery maintain is active
 
   battery calibrate
   - calibrate the battery by discharging it to 15%, then recharging it to 100%, and keeping it there for 1 hour, then discharge to maintained percentage level
