@@ -126,7 +126,7 @@ Usage:
   - Examples:
     battery maintain 80 50    # maintain at 80% with sailing to 50%
     battery maintain 80    # equivalent to battery maintain 80 75
-    battery maintain longevity    # preset for max lifespan: 65% with sailing to 60%, auto monthly calibration, cell imbalance monitoring
+    battery maintain longevity    # preset for max lifespan: 65% with sailing to 60%, monthly balance, cell imbalance monitoring
     battery maintain stop   # kill running battery maintain process, disable daemon, and enable charging. maintain will not run after reboot
     battery maintain suspend   # suspend running battery maintain process and enable charging. maintain is automatically resumed after AC adapter is reconnected. used for temporary charging to 100% before travel
     battery maintain recover   # recover battery maintain process

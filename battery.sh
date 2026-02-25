@@ -68,8 +68,8 @@ Usage:
   - Equivalent to 'battery maintain 65 60' (~3.85V per cell, well below stress threshold)
   - Provides 4-8x cycle life vs 100% charge, minimal calendar aging
   - Best for always-plugged-in use where max capacity isn't needed
-  - Auto-enables monthly calibration for BMS cell balancing and fuel gauge accuracy
-  - Monitors cell voltage imbalance hourly; triggers calibration if >0.2V difference detected
+  - Auto-enables monthly balance (charge to 100%, hold 1.5hr for BMS cell balancing)
+  - Monitors cell voltage imbalance hourly; triggers balance if >0.2V difference detected
   - Reference: https://batteryuniversity.com/article/bu-808-how-to-prolong-lithium-based-batteries
 
   battery calibrate 
@@ -1781,10 +1781,15 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 			fi
 		fi
 
-		# run battery calibrate if calibration is missed due to sleep or shutdown at specified time
+		# run battery calibrate/balance if scheduled time is reached
 		calibrate_next=$(read_config calibrate_next)
 		if [[ $now_sec -gt $calibrate_next ]] && [[ "$(calibrate_is_running)" == "0" ]] && [[ $schedule_enabled =~ "enabled" ]]; then
-			$battery_binary calibrate force &
+			if [[ "$(read_config longevity_mode)" == "enabled" ]]; then
+				# In longevity mode, use balance (skips unnecessary 15% discharge)
+				$battery_binary balance &
+			else
+				$battery_binary calibrate force &
+			fi
 		fi
 
 		# Check cell voltage imbalance in longevity mode (hourly)
@@ -2009,10 +2014,10 @@ if [[ "$action" == "maintain" ]]; then
 		# Enable longevity mode features (cell imbalance monitoring)
 		write_config longevity_mode "enabled"
 
-		# Auto-enable monthly calibration for longevity mode
-		# Periodic full charges are recommended for BMS cell balancing and fuel gauge accuracy
+		# Auto-enable monthly balance for longevity mode
+		# Periodic full charges are recommended for BMS cell balancing
 		if [[ -z "$(read_config calibrate_schedule)" ]]; then
-			log "Setting up monthly calibration (recommended for longevity mode)"
+			log "Setting up monthly balance (recommended for longevity mode)"
 			$battery_binary schedule > /dev/null 2>&1
 		fi
 		# Enable schedule if disabled
