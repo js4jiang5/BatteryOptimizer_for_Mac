@@ -1,220 +1,306 @@
-# BatteryOptimizer_for_Mac
+<div align="center">
 
-[BatteryOptimizer_for_Mac](https://github.com/js4jiang5/BatteryOptimizer_for_Mac) is a fork of [Battery APP v1.2.7](https://github.com/actuallymentor/battery), with new features, enhancements, bug fixes, and removal of confusing or useless commands as follows
+<br>
 
-## Other languages
-- [正體中文 說明](README_TW.md)<br>
+# 🍎🧃 apple-juice
 
-### New features
-- support both Apple and Intel CPU Macs
-- sail mode, allowing the battery to sail from maintain percentage to sail target without charging to avoid frequent micro charging
-- longevity mode preset optimized for maximum battery lifespan with automatic balance and cell imbalance monitoring
-- scheduled calibration, starting automatic calibration on specified days per month (at most four days), or specified one day every 1-3 month, or specified weekday every 1-12 weeks
-- new command "suspend", suspending maintain temporarily allowing charging to 100%, and automatically resume maintain when AC adapter is reconnected
-- charging limiter still works even when macbook sleep or shutdown
-  - Intel CPU: limit is at maintain percentage
-  - Apple CPU: limit is fixed at 80%
-- add battery daily log and notification
-- support macOS 26 Tahoe
+<br>
 
-### Enhancements
-- replace macOS battery percentage with real hardware charging percentage.
-- send notifications when each step of calibration is completed
-- notify user to open macbook lid before calibration is started, and start calibration immediately when macbook lid is open
-- prohibit discharge when macbook lid is closed to prevent entering sleep mode unexpectedly
-- report calibration schedule in "battery status"
-- include battery health and temperature in status report
-- set LED to none (no light) during discharging
-- add a command to show current version
-- notify user when new version is available to update
+**Keep your Mac battery healthy, the secure way**
 
-### Fixed bugs of [Battery APP v1.2.7](https://github.com/actuallymentor/battery)
-- Calibrate fail and hang at 10%
-- Battery health deteriorate due to simultaneous charge and discharge
-- PID of battery process initiated at boot-up is not stored, thus cannot be killed by "battery maintain stop" 
+<br>
 
-### Removed commands
-- battery adapter on/off (confusing and better not be used)
-- battery charging on/off (confusing and better not be used)
-- battery maintain using voltage (not practical because voltage boost abruptly when charging starts)
+<a href="#-quick-start"><img src="https://img.shields.io/badge/Install-1a1a1a?style=for-the-badge" alt="Install"></a>
+<a href="#-longevity-mode"><img src="https://img.shields.io/badge/Longevity_Mode-22c55e?style=for-the-badge" alt="Longevity Mode"></a>
+<a href="#-security"><img src="https://img.shields.io/badge/Security-1a1a1a?style=for-the-badge" alt="Security"></a>
 
-### Advantages compared to AlDente
-- free and open source
-- extremely light weighted - memory usage is 1/20 of AlDente
-- no icon in menu bar
-- daily notification of battery status. no need for user to manually run this tool
-- daily log of battery status history
+<br>
+<br>
 
-### Required settings after installation
-This is a CLI tool for both Apple and Intel Silicon Macs.<br>
-Please setup your Mac system settings as follows
-1.	System Settings > Battery > Battery Health > click the ⓘ icon > toggle off "Optimize Battery Charging"
-2.	System Settings > Notifications > enable "Allow notifications when mirroring or sharing"
-3.	System Settings > Notifications > Applications > Script Editor > Choose "Alerts"<br>
+*A security-hardened fork of [BatteryOptimizer_for_Mac](https://github.com/js4jiang5/BatteryOptimizer_for_Mac)*
 
-### 🖥 Command-line version installation
+<img src="https://img.shields.io/badge/Apple_Silicon-black?style=flat-square&logo=apple&logoColor=white" alt="Apple Silicon">
+<img src="https://img.shields.io/badge/Intel-0071C5?style=flat-square&logo=intel&logoColor=white" alt="Intel">
+<img src="https://img.shields.io/badge/29_Security_Fixes-22c55e?style=flat-square" alt="Security">
 
-One-line installation:
+<br>
+<br>
+
+---
+
+</div>
+
+<br>
+
+## 💚 Longevity Mode
+
+<div align="center">
+
+**The best way to preserve your Mac's battery health.**
+
+</div>
+
+<br>
 
 ```bash
-curl -s https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_Mac/main/setup.sh | bash
+battery maintain longevity
 ```
 
-This will:
+<br>
 
-1. Download the precompiled `smc` tool in this repo (built from the [hholtmann/smcFanControl](https://github.com/hholtmann/smcFanControl.git) repository)
-2. Install `smc` to `/usr/local/bin`
-3. Install `battery` to `/usr/local/bin`
-4. Install `brew` for `sleepwatcher` (not required for Intel CPU Macs)
-5. Install `sleepwatcher` (not required for Intel CPU Macs)
+After [setup](#%EF%B8%8F-setup), this is all you need. Set it and forget it.
 
-### FAQ
-1. Why is the battery percentage shown in this app different from macOS battery percentage?
-Ans: macOS battery percentage is 0~7% higher than real percentage. It's probably a way for macOS to avoid frequent charging after the battery is fully charged. Since macOS battery percentage is not consistent, it's not a good reference for charging/discharging control.
+<br>
 
-2. Why does this app stop working after reboot?
-Ans: It usually implies that you are not login as an admistrator. 
+<div align="center">
 
-### Snapshots
-- `battery status` <br>
-<img src="https://i.imgur.com/VHx5ytq.jpg" /> <br>
+| What it does | Why it matters |
+|:---|:---|
+| Maintains charge at **65%** | Sweet spot for lithium-ion longevity |
+| Sails down to **60%** | Avoids micro-charging cycles |
+| **Monthly auto-balance** | Keeps cells calibrated |
+| **Monitors cell imbalance** | Triggers balance when >0.2V drift detected |
 
-- `battery charge upper limit 85% and lower limit 70%` <br>
-<img src="https://i.imgur.com/mWhaVjb.jpg" /> <br>
+</div>
 
-- `battery calibrate` <br>
-<img src="https://i.imgur.com/Pj87VPN.jpg" /> <br>
+<br>
 
-- `battery calibrate lid not open notification` <br>
-<img src="https://i.imgur.com/G6R5EnH.jpg" /> <br>
+> **Lithium-ion batteries degrade fastest at high charge levels.** Keeping your battery between 60-65% dramatically extends its lifespan compared to the default 80-100% cycling.
 
-- `battery calibrate start notification` <br>
-<img src="https://i.imgur.com/J2L99Uz.jpg" /> <br>
+<br>
 
-- `battery calibrate end notification` <br>
-<img src="https://i.imgur.com/FLvcO3h.jpg" /> <br>
+---
 
-- `calibration schedule on Day 12 28 at 21:30` <br>
-<img src="https://i.imgur.com/yl7HxIx.jpg" /> <br>
+<br>
 
-- `calibration schedule on WED every 2 weeks at 10:50` <br>
-<img src="https://i.imgur.com/yXYeBB1.jpg" /> <br>
+## ⚡ Quick Start
 
-- `daily notification` <br>
-<img src="https://i.imgur.com/UvAivHE.jpg" /> <br>
+**Homebrew:**
 
-- `show daily log` <br>
-<img src="https://i.imgur.com/ETfjely.jpg" /> <br>
-
-- `new version available notification` <br>
-<img src="https://i.imgur.com/nQttVUL.jpg" /> <br>
-
-- `show changelog before update to the latest version` <br>
-<img src="https://i.imgur.com/hlvnmMW.jpg" /> <br>
-
-### Usage
-For help, run `battery` without parameters or `battery help`:
-
-```
-Battery CLI utility v2.0.0
-
-Usage:
-
-  battery maintain PERCENTAGE[10-100,longevity,stop,suspend,recover] SAILING_TARGET[5-99]
-  - PERCENTAGE is battery level upper bound above which charging is stopped
-  - SAILING_TARGET is battery level lower bound below which charging is started. default value is PERCENTAGE-5 if not specified
-  - Examples:
-    battery maintain 80 50    # maintain at 80% with sailing to 50%
-    battery maintain 80    # equivalent to battery maintain 80 75
-    battery maintain longevity    # preset for max lifespan: 65% with sailing to 60%, monthly balance, cell imbalance monitoring
-    battery maintain stop   # kill running battery maintain process, disable daemon, and enable charging. maintain will not run after reboot
-    battery maintain suspend   # suspend running battery maintain process and enable charging. maintain is automatically resumed after AC adapter is reconnected. used for temporary charging to 100% before travel
-    battery maintain recover   # recover battery maintain process
-
-  battery balance
-  - simplified cell balancing: charges to 100%, holds 1.5hr for BMS balancing, returns to maintain%
-  - automatically triggered by longevity mode when cell imbalance >0.2V detected
-  - can also be run manually when battery maintain is active
-
-  battery calibrate
-  - calibrate the battery by discharging it to 15%, then recharging it to 100%, and keeping it there for 1 hour, then discharge to maintained percentage level
-  - if macbook lid is open and AC adapter is connected, calibrate start immediately
-  - if macbook lid is not open or AC adapter is not connected, a remind notification will be received. calibration will be started automatically once macbook lid is open and AC adapter is connected, and calibration will be terminated if lid is not open in one day.
-  - notification will be received when each step is completed or error occurs till the end of calibration
-  - if you prefer the notifications to stay on until you dismiss it, setup notifications as follows
-    system settings > notifications > applications > Script Editor > Choose "Alerts"
-  - when external monitor is used, you must setup notifications as follows in order to receive notification successfully
-    system settings > notifications > check 'Allow notifications when mirroring or sharing the display'
-    eg: battery calibrate   # start calibration
-    eg: battery calibrate stop # stop calibration
-
-  battery schedule
-    schedule periodic calibration at most 4 separate days per month, or specified weekday every 1~12 weeks, or specified one day every 1~3 month. default is one day per month on Day 1 at 9am.
-    Examples:
-    battery schedule    # calibrate on Day 1 at 9am
-    battery schedule day 1 8 15 22    # calibrate on Day 1, 8, 15, 22 at 9am.
-    battery schedule day 3 18 hour 13    # calibrate on Day 3, 18 at 13:00
-    battery schedule day 6 16 26 hour 18 minute 30    # calibrate on Day 6, 16, 26 at 18:30
-    battery schedule weekday 0 week_period 2 hour 21 minute 30 # calibrate on Sunday every 2 weeks at 21:30
-    battery schedule disable    # disable periodic calibration
-    battery schedule enable    # enable periodic calibration
-    Restrictions:
-      1. at most 4 days per month are allowed
-      2. valid day range [1-28]
-      3. valid hour range [0-23]
-      4. valid minute range [0-59]
-      5. valid weekday range [0-6] 0:Sunday, 1:Monday, ...
-      6. valid week_period range [1-12]
-      7. valid month_period range [1-3]
-
-  battery charge LEVEL[1-100, stop]
-    charge the battery to a certain percentage, and disable charging when that percentage is reached
-    eg: battery charge 90
-    eg: battery charge stop # kill running battery charge process and stop charging
-
-  battery discharge LEVEL[1-100, stop]
-    block power input from the adapter until battery falls to this level
-    eg: battery discharge 90
-    eg: battery discharge stop # kill running battery discharge process and stop discharging
-
-  battery status
-    output battery SMC status, capacity, temperature, health, and cycle count 
-
-  battery dailylog
-    output daily log and show daily log store location
-
-  battery changelog
-    show the changelog of the latest version on Github
-
-  battery calibratelog
-    show calibrate history
-
-  battery logs LINES[integer, optional]
-    output logs of the battery CLI and GUI
-    eg: battery logs 100
-
-  battery language LANG[tw,us]
-    eg: battery language tw  # show status and notification in traditional Chinese if available
-    eg: battery language us  # show status and notification in English
-  
-  battery ssd
-    show SSD disk0 status
-
-  battery ssdlog
-    show SSD disk0 dailylog
-
-  battery update
-    update the battery utility to the latest version
-
-  battery version
-    show current version
-
-  battery reinstall
-    reinstall the battery utility to the latest version (reruns the installation script)
-
-  battery uninstall
-    enable charging, remove the smc tool, and the battery script
+```bash
+brew install MoonBoi9001/tap/apple-juice
+sudo battery visudo $USER
 ```
 
-### Final note
-If you feel this tool is helpful for you, you may [buy me a coffee](https://buymeacoffee.com/js4jiang5) ☕ 😀.
+**Or curl:**
+
+```bash
+curl -s https://raw.githubusercontent.com/MoonBoi9001/apple-juice/main/setup.sh | bash
+```
+
+**Then run:**
+
+```bash
+battery maintain longevity    # recommended
+```
+
+Or pick your own level:
+
+```bash
+battery maintain 80           # stay at 80%
+battery maintain 80 50        # stay at 80%, sail to 50%
+```
+
+<br>
+
+---
+
+<br>
+
+## 🎯 All Commands
+
+<br>
+
+<details>
+<summary><b>🔋 Battery Management</b></summary>
+
+<br>
+
+| Command | Description |
+|:---|:---|
+| `battery maintain longevity` | **Recommended.** Optimized for max lifespan |
+| `battery maintain 80` | Keep at 80%, sail to 75% |
+| `battery maintain 80 50` | Keep at 80%, sail to 50% |
+| `battery maintain suspend` | Temporarily charge to 100% |
+| `battery maintain recover` | Resume after suspend |
+| `battery maintain stop` | Disable completely |
+| `battery charge 90` | Charge to specific level |
+| `battery discharge 50` | Discharge to specific level |
+
+</details>
+
+<details>
+<summary><b>🔄 Calibration</b></summary>
+
+<br>
+
+| Command | Description |
+|:---|:---|
+| `battery calibrate` | Full calibration cycle |
+| `battery calibrate stop` | Stop calibration |
+| `battery balance` | Manual cell balancing |
+| `battery schedule` | Configure scheduled calibration |
+| `battery schedule disable` | Disable scheduled calibration |
+
+</details>
+
+<details>
+<summary><b>📊 Monitoring</b></summary>
+
+<br>
+
+| Command | Description |
+|:---|:---|
+| `battery status` | Health, temp, cycle count |
+| `battery dailylog` | View daily battery log |
+| `battery calibratelog` | View calibration history |
+| `battery logs` | View CLI logs |
+| `battery ssd` | SSD health status |
+| `battery ssdlog` | SSD daily log |
+
+</details>
+
+<details>
+<summary><b>⚙️ System</b></summary>
+
+<br>
+
+| Command | Description |
+|:---|:---|
+| `battery update` | Update to latest version |
+| `battery version` | Show current version |
+| `battery changelog` | View latest changelog |
+| `battery reinstall` | Reinstall from scratch |
+| `battery uninstall` | Remove completely |
+| `battery language tw/us` | Change language |
+
+</details>
+
+<br>
+
+---
+
+<br>
+
+## 🔒 Security
+
+This fork fixes **29 vulnerabilities** found in upstream:
+
+- Command injection via sed/osascript
+- Privilege escalation vectors
+- Race conditions in file operations
+- Signal handler reentrancy bugs
+- Missing input validation
+
+Executables are root-owned in `/usr/local/co.battery-optimizer`.
+
+<br>
+
+---
+
+<br>
+
+## ⚙️ Setup
+
+<div align="center">
+
+<br>
+
+**Three quick settings to configure:**
+
+<br>
+
+</div>
+
+<table>
+<tr>
+<td>
+
+```
+🔋  STEP 1
+```
+
+</td>
+<td>
+
+**System Settings → Battery → Battery Health**
+
+Turn off `Optimize Battery Charging`
+
+</td>
+</tr>
+<tr>
+<td>
+
+```
+🔔  STEP 2
+```
+
+</td>
+<td>
+
+**System Settings → Notifications**
+
+Turn on `Allow notifications when mirroring or sharing`
+
+</td>
+</tr>
+<tr>
+<td>
+
+```
+📝  STEP 3
+```
+
+</td>
+<td>
+
+**System Settings → Notifications → Script Editor**
+
+Select `Alerts`
+
+</td>
+</tr>
+</table>
+
+<br>
+
+---
+
+<br>
+
+<div align="center">
+
+**[📖 Full Docs](https://github.com/js4jiang5/BatteryOptimizer_for_Mac)** · **[🐛 Report Issue](https://github.com/MoonBoi9001/apple-juice/issues)** · **[⭐ Star on GitHub](https://github.com/MoonBoi9001/apple-juice)**
+
+</div>
+
+<br>
+
+---
+
+<div align="center">
+
+<br>
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║                        DISCLAIMER                             ║
+║                                                               ║
+║   This software is provided as-is, without warranty of any    ║
+║   kind. Use at your own risk. Battery management involves     ║
+║   low-level system operations. The authors are not liable     ║
+║   for any damage to your device. Back up before use.          ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+<br>
+
+<sub>Made with 🧃 by the community</sub>
+
+<br>
+<br>
+
+</div>
