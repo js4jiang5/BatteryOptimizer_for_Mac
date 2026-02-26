@@ -68,8 +68,9 @@ function write_config() { # write $val to $name in config_file
 PATH="$PATH:/usr/sbin"
 
 # Set environment variables
-tempfolder=~/.battery-tmp
-binfolder=/usr/local/bin
+tempfolder=$(mktemp -d "${TMPDIR:-/tmp}/battery-update.XXXXXX")
+trap 'rm -rf "$tempfolder"' EXIT
+binfolder=/usr/local/co.battery-optimizer
 configfolder=$HOME/.battery
 config_file=$configfolder/config_battery
 batteryfolder="$tempfolder/battery"
@@ -114,19 +115,28 @@ rm $batteryfolder/repo.zip
 # update smc for intel macbook if version is less than v2.0.14
 if [[ 10#$(version_number $battery_version_local) -lt 10#$(version_number "v2.0.14") ]]; then
 	if [[ $(sysctl -n machdep.cpu.brand_string) == *"Intel"* ]]; then # check CPU type
-		sudo mkdir -p $binfolder
-		sudo cp $batteryfolder/dist/smc_intel $binfolder/smc
-		sudo chown $USER $binfolder/smc
-		sudo chmod 755 $binfolder/smc
-		sudo chmod +x $binfolder/smc
+		sudo mkdir -p "$binfolder"
+		sudo cp "$batteryfolder/dist/smc_intel" "$binfolder/smc"
+		sudo chown root:wheel "$binfolder/smc"
+		sudo chmod 755 "$binfolder/smc"
 	fi
 fi
 
 echo "[ 2 ] Writing script to $binfolder/battery"
-cp $batteryfolder/battery.sh $binfolder/battery
-chown $USER $binfolder/battery
-chmod 755 $binfolder/battery
-chmod u+x $binfolder/battery
+# Ensure binfolder exists with root ownership
+if [[ ! -d "$binfolder" ]]; then
+	sudo install -d -m 755 -o root -g wheel "$binfolder"
+fi
+sudo cp "$batteryfolder/battery.sh" "$binfolder/battery"
+sudo chown root:wheel "$binfolder/battery"
+sudo chmod 755 "$binfolder/battery"
+
+# Create/update symlinks in /usr/local/bin for PATH accessibility
+sudo mkdir -p /usr/local/bin
+sudo ln -sf "$binfolder/battery" /usr/local/bin/battery
+sudo chown -h root:wheel /usr/local/bin/battery
+sudo ln -sf "$binfolder/smc" /usr/local/bin/smc
+sudo chown -h root:wheel /usr/local/bin/smc
 
 battery_new=$(echo $(cat $binfolder/battery 2>/dev/null))
 battery_version_new=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")
@@ -151,10 +161,8 @@ if [[ -z $(read_config webhookid) ]]; then write_config webhookid "$(cat $config
 if test -f $configfolder/sig; then rm -rf $configfolder/sig; fi
 if test -f $configfolder/state; then rm -rf $configfolder/state; fi
 
-# Remove tempfiles
-cd
-rm -rf $tempfolder
-echo "[ Final ] Removed temporary folder"
+# Tempfiles are cleaned up automatically via trap
+echo "[ Final ] Cleanup complete"
 
 echo -e "\n🎉 Battery tool updated.\n"
 

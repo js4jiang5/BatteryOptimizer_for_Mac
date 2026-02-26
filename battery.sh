@@ -5,15 +5,15 @@
 ## variables are used by this binary as well at the update script
 ## ###############
 BATTERY_CLI_VERSION="v2.0.28"
-BATTERY_VISUDO_VERSION="v1.0.4"
+BATTERY_VISUDO_VERSION="v1.0.5"
 
 # Path fixes for unexpected environments
-PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+PATH=/usr/local/co.battery-optimizer:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
 ## ###############
 ## Variables
 ## ###############
-binfolder=/usr/local/bin
+binfolder=/usr/local/co.battery-optimizer
 visudo_folder=/private/etc/sudoers.d
 visudo_file=${visudo_folder}/battery
 configfolder=$HOME/.battery
@@ -1225,14 +1225,14 @@ if [[ "$action" == "visudo" ]]; then
 		setting=$USER
 	fi
 
-	# Set visudo tempfile ownership to current user
+	# Create secure temp directory for visudo file
 	log "Setting visudo file permissions to $setting"
-	sudo chown -R $setting $configfolder
+	visudo_tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/battery-visudo.XXXXXX")
+	trap 'rm -rf "$visudo_tmpdir"' EXIT
 
 	# Write the visudo file to a tempfile
-	visudo_tmpfile="$configfolder/visudo.tmp"
-	sudo rm $visudo_tmpfile 2>/dev/null
-	echo -e "$visudoconfig" >$visudo_tmpfile
+	visudo_tmpfile="$visudo_tmpdir/visudo.tmp"
+	echo -e "$visudoconfig" >"$visudo_tmpfile"
 
 	# If the visudo file is the same (no error, exit code 0), set the permissions just
 	if sudo cmp $visudo_file $visudo_tmpfile &>/dev/null; then
