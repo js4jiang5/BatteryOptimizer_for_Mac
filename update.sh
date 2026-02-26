@@ -68,18 +68,18 @@ function write_config() { # write $val to $name in config_file
 }
 
 # Force-set path to include sbin
-PATH="/usr/local/co.battery-optimizer:$PATH:/usr/sbin"
+PATH="/usr/local/co.apple-juice:$PATH:/usr/sbin"
 
 # Set environment variables
-tempfolder=$(mktemp -d "${TMPDIR:-/tmp}/battery-update.XXXXXX")
+tempfolder=$(mktemp -d "${TMPDIR:-/tmp}/apple-juice-update.XXXXXX")
 trap 'rm -rf "$tempfolder"' EXIT
-binfolder=/usr/local/co.battery-optimizer
-configfolder=$HOME/.battery
-config_file=$configfolder/config_battery
-batteryfolder="$tempfolder/battery"
+binfolder=/usr/local/co.apple-juice
+configfolder=$HOME/.apple-juice
+config_file=$configfolder/config
+downloadfolder="$tempfolder/download"
 language_file=$configfolder/language.code
-github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
-mkdir -p "$batteryfolder" || { echo "Failed to create temp directory"; exit 1; }
+github_link="https://raw.githubusercontent.com/MoonBoi9001/apple-juice/main"
+mkdir -p "$downloadfolder" || { echo "Failed to create temp directory"; exit 1; }
 
 lang=$(defaults read -g AppleLocale)
 if test -f $language_file; then
@@ -97,12 +97,12 @@ else
 	fi
 fi
 
-echo -e "🔋 Starting battery update\n"
+echo -e "🔋 Starting apple-juice update\n"
 
 # Cleanup old installations from /usr/local/bin (migration from vulnerable versions)
 # Only remove if they are regular files (not symlinks to our new location)
-if [[ -f /usr/local/bin/battery && ! -L /usr/local/bin/battery ]]; then
-	sudo rm -f /usr/local/bin/battery
+if [[ -f /usr/local/bin/apple-juice && ! -L /usr/local/bin/apple-juice ]]; then
+	sudo rm -f /usr/local/bin/apple-juice
 fi
 if [[ -f /usr/local/bin/smc && ! -L /usr/local/bin/smc ]]; then
 	sudo rm -f /usr/local/bin/smc
@@ -116,43 +116,43 @@ if [[ ! -d "$binfolder" ]]; then
 	sudo install -d -m 755 -o root -g wheel "$binfolder"
 fi
 
-battery_local=$(echo $(cat $binfolder/battery 2>/dev/null))
-battery_version_local=$(echo $(get_parameter "$battery_local" "BATTERY_CLI_VERSION") | tr -d \")
-visudo_version_local=$(echo $(get_parameter "$battery_local" "BATTERY_VISUDO_VERSION") | tr -d \")
+script_local=$(echo $(cat $binfolder/apple-juice 2>/dev/null))
+version_local=$(echo $(get_parameter "$script_local" "BATTERY_CLI_VERSION") | tr -d \")
+visudo_version_local=$(echo $(get_parameter "$script_local" "BATTERY_VISUDO_VERSION") | tr -d \")
 
-# Write battery function as executable
-echo "[ 1 ] Downloading latest battery version"
+# Download and install latest version
+echo "[ 1 ] Downloading latest apple-juice version"
 update_branch="main"
-in_zip_folder_name="BatteryOptimizer_for_MAC-$update_branch"
-batteryfolder="$tempfolder/battery"
-rm -rf $batteryfolder
-mkdir -p $batteryfolder
-curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/heads/$update_branch.zip"
-unzip -qq $batteryfolder/repo.zip -d $batteryfolder
-cp -r $batteryfolder/$in_zip_folder_name/* $batteryfolder
-rm $batteryfolder/repo.zip
+in_zip_folder_name="apple-juice-$update_branch"
+downloadfolder="$tempfolder/download"
+rm -rf $downloadfolder
+mkdir -p $downloadfolder
+curl -sSL -o $downloadfolder/repo.zip "https://github.com/MoonBoi9001/apple-juice/archive/refs/heads/$update_branch.zip"
+unzip -qq $downloadfolder/repo.zip -d $downloadfolder
+cp -r $downloadfolder/$in_zip_folder_name/* $downloadfolder
+rm $downloadfolder/repo.zip
 
 # update smc for intel macbook if version is less than v2.0.14
-if [[ 10#$(version_number $battery_version_local) -lt 10#$(version_number "v2.0.14") ]]; then
+if [[ 10#$(version_number $version_local) -lt 10#$(version_number "v2.0.14") ]]; then
 	if [[ $(sysctl -n machdep.cpu.brand_string) == *"Intel"* ]]; then # check CPU type
 		if [[ ! -d "$binfolder" ]]; then
 			sudo install -d -m 755 -o root -g wheel "$binfolder"
 		fi
-		sudo cp $batteryfolder/dist/smc_intel $binfolder/smc
-		sudo chown root:wheel $binfolder/smc
+		sudo cp $downloadfolder/dist/smc_intel $binfolder/smc
+		sudo chown -h root:wheel $binfolder/smc
 		sudo chmod 755 $binfolder/smc
 	fi
 fi
 
-echo "[ 2 ] Writing script to $binfolder/battery"
-sudo cp $batteryfolder/battery.sh $binfolder/battery
-sudo chown root:wheel $binfolder/battery
-sudo chmod 755 $binfolder/battery
+echo "[ 2 ] Writing script to $binfolder/apple-juice"
+sudo cp $downloadfolder/apple-juice.sh $binfolder/apple-juice
+sudo chown -h root:wheel $binfolder/apple-juice
+sudo chmod 755 $binfolder/apple-juice
 
 # Create/update symlinks in /usr/local/bin for PATH accessibility
 sudo mkdir -p /usr/local/bin
-sudo ln -sf "$binfolder/battery" /usr/local/bin/battery
-sudo chown -h root:wheel /usr/local/bin/battery
+sudo ln -sf "$binfolder/apple-juice" /usr/local/bin/apple-juice
+sudo chown -h root:wheel /usr/local/bin/apple-juice
 sudo ln -sf "$binfolder/smc" /usr/local/bin/smc
 sudo chown -h root:wheel /usr/local/bin/smc
 if [[ -f "$binfolder/shutdown.sh" ]]; then
@@ -160,16 +160,16 @@ if [[ -f "$binfolder/shutdown.sh" ]]; then
 	sudo chown -h root:wheel /usr/local/bin/shutdown.sh
 fi
 
-battery_new=$(echo $(cat $binfolder/battery 2>/dev/null))
-battery_version_new=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")
-visudo_version_new=$(echo $(get_parameter "$battery_new" "BATTERY_VISUDO_VERSION") | tr -d \")
+script_new=$(echo $(cat $binfolder/apple-juice 2>/dev/null))
+version_new=$(echo $(get_parameter "$script_new" "BATTERY_CLI_VERSION") | tr -d \")
+visudo_version_new=$(echo $(get_parameter "$script_new" "BATTERY_VISUDO_VERSION") | tr -d \")
 
 echo "[ 3 ] Setting up visudo declarations"
 if [[ $visudo_version_new != $visudo_version_local ]]; then
-	sudo $binfolder/battery visudo $USER
+	sudo $binfolder/apple-juice visudo $USER
 fi
 
-echo "[ 4 ] Setting up battery configuration"
+echo "[ 4 ] Setting up configuration"
 if ! test -f $config_file; then # config file not exist
 	touch $config_file
 fi
@@ -188,26 +188,20 @@ cd
 # Note: tempfolder is cleaned up by trap on EXIT
 echo "[ Final ] Removed temporary folder"
 
-echo -e "\n🎉 Battery tool updated.\n"
+echo -e "\n🎉 apple-juice updated.\n"
 
-# Restart battery maintain process
-echo -e "Restarting battery maintain.\n"
-write_config informed_version "$battery_version_new"
+# Restart apple-juice maintain process
+echo -e "Restarting apple-juice maintain.\n"
+write_config informed_version "$version_new"
 
 # Try graceful shutdown first, then force kill (Issue #28)
-pkill -f "$binfolder/battery " 2>/dev/null
+pkill -f "$binfolder/apple-juice " 2>/dev/null
 sleep 1
-pkill -9 -f "$binfolder/battery " 2>/dev/null
-battery maintain recover
+pkill -9 -f "$binfolder/apple-juice " 2>/dev/null
+apple-juice maintain recover
 
-empty="                                                                    "
-button_empty="${empty} Buy me a coffee ☕ ${empty}😀"
-button_empty_tw="${empty} 請我喝杯咖啡 ☕ ${empty}😀"
 if $is_TW; then
-	answer="$(osascript -e 'display dialog "'"已更新至 $battery_version_new \n\n如果您覺得這個小工具對您有幫助,點擊下方按鈕請我喝杯咖啡吧"'" buttons {"'"$button_empty_tw"'", "完成"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+	osascript -e 'display dialog "'"已更新至 $version_new"'" buttons {"完成"} default button 1 with icon note with title "apple-juice"'
 else
-	answer="$(osascript -e 'display dialog "'"Update to $battery_version_new completed. \n\nIf you feel this tool is helpful, click the button below and buy me a coffee."'" buttons {"'"$button_empty"'", "Finish"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
-fi
-if [[ $answer =~ "coffee" ]] || [[ $answer =~ "咖啡" ]]; then
-    open https://buymeacoffee.com/js4jiang5
+	osascript -e 'display dialog "'"Updated to $version_new"'" buttons {"Done"} default button 1 with icon note with title "apple-juice"'
 fi

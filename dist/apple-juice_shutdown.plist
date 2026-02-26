@@ -4,7 +4,7 @@
 <plist version="1.0">
 	<dict>
 		<key>Label</key>
-		<string>com.battery_shutdown.app</string>
+		<string>com.apple-juice.shutdown</string>
 		<key>ProgramArguments</key>
 		<array>
 			<string>/usr/local/bin/shutdown.sh</string>

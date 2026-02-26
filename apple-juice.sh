@@ -13,27 +13,27 @@ BATTERY_CLI_VERSION="v2.0.28"
 BATTERY_VISUDO_VERSION="v1.0.5"
 
 # Path fixes for unexpected environments
-PATH=/usr/local/co.battery-optimizer:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+PATH=/usr/local/co.apple-juice:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
 ## ###############
 ## Variables
 ## ###############
-binfolder=/usr/local/co.battery-optimizer
+binfolder=/usr/local/co.apple-juice
 visudo_folder=/private/etc/sudoers.d
-visudo_file=${visudo_folder}/battery
-configfolder=$HOME/.battery
-config_file=$configfolder/config_battery
-pidfile=$configfolder/battery.pid
-logfile=$configfolder/battery.log
+visudo_file=${visudo_folder}/apple-juice
+configfolder=$HOME/.apple-juice
+config_file=$configfolder/config
+pidfile=$configfolder/apple-juice.pid
+logfile=$configfolder/apple-juice.log
 pid_sig=$configfolder/sig.pid
-daemon_path=$HOME/Library/LaunchAgents/battery.plist
+daemon_path=$HOME/Library/LaunchAgents/apple-juice.plist
 calibrate_pidfile=$configfolder/calibrate.pid
-schedule_path=$HOME/Library/LaunchAgents/battery_schedule.plist
-shutdown_path=$HOME/Library/LaunchAgents/battery_shutdown.plist
+schedule_path=$HOME/Library/LaunchAgents/apple-juice_schedule.plist
+shutdown_path=$HOME/Library/LaunchAgents/apple-juice_shutdown.plist
 daily_log=$configfolder/daily.log
 calibrate_log=$configfolder/calibrate.log
 ssd_log=$configfolder/ssd.log
-github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
+github_link="https://raw.githubusercontent.com/MoonBoi9001/apple-juice/main"
 
 ## ###############
 ## Housekeeping
@@ -54,30 +54,30 @@ fi
 
 # CLI help message
 helpmessage="
-Battery CLI utility $BATTERY_CLI_VERSION
+apple-juice CLI $BATTERY_CLI_VERSION
 
 Usage:
 
-  battery maintain PERCENTAGE[10-100,stop,suspend,recover] SAILING_TARGET[5-99]
+  apple-juice maintain PERCENTAGE[10-100,stop,suspend,recover] SAILING_TARGET[5-99]
   - PERCENTAGE is battery level upper bound above which charging is stopped
   - SAILING_TARGET is battery level lower bound below which charging is started. default value is PERCENTAGE-5 if not specified
     Examples:
-    battery maintain 80 50    # maintain at 80% with sailing to 50%
-    battery maintain 80    # equivalent to battery maintain 80 75
-    battery maintain stop   # kill running battery maintain process, disable daemon, and enable charging. maintain will not run after reboot
-    battery maintain suspend   # suspend running battery maintain process and enable charging. maintain is automatically resumed after AC adapter is reconnected. used for temporary charging to 100% before travel
-    battery maintain recover   # recover battery maintain process
+    apple-juice maintain 80 50    # maintain at 80% with sailing to 50%
+    apple-juice maintain 80    # equivalent to apple-juice maintain 80 75
+    apple-juice maintain stop   # kill running maintain process, disable daemon, and enable charging. maintain will not run after reboot
+    apple-juice maintain suspend   # suspend running maintain process and enable charging. maintain is automatically resumed after AC adapter is reconnected. used for temporary charging to 100% before travel
+    apple-juice maintain recover   # recover maintain process
 
-  battery maintain longevity
+  apple-juice maintain longevity
   - Preset optimized for maximum battery lifespan
-  - Equivalent to 'battery maintain 65 60' (~3.85V per cell, well below stress threshold)
+  - Equivalent to 'apple-juice maintain 65 60' (~3.85V per cell, well below stress threshold)
   - Provides 4-8x cycle life vs 100% charge, minimal calendar aging
   - Best for always-plugged-in use where max capacity isn't needed
   - Auto-enables monthly balance (charge to 100%, hold 1.5hr for BMS cell balancing)
   - Monitors cell voltage imbalance hourly; triggers balance if >0.2V difference detected
   - Reference: https://batteryuniversity.com/article/bu-808-how-to-prolong-lithium-based-batteries
 
-  battery calibrate 
+  apple-juice calibrate 
     calibrate the battery by discharging it to 15%, then recharging it to 100%, and keeping it there for 1 hour, then discharge to maintained percentage level
     if macbook lid is not open or AC adapter is not connected, a remind notification will be received.
     calibration will be started automatically once macbook lid is open and AC adapter is connected
@@ -86,20 +86,20 @@ Usage:
         settings > notifications > applications > Script Editor > Choose "Alerts"
     when external monitor is used, you must setup notifications as follows in order to receive notification successfully
         system settings > notifications > check 'Allow notifications when mirroring or sharing the display'
-    eg: battery calibrate   # start calibration
-    eg: battery calibrate stop # stop calibration and resume maintain
+    eg: apple-juice calibrate   # start calibration
+    eg: apple-juice calibrate stop # stop calibration and resume maintain
 	
-  battery schedule
+  apple-juice schedule
     schedule periodic calibration at most 4 separate days per month, or specified weekday every 1~12 weeks, or specified one day every 1~3 month. default is one day per month on Day 1 at 9am.
     Examples:
-    battery schedule    # calibrate on Day 1 at 9am
-    battery schedule day 1 8 15 22    # calibrate on Day 1, 8, 15, 22 at 9am.
-    battery schedule day 3 18 hour 13    # calibrate on Day 3, 18 at 13:00
-    battery schedule day 6 16 26 hour 18 minute 30    # calibrate on Day 6, 16, 26 at 18:30
-    battery schedule weekday 0 week_period 2 hour 21 minute 30 # calibrate on Sunday every 2 weeks at 21:30
-    battery schedule day 5 month_period 3 hour 21 minute 30 # calibrate every 3 month on Day 5 at 21:00
-    battery schedule disable    # disable periodic calibration
-    battery schedule enable    # enable periodic calibration
+    apple-juice schedule    # calibrate on Day 1 at 9am
+    apple-juice schedule day 1 8 15 22    # calibrate on Day 1, 8, 15, 22 at 9am.
+    apple-juice schedule day 3 18 hour 13    # calibrate on Day 3, 18 at 13:00
+    apple-juice schedule day 6 16 26 hour 18 minute 30    # calibrate on Day 6, 16, 26 at 18:30
+    apple-juice schedule weekday 0 week_period 2 hour 21 minute 30 # calibrate on Sunday every 2 weeks at 21:30
+    apple-juice schedule day 5 month_period 3 hour 21 minute 30 # calibrate every 3 month on Day 5 at 21:00
+    apple-juice schedule disable    # disable periodic calibration
+    apple-juice schedule enable    # enable periodic calibration
     Restrictions:
         1. at most 4 days per month are allowed
         2. valid day range [1-28]
@@ -109,59 +109,59 @@ Usage:
         6. valid week_period range [1-12]
         7. valid month_period range [1-3]
 
-  battery charge LEVEL[1-100, stop]
+  apple-juice charge LEVEL[1-100, stop]
     charge the battery to a certain percentage, and disable charging when that percentage is reached
-    eg: battery charge 90
-    eg: battery charge stop # kill running battery charge process and stop charging
+    eg: apple-juice charge 90
+    eg: apple-juice charge stop # kill running charge process and stop charging
 
-  battery discharge LEVEL[1-100, stop]
+  apple-juice discharge LEVEL[1-100, stop]
     block power input from the adapter until battery falls to this level
-    eg: battery discharge 90
-    eg: battery discharge stop # kill running battery discharge process and stop discharging
+    eg: apple-juice discharge 90
+    eg: apple-juice discharge stop # kill running discharge process and stop discharging
 
-  battery status
+  apple-juice status
     output battery SMC status, capacity, temperature, health, and cycle count 
 
-  battery dailylog
+  apple-juice dailylog
     output daily log and show daily log store location
 
-  battery changelog
+  apple-juice changelog
     show the changelog of the latest version on Github
 
-  battery calibratelog
+  apple-juice calibratelog
     show calibrate history
 
-  battery logs LINES[integer, optional]
-    output logs of the battery CLI and GUI
-    eg: battery logs 100
+  apple-juice logs LINES[integer, optional]
+    output logs of the apple-juice CLI and GUI
+    eg: apple-juice logs 100
 
-  battery language LANG[tw,us]
-    eg: battery language tw  # show status and notification in traditional Chinese if available
-    eg: battery language us  # show status and notification in English
+  apple-juice language LANG[tw,us]
+    eg: apple-juice language tw  # show status and notification in traditional Chinese if available
+    eg: apple-juice language us  # show status and notification in English
 
-  battery ssd
+  apple-juice ssd
     show SSD disk0 status
 
-  battery ssdlog
+  apple-juice ssdlog
     show SSD disk0 dailylog
 
-  battery update
-    update the battery utility to the latest version
+  apple-juice update
+    update apple-juice to the latest version
 
-  battery version
+  apple-juice version
     show current version
 
-  battery reinstall
-    reinstall the battery utility to the latest version (reruns the installation script)
+  apple-juice reinstall
+    reinstall apple-juice to the latest version (reruns the installation script)
 
-  battery uninstall
-    enable charging, remove the smc tool, and the battery script
+  apple-juice uninstall
+    enable charging, remove the smc tool, and the apple-juice script
 
 "
 
 # Visudo instructions
 visudoconfig="
-# Visudo settings for the battery utility installed from https://github.com/js4jiang5/BatteryOptimizer_for_MAC
+# Visudo settings for apple-juice installed from https://github.com/MoonBoi9001/apple-juice
 # intended to be placed in $visudo_file on a mac
 Cmnd_Alias      BATTERYOFF = $binfolder/smc -k CH0B -w 02, $binfolder/smc -k CH0C -w 02, $binfolder/smc -k CHTE -w 01000000, $binfolder/smc -k CH0B -r, $binfolder/smc -k CH0C -r, $binfolder/smc -k CHTE -r
 Cmnd_Alias      BATTERYON = $binfolder/smc -k CH0B -w 00, $binfolder/smc -k CH0C -w 00, $binfolder/smc -k CHTE -w 00000000
@@ -248,7 +248,7 @@ function valid_action() {
                 echo "  - $valid_action"
             fi
         done
-        echo "Run 'battery' without parameters, for list of valid commands."
+        echo "Run 'apple-juice' without parameters, for list of valid commands."
         return 1
     fi
     
@@ -511,9 +511,9 @@ function show_schedule() {
 	# check if schedule is enabled
 	enable_exist="$(launchctl print gui/$(id -u $USER) | grep "=> enabled")"
 	if [[ $enable_exist ]]; then # new version that replace => false with => enabled
-		schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep enabled | grep "com.battery_schedule.app")"
+		schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep enabled | grep "com.apple-juice_schedule.app")"
 	else # old version that use => false
-		schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep "=> false" | grep "com.battery_schedule.app")"
+		schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep "=> false" | grep "com.apple-juice_schedule.app")"
 		schedule_enabled=${schedule_enabled/false/enabled}
 	fi
 	schedule_txt="$(read_config calibrate_schedule)"
@@ -567,7 +567,7 @@ function show_schedule() {
 			else
 				log "Your calibration schedule is disabled. Enable it by"
 			fi
-			log "battery schedule enable"
+			log "apple-juice schedule enable"
 		else
 			if $is_TW; then
 				log "您尚未設定電池自動校正時程"
@@ -1127,14 +1127,14 @@ function ack_SIG() {
 	if [ "$sig" == "suspend" ]; then # if suspend is called by user, enable charging to 100%
 		maintain_status="suspended"
 		enable_charging
-		log 'ack battery maintain suspend' # send ack
-	elif [ "$sig" == "suspend_no_charging" ]; then # if suspend is called by another battery process, let that process handle charging
+		log 'ack maintain suspend' # send ack
+	elif [ "$sig" == "suspend_no_charging" ]; then # if suspend is called by another process, let that process handle charging
 		maintain_status="suspended"
-		log 'ack battery maintain suspend' # send ack
+		log 'ack maintain suspend' # send ack
 	elif [ "$sig" == "recover" ]; then
 		maintain_status="active"
 		disable_discharging
-		log 'ack battery maintain recover' # send ack
+		log 'ack maintain recover' # send ack
 	fi
 	# Validate PID before sending signal (Issue #6, #7)
 	if [[ -n "$sigpid" ]] && [[ "$sigpid" =~ ^[0-9]+$ ]] && kill -0 "$sigpid" 2>/dev/null; then
@@ -1172,7 +1172,7 @@ function charge_interrupted() {
 	exit 1
 }
 
-function charge_terminated() { # terminated by another battery process, no need to handle maintain process
+function charge_terminated() { # terminated by another process, no need to handle maintain process
 	disable_charging
 	# Kill any sleep/caffeinate processes spawned by this script (Issue #29)
 	pkill -P $$ sleep 2>/dev/null
@@ -1191,7 +1191,7 @@ function discharge_interrupted() {
 	exit 1
 }
 
-function discharge_terminated() { # terminated by another battery process, no need to handle maintain process
+function discharge_terminated() { # terminated by another process, no need to handle maintain process
 	disable_discharging
 	# Kill any sleep/caffeinate processes spawned by this script (Issue #29)
 	pkill -P $$ sleep 2>/dev/null
@@ -1200,14 +1200,14 @@ function discharge_terminated() { # terminated by another battery process, no ne
 }
 
 function maintain_is_running() {
-	# check if battery maintain is running
+	# check if maintain is running
 	if [[ -f "$pidfile" ]]; then
 		local pid
 		pid=$(cat "$pidfile" 2>/dev/null | awk '{print $1}')
 		# Use kill -0 for atomic process existence check (Issue #5: TOCTOU fix)
 		if [[ -n "$pid" ]] && [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
-			# Verify it's actually a battery process
-			if ps -p "$pid" -o comm= 2>/dev/null | grep -q battery; then
+			# Verify it's actually an apple-juice process
+			if ps -p "$pid" -o comm= 2>/dev/null | grep -q apple-juice; then
 				echo 1
 				return
 			fi
@@ -1217,14 +1217,14 @@ function maintain_is_running() {
 }
 
 function calibrate_is_running() {
-	# check if battery calibrate is running
+	# check if calibrate is running
 	if [[ -f "$calibrate_pidfile" ]]; then
 		local pid_calibrate
 		pid_calibrate=$(cat "$calibrate_pidfile" 2>/dev/null)
 		# Use kill -0 for atomic process existence check (Issue #5: TOCTOU fix)
 		if [[ -n "$pid_calibrate" ]] && [[ "$pid_calibrate" =~ ^[0-9]+$ ]] && kill -0 "$pid_calibrate" 2>/dev/null; then
-			# Verify it's actually a battery process
-			if ps -p "$pid_calibrate" -o comm= 2>/dev/null | grep -q battery; then
+			# Verify it's actually an apple-juice process
+			if ps -p "$pid_calibrate" -o comm= 2>/dev/null | grep -q apple-juice; then
 				echo 1
 				return
 			fi
@@ -1327,19 +1327,18 @@ if [[ "$action" == "visudo" ]]; then
 		setting=$USER
 	fi
 
-	# Set visudo tempfile ownership to current user
-	log "Setting visudo file permissions to $setting"
-	sudo chown -R $setting $configfolder
+	log "Setting up visudo for $setting"
 
-	# Write the visudo file to a tempfile
-	visudo_tmpfile="$configfolder/visudo.tmp"
-	sudo rm $visudo_tmpfile 2>/dev/null
-	echo -e "$visudoconfig" >$visudo_tmpfile
+	# Write the visudo file to a tempfile using mktemp (security best practice)
+	visudo_tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/apple-juice-visudo.XXXXXX")
+	trap 'rm -rf "$visudo_tmpdir"' EXIT
+	visudo_tmpfile="$visudo_tmpdir/visudo.tmp"
+	echo -e "$visudoconfig" >"$visudo_tmpfile"
 
 	# If the visudo file is the same (no error, exit code 0), set the permissions just
 	if sudo cmp $visudo_file $visudo_tmpfile &>/dev/null; then
 
-		echo "The existing battery visudo file is what it should be for version $BATTERY_CLI_VERSION"
+		echo "The existing visudo file is what it should be for version $BATTERY_CLI_VERSION"
 
 		# Check if file permissions are correct, if not, set them
 		current_visudo_file_permissions=$(stat -f "%Lp" $visudo_file)
@@ -1347,14 +1346,14 @@ if [[ "$action" == "visudo" ]]; then
 			sudo chmod 440 $visudo_file
 		fi
 
-		sudo rm $visudo_tmpfile 2>/dev/null
+		rm -rf "$visudo_tmpdir" 2>/dev/null
 		# exit because no changes are needed
 		exit 0
 
 	fi
 
 	# Validate that the visudo tempfile is valid
-	if sudo visudo -c -f $visudo_tmpfile &>/dev/null; then
+	if sudo visudo -c -f "$visudo_tmpfile" &>/dev/null; then
 
 		# If the visudo folder does not exist, make it
 		if ! test -d "$visudo_folder"; then
@@ -1362,10 +1361,7 @@ if [[ "$action" == "visudo" ]]; then
 		fi
 
 		# Copy the visudo file from tempfile to live location
-		sudo cp $visudo_tmpfile $visudo_file
-
-		# Delete tempfile
-		rm $visudo_tmpfile
+		sudo cp "$visudo_tmpfile" $visudo_file
 
 		# Set correct permissions on visudo file
 		sudo chmod 440 $visudo_file
@@ -1374,10 +1370,10 @@ if [[ "$action" == "visudo" ]]; then
 
 	else
 		echo "Error validating visudo file, this should never happen:"
-		sudo visudo -c -f $visudo_tmpfile
+		sudo visudo -c -f "$visudo_tmpfile"
 	fi
 
-	sudo rm $visudo_tmpfile 2>/dev/null
+	# Temp directory cleaned up by trap on EXIT
 	exit 0
 fi
 
@@ -1406,52 +1402,52 @@ fi
 if [[ "$action" == "update" ]]; then
 
 	# Check if we have the most recent version
-	# fetch latest battery.sh
+	# fetch latest version
 
 	if [[ "$setting" == "beta" ]]; then
-		github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/refs/heads/$subsetting"
+		github_link="https://raw.githubusercontent.com/MoonBoi9001/apple-juice/refs/heads/$subsetting"
 	else
-		github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
+		github_link="https://raw.githubusercontent.com/MoonBoi9001/apple-juice/main"
 	fi
-	battery_new=$(echo $(curl -sSL "$github_link/battery.sh"))
-	battery_new_version=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")
-		
-	if [[ $battery_new == "404: Not Found" ]]; then
+	script_new=$(echo $(curl -sSL "$github_link/apple-juice.sh"))
+	version_new=$(echo $(get_parameter "$script_new" "BATTERY_CLI_VERSION") | tr -d \")
+
+	if [[ $script_new == "404: Not Found" ]]; then
 		log "Error: the specified update file is not available"
 		exit 1
 	fi
 
-	visudo_new_version=$(echo $(get_parameter "$battery_new" "BATTERY_VISUDO_VERSION") | tr -d \")
-	if [[ $battery_new_version == $BATTERY_CLI_VERSION ]] && [[ $visudo_new_version == $BATTERY_VISUDO_VERSION ]] && [[ "$setting" != "force" ]]; then
+	visudo_new_version=$(echo $(get_parameter "$script_new" "BATTERY_VISUDO_VERSION") | tr -d \")
+	if [[ $version_new == $BATTERY_CLI_VERSION ]] && [[ $visudo_new_version == $BATTERY_VISUDO_VERSION ]] && [[ "$setting" != "force" ]]; then
 		if $is_TW; then
-			osascript -e 'display dialog "'"$BATTERY_CLI_VERSION 已是最新版，不需要更新"'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+			osascript -e 'display dialog "'"$BATTERY_CLI_VERSION 已是最新版，不需要更新"'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "apple-juice"' >> /dev/null
 		else
-			osascript -e 'display dialog "'"Your version $BATTERY_CLI_VERSION is already the latest. No need to update."'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+			osascript -e 'display dialog "'"Your version $BATTERY_CLI_VERSION is already the latest. No need to update."'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "apple-juice"' >> /dev/null
 		fi		
 	else
 		button_empty="                                                                                                                                                    "
 		if $is_TW; then
 			changelog=$(get_changelog CHANGELOG_TW)
-			battery_new_version=$(get_version CHANGELOG_TW)
-			safe_version=$(escape_osascript "$battery_new_version")
+			version_new=$(get_version CHANGELOG_TW)
+			safe_version=$(escape_osascript "$version_new")
 			safe_changelog=$(escape_osascript "$changelog")
-			osascript -e 'display dialog "'"$safe_version 更新內容如下\n\n$safe_changelog"'" buttons {"'"$button_empty"'", "繼續"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+			osascript -e 'display dialog "'"$safe_version 更新內容如下\n\n$safe_changelog"'" buttons {"'"$button_empty"'", "繼續"} default button 2 with icon note with title "apple-juice"' >> /dev/null
 		else
 			changelog=$(get_changelog CHANGELOG)
-			battery_new_version=$(get_version CHANGELOG)
-			safe_version=$(escape_osascript "$battery_new_version")
+			version_new=$(get_version CHANGELOG)
+			safe_version=$(escape_osascript "$version_new")
 			safe_changelog=$(escape_osascript "$changelog")
-			osascript -e 'display dialog "'"$safe_version changes include\n\n$safe_changelog"'" buttons {"'"$button_empty"'", "Continue"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+			osascript -e 'display dialog "'"$safe_version changes include\n\n$safe_changelog"'" buttons {"'"$button_empty"'", "Continue"} default button 2 with icon note with title "apple-juice"' >> /dev/null
 		fi
 		if $is_TW; then
-			safe_version=$(escape_osascript "$battery_new_version")
-			answer="$(osascript -e 'display dialog "'"你現在要更新到$safe_version 嗎?"'" buttons {"立即更新", "跳過此版本"} default button 1 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+			safe_version=$(escape_osascript "$version_new")
+			answer="$(osascript -e 'display dialog "'"你現在要更新到$safe_version 嗎?"'" buttons {"立即更新", "跳過此版本"} default button 1 with icon note with title "apple-juice"' -e 'button returned of result')"
 			if [[ $answer == "立即更新" ]]; then
 				answer="Yes"
 			fi
 		else
-			safe_version=$(escape_osascript "$battery_new_version")
-			answer="$(osascript -e 'display dialog "'"Do you want to update to version $safe_version now?"'" buttons {"Yes", "No"} default button 1 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+			safe_version=$(escape_osascript "$version_new")
+			answer="$(osascript -e 'display dialog "'"Do you want to update to version $safe_version now?"'" buttons {"Yes", "No"} default button 1 with icon note with title "apple-juice"' -e 'button returned of result')"
 		fi
 		
 		if [[ $answer == "Yes" ]]; then
@@ -1474,7 +1470,7 @@ fi
 if [[ "$action" == "uninstall" ]]; then
 
 	if [[ ! "$setting" == "silent" ]]; then
-		echo "This will enable charging, and remove the smc tool and battery script"
+		echo "This will enable charging, and remove the smc tool and apple-juice"
 		echo "Press any key to continue"
 		read
 	fi
@@ -1484,13 +1480,13 @@ if [[ "$action" == "uninstall" ]]; then
 	$battery_binary schedule disable
 	rm $schedule_path 2>/dev/null
 	rm $shutdown_path 2>/dev/null
-	sudo rm -v "$binfolder/smc" "$binfolder/battery" $visudo_file "$binfolder/shutdown.sh"
+	sudo rm -v "$binfolder/smc" "$binfolder/apple-juice" $visudo_file "$binfolder/shutdown.sh"
 	sudo rm -v -r "$configfolder"
 	sudo rm -rf $HOME/.sleep $HOME/.wakeup $HOME/.shutdown $HOME/.reboot
 	# Use graceful shutdown first, then force kill (Issue #8)
-	pkill -f "^$binfolder/battery " 2>/dev/null
+	pkill -f "^$binfolder/apple-juice " 2>/dev/null
 	sleep 1
-	pkill -9 -f "^$binfolder/battery " 2>/dev/null
+	pkill -9 -f "^$binfolder/apple-juice " 2>/dev/null
 	exit 0
 fi
 
@@ -1501,11 +1497,11 @@ if [[ "$action" == "charge" ]]; then
 	trap charge_terminated SIGUSR1
 
 	# kill running charge process
-	pids=$(pgrep -f "battery charge")
+	pids=$(pgrep -f "apple-juice charge")
 	for pid_running in $pids; do
-		# Validate PID and verify it's a battery charge process (Issue #6, #7, #25)
+		# Validate PID and verify it's a charge process (Issue #6, #7, #25)
 		if [[ -n "$pid_running" ]] && [[ "$pid_running" =~ ^[0-9]+$ ]] && kill -0 "$pid_running" 2>/dev/null; then
-			if ps -p "$pid_running" -o args= 2>/dev/null | grep -q "[b]attery charge"; then
+			if ps -p "$pid_running" -o args= 2>/dev/null | grep -q "[a]pple-juice charge"; then
 				kill "$pid_running" 2>/dev/null
 			fi
 		fi
@@ -1515,17 +1511,17 @@ if [[ "$action" == "charge" ]]; then
 		if [[ "$setting" == "stop" ]]; then
 			exit 0
 		else
-			log "Error: $setting is not a valid setting for battery charge. Please use a number between 0 and 100"
+			log "Error: $setting is not a valid setting for charge. Please use a number between 0 and 100"
 			exit 1
 		fi
 	fi
 
 	# kill running discharge processes
-	pids=$(pgrep -f "battery discharge")
+	pids=$(pgrep -f "apple-juice discharge")
 	for pid_running in $pids; do
-		# Validate PID and verify it's a battery discharge process (Issue #6, #7, #25)
+		# Validate PID and verify it's a discharge process (Issue #6, #7, #25)
 		if [[ -n "$pid_running" ]] && [[ "$pid_running" =~ ^[0-9]+$ ]] && kill -0 "$pid_running" 2>/dev/null; then
-			if ps -p "$pid_running" -o args= 2>/dev/null | grep -q "[b]attery discharge"; then
+			if ps -p "$pid_running" -o args= 2>/dev/null | grep -q "[a]pple-juice discharge"; then
 				kill "$pid_running" 2>/dev/null
 			fi
 		fi
@@ -1599,7 +1595,7 @@ if [[ "$action" == "charge" ]]; then
 		if $is_TW; then
 			log "錯誤: 電池充電異常"
 		else
-			log "Error: battery charge abnormal"
+			log "Error: charge abnormal"
 		fi
 		if [[ "$(calibrate_is_running)" == "0" ]] && [[ "$original_maintain_status" == "active" ]]; then # if discharge level is higher than maintain percentage, recover maintain won't cause charge
 			$battery_binary maintain recover
@@ -1616,11 +1612,11 @@ if [[ "$action" == "discharge" ]]; then
 	trap discharge_terminated SIGUSR1
 
 	# kill running discharge process
-	pids=$(pgrep -f "battery discharge")
+	pids=$(pgrep -f "apple-juice discharge")
 	for pid_running in $pids; do
-		# Validate PID and verify it's a battery discharge process (Issue #6, #7, #25)
+		# Validate PID and verify it's a discharge process (Issue #6, #7, #25)
 		if [[ -n "$pid_running" ]] && [[ "$pid_running" =~ ^[0-9]+$ ]] && kill -0 "$pid_running" 2>/dev/null; then
-			if ps -p "$pid_running" -o args= 2>/dev/null | grep -q "[b]attery discharge"; then
+			if ps -p "$pid_running" -o args= 2>/dev/null | grep -q "[a]pple-juice discharge"; then
 				kill "$pid_running" 2>/dev/null
 			fi
 		fi
@@ -1630,7 +1626,7 @@ if [[ "$action" == "discharge" ]]; then
 		if [[ "$setting" == "stop" ]]; then
 			exit 0
 		else
-			log "Error: $setting is not a valid setting for battery discharge. Please use a number between 0 and 100"
+			log "Error: $setting is not a valid setting for discharge. Please use a number between 0 and 100"
 			exit 1
 		fi
 	fi
@@ -1641,11 +1637,11 @@ if [[ "$action" == "discharge" ]]; then
 	fi
 
 	# kill running charge processes
-	pids=$(pgrep -f "battery charge")
+	pids=$(pgrep -f "apple-juice charge")
 	for pid_running in $pids; do
-		# Validate PID and verify it's a battery charge process (Issue #6, #7, #25)
+		# Validate PID and verify it's a charge process (Issue #6, #7, #25)
 		if [[ -n "$pid_running" ]] && [[ "$pid_running" =~ ^[0-9]+$ ]] && kill -0 "$pid_running" 2>/dev/null; then
-			if ps -p "$pid_running" -o args= 2>/dev/null | grep -q "[b]attery charge"; then
+			if ps -p "$pid_running" -o args= 2>/dev/null | grep -q "[a]pple-juice charge"; then
 				kill "$pid_running" 2>/dev/null
 			fi
 		fi
@@ -1708,7 +1704,7 @@ if [[ "$action" == "discharge" ]]; then
 		if $is_TW; then
 			log "錯誤: 電池放電異常"
 		else
-			log "Error: battery discharge abnormal"
+			log "Error: discharge abnormal"
 		fi
 		if [[ "$(calibrate_is_running)" == "0" ]] && [[ "$original_maintain_status" == "active" ]]; then # if discharge level is higher than maintain percentage, recover maintain won't cause charge
 			$battery_binary maintain recover
@@ -1742,7 +1738,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 	fi
 
 	if ! valid_percentage "$setting"; then
-		log "Error: $setting is not a valid setting for battery maintain. Please use a number between 0 and 100"
+		log "Error: $setting is not a valid setting for maintain. Please use a number between 0 and 100"
 		exit 1
 	fi
 
@@ -1759,7 +1755,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 		lower_limit=$subsetting
 	fi
 
-	log "Starting battery maintenance at $setting% with sailing to $lower_limit% $thirdsetting"
+	log "Starting maintenance at $setting% with sailing to $lower_limit% $thirdsetting"
 
 	# Check if the user requested that the battery maintenance first discharge to the desired level
 	if [[ "$subsetting" == "--force-discharge" ]] || [[ "$thirdsetting" == "--force-discharge" ]]; then
@@ -1770,7 +1766,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 		# Before we start maintaining the battery level, first discharge to the target level
 		log "Triggering discharge to $setting before enabling charging limiter"
 		$battery_binary discharge "$setting"
-		log "Discharge pre battery maintenance complete, continuing to battery maintenance loop"
+		log "Discharge pre maintenance complete, continuing to maintenance loop"
 	else
 		log "Not triggering discharge as it is not requested"
 	fi
@@ -1827,9 +1823,9 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 		enable_exist="$(launchctl print gui/$(id -u $USER) | grep "=> enabled")"
 		
 		if [[ $enable_exist ]] && [[ $(read_config calibrate_schedule) ]]; then # new version that replace => false with => enabled
-			schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep enabled | grep "com.battery_schedule.app")"
+			schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep enabled | grep "com.apple-juice_schedule.app")"
 		else # old version that use => false
-			schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep "=> false" | grep "com.battery_schedule.app")"
+			schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep "=> false" | grep "com.apple-juice_schedule.app")"
 			schedule_enabled=${schedule_enabled/false/enabled}
 		fi
 
@@ -1841,9 +1837,9 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 				logd "$(get_accurate_battery_percentage)% $(get_voltage)V $(get_battery_temperature)°C $(get_battery_health)% $(get_cycle)" | awk '{printf "%-10s, %9s, %9s, %13s, %9s, %9s\n", $1, $2, $3, $4, $5, $6}' >> $daily_log
 				#if [ "$(date +%d)" == "01" ]; then # monthly notification
 				if $is_TW; then
-					osascript -e 'display notification "'"電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\n健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"'" with title "Battery" sound name "Blow"'
+					osascript -e 'display notification "'"電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\n健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"'" with title "apple-juice" sound name "Blow"'
 				else
-					osascript -e 'display notification "'"Battery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\nHealth $(get_battery_health)%, Cycle $(get_cycle)"'" with title "Battery" sound name "Blow"'
+					osascript -e 'display notification "'"Battery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\nHealth $(get_battery_health)%, Cycle $(get_cycle)"'" with title "apple-juice" sound name "Blow"'
 				fi
 				#fi
 
@@ -1873,9 +1869,9 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 				if [[ $tomorrow_day -eq $schedule_day ]] && [[ $diff_sec -lt $((48*60*60)) ]]; then
 					schedule_time="$(echo `date -j -f "%s" $schedule_sec "+%Y/%m/%d %H:%M"`)"
 					if $is_TW; then
-						osascript -e 'display notification "'"提醒您，明天 ($schedule_time) 將進行電池校正"'" with title "Battery" sound name "Blow"'
+						osascript -e 'display notification "'"提醒您，明天 ($schedule_time) 將進行電池校正"'" with title "apple-juice" sound name "Blow"'
 					else
-						osascript -e 'display notification "'"Remind you, tomorrow ($schedule_time) is battery calibration day."'" with title "Battery" sound name "Blow"'
+						osascript -e 'display notification "'"Remind you, tomorrow ($schedule_time) is battery calibration day."'" with title "apple-juice" sound name "Blow"'
 					fi
 				fi
 
@@ -1883,15 +1879,15 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 				if [[ $now_day -eq $schedule_day ]] && [[ $diff_sec -lt $((24*60*60)) ]]; then
 					schedule_time="$(echo `date -j -f "%s" $schedule_sec "+%Y/%m/%d %H:%M"`)"
 					if $is_TW; then
-						osascript -e 'display notification "'"提醒您，今天 ($schedule_time) 將進行電池校正"'" with title "Battery" sound name "Blow"'
+						osascript -e 'display notification "'"提醒您，今天 ($schedule_time) 將進行電池校正"'" with title "apple-juice" sound name "Blow"'
 					else
-						osascript -e 'display notification "'"Remind you, today ($schedule_time) is battery calibration day."'" with title "Battery" sound name "Blow"'
+						osascript -e 'display notification "'"Remind you, today ($schedule_time) is battery calibration day."'" with title "apple-juice" sound name "Blow"'
 					fi
 				fi
 			fi
 		fi
 
-		# run battery calibrate/balance if scheduled time is reached
+		# run calibrate/balance if scheduled time is reached
 		calibrate_next=$(read_config calibrate_next)
 		if [[ $now_sec -gt $calibrate_next ]] && [[ "$(calibrate_is_running)" == "0" ]] && [[ $schedule_enabled =~ "enabled" ]]; then
 			if [[ "$(read_config longevity_mode)" == "enabled" ]]; then
@@ -1924,17 +1920,17 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 
 		# check if there is update version
 		if [[ $(date +%s) -gt $check_update_timeout ]]; then
-			updated="$(curl -sS $github_link/battery.sh | grep "$informed_version")"
-			new_version="$(curl -sS $github_link/battery.sh | grep "BATTERY_CLI_VERSION=")"
+			updated="$(curl -sS $github_link/apple-juice.sh | grep "$informed_version")"
+			new_version="$(curl -sS $github_link/apple-juice.sh | grep "BATTERY_CLI_VERSION=")"
 			new_version="$(echo $new_version | awk '{print $1}')"
 			new_version=$(echo ${new_version/"BATTERY_CLI_VERSION="} | tr -d \")
 			
 			if [[ -z $updated ]] && [[ $new_version ]]; then
 				safe_new_version=$(escape_osascript "$new_version")
 				if $is_TW; then
-					osascript -e 'display notification "'"有新版$safe_new_version, 請在 Terminal 下輸入 \n\\\"battery update\\\" 更新"'" with title "BatteryOptimizer" sound name "Blow"'
+					osascript -e 'display notification "'"有新版$safe_new_version, 請在 Terminal 下輸入 \n\\\"apple-juice update\\\" 更新"'" with title "apple-juice" sound name "Blow"'
 				else
-					osascript -e 'display notification "'"New version $safe_new_version available \nUpdate with command \\\"battery update\\\""'" with title "BatteryOptimizer" sound name "Blow"'
+					osascript -e 'display notification "'"New version $safe_new_version available \nUpdate with command \\\"apple-juice update\\\""'" with title "apple-juice" sound name "Blow"'
 				fi
 				informed_version=$new_version
 				write_config informed_version $informed_version
@@ -1982,7 +1978,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 				if [[ "$ac_connection" == "1" ]] && [[ "$pre_ac_connection" == "0" ]]; then # resume maintain to active when AC adapter is reconnected
 					maintain_status="active"
 					log "Battery maintain is recovered because AC adapter is reconnected"
-					osascript -e 'display notification "Battery maintain is recovered" with title "Battery" sound name "Blow"'
+					osascript -e 'display notification "Battery maintain is recovered" with title "apple-juice" sound name "Blow"'
 				fi
 			fi
 			pre_ac_connection=$ac_connection
@@ -2009,7 +2005,7 @@ fi
 # Asynchronous battery level maintenance
 if [[ "$action" == "maintain" ]]; then
 
-	# check if this action is called by another battery process, if yes log only without notify
+	# check if this action is called by another process, if yes log only without notify
 	if [[ $(ps aux | grep $PPID) == *"$battery_binary"* ]]; then
 		notify=0
 	else
@@ -2028,7 +2024,7 @@ if [[ "$action" == "maintain" ]]; then
 				logn "Recover in 5 secs, wait ."
 				ack_received=0
 				trap confirm_SIG SIGUSR1
-				kill -s USR1 $pid # inform running battery process to suspend
+				kill -s USR1 $pid # inform running process to suspend
 				for i in {1..10}; do # wait till timeout after 60 seconds
 					echo -n "."
 					sleep 1
@@ -2036,13 +2032,13 @@ if [[ "$action" == "maintain" ]]; then
 				if [ "$ack_received" == "1" ]; then
 					logLF "Battery maintain is recovered"
 					if [ "$notify" == "1" ]; then
-						osascript -e 'display notification "Battery maintain is recovered" with title "Battery" sound name "Blow"'
+						osascript -e 'display notification "Battery maintain is recovered" with title "apple-juice" sound name "Blow"'
 					fi
 					exit 0
 				else
 					logLF "Error: Battery maintain recover failed"
 					if [ "$notify" == "1" ]; then
-						osascript -e 'display notification "Error: Battery maintain recover failed" with title "Battery" sound name "Blow"'
+						osascript -e 'display notification "Error: Battery maintain recover failed" with title "apple-juice" sound name "Blow"'
 					fi
 					exit 1
 				fi
@@ -2062,7 +2058,7 @@ if [[ "$action" == "maintain" ]]; then
 			if [[ "$maintain_status" == "active" ]]; then
 				if [ "$notify" == "1" ]; then # if suspend is called by user, enable charging to 100%
 					echo "$$ suspend" > $pid_sig
-				else # if suspend is called by another battery process, let that process handle charging
+				else # if suspend is called by another process, let that process handle charging
 					echo "$$ suspend_no_charging" > $pid_sig
 				fi
 
@@ -2072,7 +2068,7 @@ if [[ "$action" == "maintain" ]]; then
 				logn "Suspend in 5 secs, wait ."
 				ack_received=0
 				trap confirm_SIG SIGUSR1
-				kill -s USR1 $pid # inform running battery process to suspend
+				kill -s USR1 $pid # inform running process to suspend
 				for i in {1..10}; do # wait till timeout after 60 seconds
 					echo -n "."
 					sleep 1
@@ -2080,19 +2076,19 @@ if [[ "$action" == "maintain" ]]; then
 				if [ "$ack_received" == "1" ]; then
 					logLF "Battery maintain is suspended"
 					if [ "$notify" == "1" ]; then
-						osascript -e 'display notification "Battery maintain is suspended" with title "Battery" sound name "Blow"'
+						osascript -e 'display notification "Battery maintain is suspended" with title "apple-juice" sound name "Blow"'
 					fi
 					exit 0
 				else
 					logLF "Error: Battery maintain suspend failed"
 					if [ "$notify" == "1" ]; then
-						osascript -e 'display notification "Error: Battery maintain suspend failed" with title "Battery" sound name "Blow"'
+						osascript -e 'display notification "Error: Battery maintain suspend failed" with title "apple-juice" sound name "Blow"'
 					fi
 					exit 1
 				fi
 			else
 				if [ "$notify" == "1" ]; then
-					osascript -e 'display notification "Battery maintain is suspended" with title "Battery" sound name "Blow"'
+					osascript -e 'display notification "Battery maintain is suspended" with title "apple-juice" sound name "Blow"'
 				fi
 				exit 0
 			fi
@@ -2160,7 +2156,7 @@ if [[ "$action" == "maintain" ]]; then
 		# log "Called with $setting $action"
 		# If non 0-100 setting is not a special keyword, exit with an error.
 		if ! { [[ "$setting" == "stop" ]] || [[ "$setting" == "recover" ]]; }; then
-			log "Error: $setting is not a valid setting for battery maintain. Please use a number between 0 and 100, 'longevity' for optimal lifespan, or 'stop'/'recover'."
+			log "Error: $setting is not a valid setting for maintain. Please use a number between 0 and 100, 'longevity' for optimal lifespan, or 'stop'/'recover'."
 			exit 1
 		fi
 	fi
@@ -2195,9 +2191,9 @@ if [[ "$action" == "maintain" ]]; then
 			if ! [[ $(ps aux | grep $PPID) =~ "setup.sh" ]] && ! [[ $(ps aux | grep $PPID) =~ "update.sh" ]]; then 
 				# Ask user if discharging right now unless this action is invoked by setup.sh
 				if $is_TW; then
-					answer="$(osascript -e 'display dialog "'"你要現在就放電到 $setting% 嗎?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+					answer="$(osascript -e 'display dialog "'"你要現在就放電到 $setting% 嗎?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "apple-juice"' -e 'button returned of result')"
 				else
-					answer="$(osascript -e 'display dialog "'"Do you want to discharge battery to $setting% now?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+					answer="$(osascript -e 'display dialog "'"Do you want to discharge battery to $setting% now?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "apple-juice"' -e 'button returned of result')"
 				fi
 				if [[ "$answer" == "Yes" ]] || [ -z $answer ]; then
 					log "Start discharging to $setting%"
@@ -2243,19 +2239,19 @@ if [[ "$action" == "calibrate" ]]; then
 
 	write_config calibrate_next $(check_next_calibration_date)
 
-	# make sure battery maintain is running
+	# make sure maintain is running
 	if [ "$(maintain_is_running)" == "0" ]; then		
 		if ! test -f "$daemon_path"; then # if daemon is not available, create one
 			$battery_binary create_daemon
 		fi
 
-		# enable and reload to run battery maintain recover
-		launchctl enable "gui/$(id -u $USER)/com.battery.app"
+		# enable and reload to run maintain recover
+		launchctl enable "gui/$(id -u $USER)/com.apple-juice.app"
 		launchctl unload "$daemon_path" 2> /dev/null
 		launchctl load "$daemon_path" 2> /dev/null
 	fi
 
-	# wait till battery maintain is running
+	# wait till maintain is running
 	for i in {1..10}; do
 		if [ "$(maintain_is_running)" == "1" ]; then
 			break
@@ -2270,10 +2266,10 @@ if [[ "$action" == "calibrate" ]]; then
 	calibrate_time=`date -j -f "%s" $(date +%s) "+%Y/%m/%d %H:%M"`
 	health_before="$(get_battery_health)%"
 
-	# abort calibration if battery maintain is not running
+	# abort calibration if maintain is not running
 	if [ "$(maintain_is_running)" == "0" ]; then
 		if $is_TW; then
-			osascript -e 'display notification "校正前必須先執行 battery maintain" with title "電池校正錯誤" sound name "Blow"'
+			osascript -e 'display notification "校正前必須先執行 apple-juice maintain" with title "電池校正錯誤" sound name "Blow"'
 		else
 			osascript -e 'display notification "Battery maintain need to run before calibration" with title "Battery Calibration Error" sound name "Blow"'
 		fi
@@ -2756,7 +2752,7 @@ if [[ "$action" == "status" ]]; then
 				fi
 			else
 				if [[ "$(calibrate_is_running)" == "1" ]]; then
-					log "Calibration ongoing, battery maintain is suspended"
+					log "Calibration ongoing, maintain is suspended"
 				else
 					log "Battery maintain is suspended" 
 				fi
@@ -2796,10 +2792,10 @@ if [[ "$action" == "create_daemon" ]]; then
 <plist version=\"1.0\">
 	<dict>
 		<key>Label</key>
-		<string>com.battery.app</string>
+		<string>com.apple-juice.app</string>
 		<key>ProgramArguments</key>
 		<array>
-			<string>$binfolder/battery</string>
+			<string>$binfolder/apple-juice</string>
 			<string>$call_action</string>
 			<string>recover</string>
 		</array>
@@ -2838,7 +2834,7 @@ if [[ "$action" == "create_daemon" ]]; then
 	fi
 
 	# enable daemon
-	launchctl enable "gui/$(id -u $USER)/com.battery.app"
+	launchctl enable "gui/$(id -u $USER)/com.apple-juice.app"
 	exit 0
 
 fi
@@ -2846,8 +2842,8 @@ fi
 # Disable daemon
 if [[ "$action" == "disable_daemon" ]]; then
 
-	log "Disabling daemon at gui/$(id -u $USER)/com.battery.app" >> $logfile
-	launchctl disable "gui/$(id -u $USER)/com.battery.app"
+	log "Disabling daemon at gui/$(id -u $USER)/com.apple-juice.app" >> $logfile
+	launchctl disable "gui/$(id -u $USER)/com.apple-juice.app"
 	exit 0
 
 fi
@@ -2889,8 +2885,8 @@ if [[ "$action" == "schedule" ]]; then
 					log "Schedule disabled"
 					echo
 				fi
-				log "Disabling schedule at gui/$(id -u $USER)/com.battery_schedule.app" >> $logfile
-				launchctl disable "gui/$(id -u $USER)/com.battery_schedule.app"
+				log "Disabling schedule at gui/$(id -u $USER)/com.apple-juice_schedule.app" >> $logfile
+				launchctl disable "gui/$(id -u $USER)/com.apple-juice_schedule.app"
 				launchctl unload "$schedule_path" 2> /dev/null
 			fi
 			exit 0
@@ -2899,16 +2895,16 @@ if [[ "$action" == "schedule" ]]; then
 		if [ $2 == "enable" ]; then
 			enable_exist="$(launchctl print gui/$(id -u $USER) | grep "=> enabled")"
 			if [[ $enable_exist ]]; then # new version that replace => false with => enabled
-				schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep enabled | grep "com.battery_schedule.app")"
+				schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep enabled | grep "com.apple-juice_schedule.app")"
 			else # old version that use => false
-				schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep "=> false" | grep "com.battery_schedule.app")"
+				schedule_enabled="$(launchctl print gui/$(id -u $USER) | grep "=> false" | grep "com.apple-juice_schedule.app")"
 				schedule_enabled=${schedule_enabled/false/enabled}
 			fi
 			if ! [[ $schedule_enabled =~ "enabled" ]]; then
 				if [[ $(read_config calibrate_schedule) ]]; then
 					write_config calibrate_next $(check_next_calibration_date)
-					log "Enabling schedule at gui/$(id -u $USER)/com.battery_schedule.app" >> $logfile
-					launchctl enable "gui/$(id -u $USER)/com.battery_schedule.app"
+					log "Enabling schedule at gui/$(id -u $USER)/com.apple-juice_schedule.app" >> $logfile
+					launchctl enable "gui/$(id -u $USER)/com.apple-juice_schedule.app"
 				fi
 			fi
 			show_schedule
@@ -3128,10 +3124,10 @@ if [[ "$action" == "schedule" ]]; then
 <plist version=\"1.0\">
 	<dict>
 		<key>Label</key>
-		<string>com.battery_schedule.app</string>
+		<string>com.apple-juice_schedule.app</string>
 		<key>ProgramArguments</key>
 		<array>
-			<string>$binfolder/battery</string>
+			<string>$binfolder/apple-juice</string>
 			<string>$call_action</string>
 		</array>
 		<key>StartCalendarInterval</key>
@@ -3194,7 +3190,7 @@ if [[ "$action" == "schedule" ]]; then
 	fi
 
 	# enable schedule
-	launchctl enable "gui/$(id -u $USER)/com.battery_schedule.app"
+	launchctl enable "gui/$(id -u $USER)/com.apple-juice_schedule.app"
 	launchctl unload "$schedule_path" 2> /dev/null
 	launchctl load "$schedule_path" 2> /dev/null
 
@@ -3270,16 +3266,16 @@ if [[ "$action" == "changelog" ]]; then
 	button_empty="                                                                                                                                                    "
 	if $is_TW; then
 		changelog=$(get_changelog CHANGELOG_TW)
-		battery_new_version=$(get_version CHANGELOG_TW)
-		safe_version=$(escape_osascript "$battery_new_version")
+		version_new=$(get_version CHANGELOG_TW)
+		safe_version=$(escape_osascript "$version_new")
 		safe_changelog=$(escape_osascript "$changelog")
-		osascript -e 'display dialog "'"$safe_version 更新內容如下\n\n$safe_changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+		osascript -e 'display dialog "'"$safe_version 更新內容如下\n\n$safe_changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "apple-juice"' >> /dev/null
 	else
 		changelog=$(get_changelog CHANGELOG)
-		battery_new_version=$(get_version CHANGELOG)
-		safe_version=$(escape_osascript "$battery_new_version")
+		version_new=$(get_version CHANGELOG)
+		safe_version=$(escape_osascript "$version_new")
 		safe_changelog=$(escape_osascript "$changelog")
-		osascript -e 'display dialog "'"$safe_version changes inlude\n\n$safe_changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+		osascript -e 'display dialog "'"$safe_version changes inlude\n\n$safe_changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "apple-juice"' >> /dev/null
 	fi
 	exit 0
 fi

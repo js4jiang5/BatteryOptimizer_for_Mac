@@ -38,30 +38,30 @@ function write_config() { # write $val to $name in config_file
 
 # User welcome message
 echo -e "\n####################################################################"
-echo '# 👋 Welcome, this is the setup script for the battery CLI tool.'
+echo '# 👋 Welcome, this is the setup script for apple-juice.'
 echo -e "# Note: this script will ask for your password once or multiple times."
 echo -e "####################################################################\n\n"
 
 # Set environment variables
-tempfolder=$(mktemp -d "${TMPDIR:-/tmp}/battery-install.XXXXXX")
+tempfolder=$(mktemp -d "${TMPDIR:-/tmp}/apple-juice-install.XXXXXX")
 trap 'rm -rf "$tempfolder"' EXIT
-readonly EXPECTED_BINFOLDER="/usr/local/co.battery-optimizer"
+readonly EXPECTED_BINFOLDER="/usr/local/co.apple-juice"
 binfolder="$EXPECTED_BINFOLDER"
 
 # Set script value
 calling_user=${1:-"$USER"}
-configfolder=/Users/$calling_user/.battery
-config_file=$configfolder/config_battery
-pidfile=$configfolder/battery.pid
-logfile=$configfolder/battery.log
+configfolder=/Users/$calling_user/.apple-juice
+config_file=$configfolder/config
+pidfile=$configfolder/apple-juice.pid
+logfile=$configfolder/apple-juice.log
 sleepwatcher_log=$configfolder/sleepwatcher.log
 
 # Ask for sudo once, in most systems this will cache the permissions for a bit
-sudo echo "🔋 Starting battery installation"
+sudo echo "🔋 Starting apple-juice installation"
 echo -e "[ 1 ] Superuser permissions acquired."
 
 # Cleanup after older versions that installed to /usr/local/bin
-sudo rm -f /usr/local/bin/battery
+sudo rm -f /usr/local/bin/apple-juice
 sudo rm -f /usr/local/bin/smc
 sudo rm -f /usr/local/bin/shutdown.sh
 
@@ -74,16 +74,16 @@ fi
 
 # Note: github names zips by <reponame>-<branchname>.replace( '/', '-' )
 update_branch="2.0.27"
-in_zip_folder_name="BatteryOptimizer_for_MAC-$update_branch"
-batteryfolder="$tempfolder/battery"
-echo "[ 2 ] Downloading latest version of battery CLI"
-rm -rf "$batteryfolder"
-mkdir -p "$batteryfolder"
-curl -sSL -o "$batteryfolder/repo.zip" "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/tags/v$update_branch.zip"
-unzip -qq "$batteryfolder/repo.zip" -d "$batteryfolder"
-cp -r "$batteryfolder/$in_zip_folder_name/"* "$batteryfolder"
-curl -sSL -o "$batteryfolder/dist/notification_permission.scpt" "https://github.com/js4jiang5/BatteryOptimizer_for_Mac/raw/refs/heads/main/dist/notification_permission.scpt"
-rm "$batteryfolder/repo.zip"
+in_zip_folder_name="apple-juice-$update_branch"
+downloadfolder="$tempfolder/download"
+echo "[ 2 ] Downloading latest version of apple-juice"
+rm -rf "$downloadfolder"
+mkdir -p "$downloadfolder"
+curl -sSL -o "$downloadfolder/repo.zip" "https://github.com/MoonBoi9001/apple-juice/archive/refs/tags/v$update_branch.zip"
+unzip -qq "$downloadfolder/repo.zip" -d "$downloadfolder"
+cp -r "$downloadfolder/$in_zip_folder_name/"* "$downloadfolder"
+curl -sSL -o "$downloadfolder/dist/notification_permission.scpt" "https://github.com/MoonBoi9001/apple-juice/raw/refs/heads/main/dist/notification_permission.scpt"
+rm "$downloadfolder/repo.zip"
 
 # Create dedicated bin folder with root ownership (security requirement)
 # Safety check: verify binfolder hasn't been modified (defense against code injection)
@@ -97,61 +97,61 @@ if [[ -d "$binfolder" ]]; then
 fi
 sudo install -d -m 755 -o root -g wheel "$binfolder"
 if [[ $cpu_type == "apple" ]]; then
-	sudo cp "$batteryfolder/dist/smc" "$binfolder/smc"
+	sudo cp "$downloadfolder/dist/smc" "$binfolder/smc"
 else
-	sudo cp "$batteryfolder/dist/smc_intel" "$binfolder/smc"
+	sudo cp "$downloadfolder/dist/smc_intel" "$binfolder/smc"
 fi
-sudo chown root:wheel "$binfolder/smc"
+sudo chown -h root:wheel "$binfolder/smc"
 sudo chmod 755 "$binfolder/smc"
 # Check if smc works (use explicit path since symlinks not created yet)
 check_smc=$("$binfolder/smc" 2>&1)
 if [[ $check_smc =~ " Bad " ]] || [[ $check_smc =~ " bad " ]] ; then # current is not a right version
-	sudo cp "$batteryfolder/dist/smc_intel" "$binfolder/smc"
-	sudo chown root:wheel "$binfolder/smc"
+	sudo cp "$downloadfolder/dist/smc_intel" "$binfolder/smc"
+	sudo chown -h root:wheel "$binfolder/smc"
 	sudo chmod 755 "$binfolder/smc"
 	# check again
 	check_smc=$($binfolder/smc 2>&1)
 	if [[ $check_smc =~ " Bad " ]] || [[ $check_smc =~ " bad " ]] ; then # current is not a right version
-		echo "Error: BatteryOptimizer seems not compatible with your MAC yet"
+		echo "Error: apple-juice seems not compatible with your MAC yet"
 		exit 1
 	fi
 fi
 
-echo "[ 4 ] Writing script to $binfolder/battery for user $calling_user"
-sudo cp "$batteryfolder/battery.sh" "$binfolder/battery"
+echo "[ 4 ] Writing script to $binfolder/apple-juice for user $calling_user"
+sudo cp "$downloadfolder/apple-juice.sh" "$binfolder/apple-juice"
 
 echo "[ 5 ] Setting correct file permissions"
-# Set permissions for battery executables (must be root-owned for security)
-sudo chown root:wheel "$binfolder/battery"
-sudo chmod 755 "$binfolder/battery"
+# Set permissions for apple-juice executables (must be root-owned for security)
+sudo chown -h root:wheel "$binfolder/apple-juice"
+sudo chmod 755 "$binfolder/apple-juice"
 
 # Create symlinks in /usr/local/bin for PATH accessibility
 sudo mkdir -p /usr/local/bin
-sudo ln -sf "$binfolder/battery" /usr/local/bin/battery
-sudo chown -h root:wheel /usr/local/bin/battery
+sudo ln -sf "$binfolder/apple-juice" /usr/local/bin/apple-juice
+sudo chown -h root:wheel /usr/local/bin/apple-juice
 sudo ln -sf "$binfolder/smc" /usr/local/bin/smc
 sudo chown -h root:wheel /usr/local/bin/smc
 
 # Set permissions for logfiles
 mkdir -p "$configfolder" || { echo "Failed to create config directory"; exit 1; }
-sudo chown -R "$calling_user" "$configfolder"
+sudo chown -hR "$calling_user" "$configfolder"
 
 touch "$logfile"
-sudo chown "$calling_user" "$logfile"
+sudo chown -h "$calling_user" "$logfile"
 sudo chmod 755 "$logfile"
 
 touch "$pidfile"
-sudo chown "$calling_user" "$pidfile"
+sudo chown -h "$calling_user" "$pidfile"
 sudo chmod 755 "$pidfile"
 
 echo "[ 6 ] Setting up visudo declarations"
-sudo "$batteryfolder/battery.sh" visudo "$USER"
-sudo chown -R "$calling_user" "$configfolder"
+sudo "$downloadfolder/apple-juice.sh" visudo "$USER"
+sudo chown -hR "$calling_user" "$configfolder"
 
-# Run battery maintain with default percentage 80
-echo "[ 7 ] Set default battery maintain percentage to 80%, can be changed afterwards"
+# Run apple-juice maintain with default percentage 80
+echo "[ 7 ] Set default maintain percentage to 80%, can be changed afterwards"
 # Setup configuration file
-version=$(echo $(battery version))
+version=$(echo $(apple-juice version))
 touch "$config_file"
 write_config calibrate_method 1
 write_config calibrate_schedule
@@ -163,24 +163,24 @@ write_config daily_last
 write_config clamshell_discharge
 write_config webhookid
 
-$binfolder/battery maintain 80 >/dev/null &
+$binfolder/apple-juice maintain 80 >/dev/null &
 
 if [[ $(smc -k BCLM -r) == *"no data"* ]] && [[ $(smc -k CHWA -r) != *"no data"* ]]; then # sleepwatcher only required for Apple CPU Macbook when CHWA is available
 	echo "[ 8 ] Setup for power limit when Macs shutdown"
-	sudo cp $batteryfolder/dist/.reboot $HOME/.reboot
-	sudo cp $batteryfolder/dist/.shutdown $HOME/.shutdown
-	sudo cp $batteryfolder/dist/shutdown.sh $binfolder/shutdown.sh
-	sudo cp $batteryfolder/dist/battery_shutdown.plist $HOME/Library/LaunchAgents/battery_shutdown.plist
-	launchctl enable "gui/$(id -u $USER)/com.battery_shutdown.app"
-	launchctl unload "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
-	launchctl load "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
-	sudo chown -R $calling_user $HOME/.reboot
+	sudo cp $downloadfolder/dist/.reboot $HOME/.reboot
+	sudo cp $downloadfolder/dist/.shutdown $HOME/.shutdown
+	sudo cp $downloadfolder/dist/shutdown.sh $binfolder/shutdown.sh
+	sudo cp $downloadfolder/dist/apple-juice_shutdown.plist $HOME/Library/LaunchAgents/apple-juice_shutdown.plist
+	launchctl enable "gui/$(id -u $USER)/com.apple-juice.shutdown"
+	launchctl unload "$HOME/Library/LaunchAgents/apple-juice_shutdown.plist" 2> /dev/null
+	launchctl load "$HOME/Library/LaunchAgents/apple-juice_shutdown.plist" 2> /dev/null
+	sudo chown -hR $calling_user $HOME/.reboot
 	sudo chmod 755 $HOME/.reboot
 	sudo chmod +x $HOME/.reboot
-	sudo chown -R $calling_user $HOME/.shutdown
+	sudo chown -hR $calling_user $HOME/.shutdown
 	sudo chmod 755 $HOME/.shutdown
 	sudo chmod +x $HOME/.shutdown
-	sudo chown root:wheel $binfolder/shutdown.sh
+	sudo chown -h root:wheel $binfolder/shutdown.sh
 	sudo chmod 755 $binfolder/shutdown.sh
 	# Create symlink for shutdown.sh (only when the file is installed)
 	sudo ln -sf "$binfolder/shutdown.sh" /usr/local/bin/shutdown.sh
@@ -225,12 +225,12 @@ if [[ $(smc -k BCLM -r) == *"no data"* ]] && [[ $(smc -k CHWA -r) != *"no data"*
 
 	if $sleepwatcher_installed; then
 		echo "[ 11 ] Generate ~/.sleep and ~/.wakeup"
-		sudo cp $batteryfolder/dist/.sleep $HOME/.sleep
-		sudo cp $batteryfolder/dist/.wakeup $HOME/.wakeup
-		sudo chown -R $calling_user $HOME/.sleep
+		sudo cp $downloadfolder/dist/.sleep $HOME/.sleep
+		sudo cp $downloadfolder/dist/.wakeup $HOME/.wakeup
+		sudo chown -hR $calling_user $HOME/.sleep
 		sudo chmod 755 $HOME/.sleep
 		sudo chmod +x $HOME/.sleep
-		sudo chown -R $calling_user $HOME/.wakeup
+		sudo chown -hR $calling_user $HOME/.wakeup
 		sudo chmod 755 $HOME/.wakeup
 		sudo chmod +x $HOME/.wakeup
 	fi
@@ -244,11 +244,8 @@ else
 fi
 
 # Enable notification permission for Script Editor
-open -a "Script Editor" $batteryfolder/dist/notification_permission.scpt
+open -a "Script Editor" $downloadfolder/dist/notification_permission.scpt
 
-empty="                                                                    "
-button_empty="${empty} Buy me a coffee ☕ ${empty}😀"
-button_empty_tw="${empty} 請我喝杯咖啡 ☕ ${empty}😀"
 notice="Installation completed.
 
 Script Editor is opened. Please manually click ▶️ in Script Editor for permission of notification,
@@ -269,20 +266,9 @@ notice_tw="安裝完成.
 "
 
 if $is_TW; then
-	#osascript <<- EOF
-	#	display notification "安裝完成" with title "BatteryOptimizer" sound name "Blow"
-	#	delay .5
-	#EOF
-	answer="$(osascript -e 'display dialog "'"$notice_tw \n如果您覺得這個小工具對您有幫助,點擊下方按鈕請我喝杯咖啡吧"'" buttons {"'"$button_empty_tw"'", "完成"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+	osascript -e 'display dialog "'"$notice_tw"'" buttons {"完成"} default button 1 with icon note with title "apple-juice"'
 else
-	#osascript <<- EOF
-	#	display notification "Installation completed" with title "BatteryOptimizer" sound name "Blow"
-	#	delay .5
-	#EOF
-	answer="$(osascript -e 'display dialog "'"$notice \nIf you feel this tool is helpful, you may click the button below and buy me a coffee."'" buttons {"'"$button_empty"'", "Finish"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
-fi
-if [[ $answer =~ "coffee" ]] || [[ $answer =~ "咖啡" ]]; then
-    open https://buymeacoffee.com/js4jiang5
+	osascript -e 'display dialog "'"$notice"'" buttons {"Done"} default button 1 with icon note with title "apple-juice"'
 fi
 
 # Remove tempfiles
@@ -290,4 +276,4 @@ fi
 #echo "[ Final ] Removing temp folder $tempfolder"
 # Note: tempfolder is cleaned up by trap on EXIT
 
-#echo -e "\n🎉 Battery tool installed. Type \"battery help\" for instructions.\n"
+#echo -e "\n🎉 apple-juice installed. Type \"apple-juice help\" for instructions.\n"
