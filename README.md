@@ -286,16 +286,16 @@ Select `Alerts`
 <br>
 
 ```
-                         ╔═══════════════════════════════════════════════════════════════╗
-                         ║                                                               ║
-                         ║                        DISCLAIMER                             ║
-                         ║                                                               ║
-                         ║   This software is provided as-is, without warranty of any    ║
-                         ║   kind. Use at your own risk. Battery management involves     ║
-                         ║   low-level system operations. The authors are not liable     ║
-                         ║   for any damage to your device. Back up before use.          ║
-                         ║                                                               ║
-                         ╚═══════════════════════════════════════════════════════════════╝
+                            ╔═══════════════════════════════════════════════════════════════╗
+                            ║                                                               ║
+                            ║                        DISCLAIMER                             ║
+                            ║                                                               ║
+                            ║   This software is provided as-is, without warranty of any    ║
+                            ║   kind. Use at your own risk. Battery management involves     ║
+                            ║   low-level system operations. The authors are not liable     ║
+                            ║   for any damage to your device. Back up before use.          ║
+                            ║                                                               ║
+                            ╚═══════════════════════════════════════════════════════════════╝
 ```
 
 <br>
