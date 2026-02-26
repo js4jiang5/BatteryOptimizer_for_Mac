@@ -128,6 +128,11 @@ chown $USER $binfolder/battery
 chmod 755 $binfolder/battery
 chmod u+x $binfolder/battery
 
+# Install/update CLI i18n catalog files used by /usr/local/bin/battery
+mkdir -p "$configfolder/i18n"
+cp -Rf "$batteryfolder/i18n/." "$configfolder/i18n/"
+chown -R "$USER" "$configfolder/i18n"
+
 battery_new=$(echo $(cat $binfolder/battery 2>/dev/null))
 battery_version_new=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")
 visudo_version_new=$(echo $(get_parameter "$battery_new" "BATTERY_VISUDO_VERSION") | tr -d \")

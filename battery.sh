@@ -48,102 +48,26 @@ if ((logsize > max_logsize_bytes)); then
 fi
 
 # CLI help message
-helpmessage="
-Battery CLI utility $BATTERY_CLI_VERSION
+# CLI help and i18n helpers are loaded from i18n/battery_i18n.sh
 
-Usage:
-
-  battery maintain PERCENTAGE[10-100,stop,suspend,recover] SAILING_TARGET[5-99]
-  - PERCENTAGE is battery level upper bound above which charging is stopped
-  - SAILING_TARGET is battery level lower bound below which charging is started. default value is PERCENTAGE-5 if not specified
-    Examples:
-    battery maintain 80 50    # maintain at 80% with sailing to 50%
-    battery maintain 80    # equivalent to battery maintain 80 75
-    battery maintain stop   # kill running battery maintain process, disable daemon, and enable charging. maintain will not run after reboot
-    battery maintain suspend   # suspend running battery maintain process and enable charging. maintain is automatically resumed after AC adapter is reconnected. used for temporary charging to 100% before travel
-    battery maintain recover   # recover battery maintain process
-
-  battery calibrate 
-    calibrate the battery by discharging it to 15%, then recharging it to 100%, and keeping it there for 1 hour, then discharge to maintained percentage level
-    if macbook lid is not open or AC adapter is not connected, a remind notification will be received.
-    calibration will be started automatically once macbook lid is open and AC adapter is connected
-    notification will be received when each step is completed or error occurs till the end of calibration
-    if you prefer the notifications to stay on until you dismiss it, setup notifications as follows
-        settings > notifications > applications > Script Editor > Choose "Alerts"
-    when external monitor is used, you must setup notifications as follows in order to receive notification successfully
-        system settings > notifications > check 'Allow notifications when mirroring or sharing the display'
-    eg: battery calibrate   # start calibration
-    eg: battery calibrate stop # stop calibration and resume maintain
-	
-  battery schedule
-    schedule periodic calibration at most 4 separate days per month, or specified weekday every 1~12 weeks, or specified one day every 1~3 month. default is one day per month on Day 1 at 9am.
-    Examples:
-    battery schedule    # calibrate on Day 1 at 9am
-    battery schedule day 1 8 15 22    # calibrate on Day 1, 8, 15, 22 at 9am.
-    battery schedule day 3 18 hour 13    # calibrate on Day 3, 18 at 13:00
-    battery schedule day 6 16 26 hour 18 minute 30    # calibrate on Day 6, 16, 26 at 18:30
-    battery schedule weekday 0 week_period 2 hour 21 minute 30 # calibrate on Sunday every 2 weeks at 21:30
-    battery schedule day 5 month_period 3 hour 21 minute 30 # calibrate every 3 month on Day 5 at 21:00
-    battery schedule disable    # disable periodic calibration
-    battery schedule enable    # enable periodic calibration
-    Restrictions:
-        1. at most 4 days per month are allowed
-        2. valid day range [1-28]
-        3. valid hour range [0-23]
-        4. valid minute range [0-59]
-        5. valid weekday range [0-6] 0:Sunday, 1:Monday, ...
-        6. valid week_period range [1-12]
-        7. valid month_period range [1-3]
-
-  battery charge LEVEL[1-100, stop]
-    charge the battery to a certain percentage, and disable charging when that percentage is reached
-    eg: battery charge 90
-    eg: battery charge stop # kill running battery charge process and stop charging
-
-  battery discharge LEVEL[1-100, stop]
-    block power input from the adapter until battery falls to this level
-    eg: battery discharge 90
-    eg: battery discharge stop # kill running battery discharge process and stop discharging
-
-  battery status
-    output battery SMC status, capacity, temperature, health, and cycle count 
-
-  battery dailylog
-    output daily log and show daily log store location
-
-  battery changelog
-    show the changelog of the latest version on Github
-
-  battery calibratelog
-    show calibrate history
-
-  battery logs LINES[integer, optional]
-    output logs of the battery CLI and GUI
-    eg: battery logs 100
-
-  battery language LANG[tw,us]
-    eg: battery language tw  # show status and notification in traditional Chinese if available
-    eg: battery language us  # show status and notification in English
-
-  battery ssd
-    show SSD disk0 status
-
-  battery ssdlog
-    show SSD disk0 dailylog
-
-  battery update
-    update the battery utility to the latest version
-
-  battery version
-    show current version
-
-  battery reinstall
-    reinstall the battery utility to the latest version (reruns the installation script)
-
-  battery uninstall
-    enable charging, remove the smc tool, and the battery script
-
-"
+# Load i18n catalog/helpers from installed config path or local repo path
+battery_i18n_loaded=false
+battery_i18n_candidates=(
+  "$configfolder/i18n/battery_i18n.sh"
+  "$(cd "$(dirname "$0")" 2>/dev/null && pwd)/i18n/battery_i18n.sh"
+)
+for battery_i18n_file in "${battery_i18n_candidates[@]}"; do
+  if [[ -f "$battery_i18n_file" ]]; then
+    # shellcheck disable=SC1090
+    source "$battery_i18n_file"
+    battery_i18n_loaded=true
+    break
+  fi
+done
+if ! $battery_i18n_loaded; then
+  echo "Error: battery i18n file not found. Expected at ~/.battery/i18n/battery_i18n.sh or next to battery.sh." >&2
+  exit 1
+fi
 
 # Visudo instructions
 visudoconfig="
@@ -221,15 +145,14 @@ function valid_action() {
     done
     
     if ! $action_valid; then
-        echo "Error: Unknown command '$action'"
-        # Find similar commands
-        echo "Did you mean one of these?"
+        echo "$(i18n_format invalid_action "$action")"
+        echo "$(i18n_text did_you_mean)"
         for valid_action in "${VALID_ACTIONS_USER[@]}"; do
             if [[ "$valid_action" == *"${action:0:3}"* ]]; then
                 echo "  - $valid_action"
             fi
         done
-        echo "Run 'battery' without parameters, for list of valid commands."
+        echo "$(i18n_text run_battery_help)"
         return 1
     fi
     
@@ -499,61 +422,18 @@ function show_schedule() {
 	schedule_txt="$(read_config calibrate_schedule)"
 	if [[ $schedule_enabled =~ "enabled" ]]; then
 		if [[ $schedule_txt ]]; then
-			if $is_TW; then
-				if ! [[ $schedule_txt =~ "week" ]]; then
-					if ! [[ $schedule_txt =~ "month" ]]; then
-						schedule_txt=${schedule_txt/"Schedule calibration on day"/"電池自動校正時程安排在"}
-						schedule_txt=${schedule_txt/"at"/"日"}
-					else
-						schedule_txt=${schedule_txt/"Schedule calibration on day"/"電池自動校正時程安排在"}
-						schedule_txt=${schedule_txt/"every "/"日每"}
-						schedule_txt=${schedule_txt/"month at"/"個月"}
-						schedule_txt=${schedule_txt%" starting"*}
-					fi
-				else
-					schedule_txt=${schedule_txt/"Schedule calibration on"/"電池自動校正時程安排在"}		
-					schedule_txt=${schedule_txt/"SUN"/"星期日"} 
-					schedule_txt=${schedule_txt/"MON"/"星期一"}
-					schedule_txt=${schedule_txt/"TUE"/"星期二"}
-					schedule_txt=${schedule_txt/"WED"/"星期三"}
-					schedule_txt=${schedule_txt/"THU"/"星期四"}
-					schedule_txt=${schedule_txt/"FRI"/"星期五"}
-					schedule_txt=${schedule_txt/"SAT"/"星期六"}
-					schedule_txt=${schedule_txt/"every "/"每"}
-					schedule_txt=${schedule_txt/"week at"/"週"}
-					schedule_txt=${schedule_txt%" starting"*}
-
-				fi
-				log "$schedule_txt 開始"
-				#check_next_calibration_date
-				log "下次校正日期是 `date -j -f "%s" "$(echo $(check_next_calibration_date) | awk '{print $NF}')" +%Y/%m/%d`"
-			
-			else
-				schedule_txt=${schedule_txt%" starting"*}
-				log "$schedule_txt"
-				log "Next calibration date is `date -j -f "%s" "$(echo $(check_next_calibration_date) | awk '{print $NF}')" +%Y/%m/%d`"
-			fi
+			log "$(i18n_schedule_display_text "$schedule_txt")"
+			next_calibration_date="$(date -j -f "%s" "$(echo $(check_next_calibration_date) | awk '{print $NF}')" +%Y/%m/%d)"
+			i18n_log schedule_next_date "$next_calibration_date"
 		else
-			if $is_TW; then
-				log "您尚未設定電池自動校正時程"
-			else
-				log "You haven't scheduled calibration yet"
-			fi
+			i18n_log schedule_not_set
 		fi
 	else
 		if [[ $schedule_txt ]]; then
-			if $is_TW; then
-				log "您的電池自動校正時程已暫停，要恢復請執行"
-			else
-				log "Your calibration schedule is disabled. Enable it by"
-			fi
+			i18n_log schedule_disabled_enable_by
 			log "battery schedule enable"
 		else
-			if $is_TW; then
-				log "您尚未設定電池自動校正時程"
-			else
-				log "You haven't scheduled calibration yet"
-			fi
+			i18n_log schedule_not_set
 		fi
 	fi
 }
@@ -1189,32 +1069,18 @@ function print_calibrate_log() {
 ## Actions
 ## ###############
 
+# Resolve CLI language before help/validation so shared errors can be localized
+resolve_cli_language
+
 # Help message
 if [ -z "$action" ] || [[ "$action" == "help" ]]; then
-	echo -e "$helpmessage"
+	show_help
 	exit 0
 fi
 
 # Validate action
 if ! valid_action "$action"; then
     exit 1
-fi
-# check language
-lang=$(defaults read -g AppleLocale)
-
-language=$(read_config language)
-if [[ $language ]]; then
-	if [[ "$language" == "tw" ]]; then
-		is_TW=true
-	else
-		is_TW=false
-	fi
-else
-	if [[ $lang =~ "zh_TW" ]]; then
-		is_TW=true
-	else
-		is_TW=false
-	fi
 fi
 
 # Visudo message
@@ -1226,7 +1092,7 @@ if [[ "$action" == "visudo" ]]; then
 	fi
 
 	# Set visudo tempfile ownership to current user
-	log "Setting visudo file permissions to $setting"
+	i18n_log visudo_set_owner "$setting"
 	sudo chown -R $setting $configfolder
 
 	# Write the visudo file to a tempfile
@@ -1237,7 +1103,7 @@ if [[ "$action" == "visudo" ]]; then
 	# If the visudo file is the same (no error, exit code 0), set the permissions just
 	if sudo cmp $visudo_file $visudo_tmpfile &>/dev/null; then
 
-		echo "The existing battery visudo file is what it should be for version $BATTERY_CLI_VERSION"
+			i18n_echo visudo_already_current "$BATTERY_CLI_VERSION"
 
 		# Check if file permissions are correct, if not, set them
 		current_visudo_file_permissions=$(stat -f "%Lp" $visudo_file)
@@ -1268,10 +1134,10 @@ if [[ "$action" == "visudo" ]]; then
 		# Set correct permissions on visudo file
 		sudo chmod 440 $visudo_file
 
-		echo "Visudo file updated successfully"
+			i18n_echo visudo_updated_success
 
 	else
-		echo "Error validating visudo file, this should never happen:"
+			i18n_echo visudo_validate_error
 		sudo visudo -c -f $visudo_tmpfile
 	fi
 
@@ -1281,9 +1147,9 @@ fi
 
 # Reinstall helper
 if [[ "$action" == "reinstall" ]]; then
-	echo "This will run curl -sS $github_link/setup.sh   | bash"
+	i18n_echo reinstall_preview "$github_link"
 	if [[ ! "$setting" == "silent" ]]; then
-		echo "Press any key to continue"
+		i18n_echo press_any_key_continue
 		read
 	fi
 	curl -sS $github_link/setup.sh | bash
@@ -1304,39 +1170,36 @@ if [[ "$action" == "update" ]]; then
 	battery_new=$(echo $(curl -sSL "$github_link/battery.sh"))
 	battery_new_version=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")
 		
-	if [[ $battery_new == "404: Not Found" ]]; then
-		log "Error: the specified update file is not available"
-		exit 1
-	fi
+		if [[ $battery_new == "404: Not Found" ]]; then
+			i18n_log update_specified_file_missing
+			exit 1
+		fi
 
 	visudo_new_version=$(echo $(get_parameter "$battery_new" "BATTERY_VISUDO_VERSION") | tr -d \")
 	if [[ $battery_new_version == $BATTERY_CLI_VERSION ]] && [[ $visudo_new_version == $BATTERY_VISUDO_VERSION ]] && [[ "$setting" != "force" ]]; then
-		if $is_TW; then
-			osascript -e 'display dialog "'"$BATTERY_CLI_VERSION 已是最新版，不需要更新"'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
-		else
-			osascript -e 'display dialog "'"Your version $BATTERY_CLI_VERSION is already the latest. No need to update."'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
-		fi		
+		dialog_msg=$(i18n_format update_dialog_latest "$BATTERY_CLI_VERSION")
+		dialog_ok=$(i18n_text dialog_button_ok)
+		dialog_title=$(i18n_text title_battery_optimizer_mac)
+		osascript -e 'display dialog "'"$dialog_msg"'" buttons {"'"$dialog_ok"'"} default button 1 giving up after 60 with icon note with title "'"$dialog_title"'"' >> /dev/null
 	else
 		button_empty="                                                                                                                                                    "
 		if $is_TW; then
 			changelog=$(get_changelog CHANGELOG_TW)
 			battery_new_version=$(get_version CHANGELOG_TW)
-			osascript -e 'display dialog "'"$battery_new_version 更新內容如下\n\n$changelog"'" buttons {"'"$button_empty"'", "繼續"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
 		else
 			changelog=$(get_changelog CHANGELOG)
 			battery_new_version=$(get_version CHANGELOG)
-			osascript -e 'display dialog "'"$battery_new_version changes include\n\n$changelog"'" buttons {"'"$button_empty"'", "Continue"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
 		fi
-		if $is_TW; then
-			answer="$(osascript -e 'display dialog "'"你現在要更新到$battery_new_version 嗎?"'" buttons {"立即更新", "跳過此版本"} default button 1 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
-			if [[ $answer == "立即更新" ]]; then
-				answer="Yes"
-			fi	
-		else
-			answer="$(osascript -e 'display dialog "'"Do you want to update to version $battery_new_version now?"'" buttons {"Yes", "No"} default button 1 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
-		fi
+		dialog_msg=$(i18n_format update_dialog_changelog "$battery_new_version" "$changelog")
+		dialog_continue=$(i18n_text dialog_button_continue)
+		dialog_title=$(i18n_text title_battery_optimizer_mac)
+		osascript -e 'display dialog "'"$dialog_msg"'" buttons {"'"$button_empty"'", "'"$dialog_continue"'"} default button 2 with icon note with title "'"$dialog_title"'"' >> /dev/null
+		update_yes_button=$(i18n_text dialog_button_update_now)
+		update_no_button=$(i18n_text dialog_button_skip_version)
+		dialog_msg=$(i18n_format update_dialog_confirm "$battery_new_version")
+		answer="$(osascript -e 'display dialog "'"$dialog_msg"'" buttons {"'"$update_yes_button"'", "'"$update_no_button"'"} default button 1 with icon note with title "'"$dialog_title"'"' -e 'button returned of result')"
 		
-		if [[ $answer == "Yes" ]]; then
+		if [[ $answer == "$update_yes_button" ]]; then
 			curl -sS "$github_link/update.sh" | bash
 		fi
 	fi
@@ -1347,8 +1210,8 @@ fi
 if [[ "$action" == "uninstall" ]]; then
 
 	if [[ ! "$setting" == "silent" ]]; then
-		echo "This will enable charging, and remove the smc tool and battery script"
-		echo "Press any key to continue"
+		i18n_echo uninstall_preview
+		i18n_echo press_any_key_continue
 		read
 	fi
 	enable_charging
@@ -1379,13 +1242,13 @@ if [[ "$action" == "charge" ]]; then
 	done
 
 	if ! valid_percentage "$setting"; then
-		if [[ "$setting" == "stop" ]]; then
-			exit 0
-		else
-			log "Error: $setting is not a valid setting for battery charge. Please use a number between 0 and 100"
-			exit 1
+			if [[ "$setting" == "stop" ]]; then
+				exit 0
+			else
+				i18n_log charge_invalid_setting "$setting"
+				exit 1
+			fi
 		fi
-	fi
 
 	# kill running discharge processes
 	pids=$(pgrep -f battery)
@@ -1399,11 +1262,11 @@ if [[ "$action" == "charge" ]]; then
 	original_maintain_status=$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $2}')
 	$battery_binary maintain suspend
 
-	# Start charging
-	battery_percentage=$(get_battery_percentage)
-	battery_pre=$battery_percentage
-	log "Charging to $setting% from $battery_percentage%"
-	enable_charging # also disables discharging
+		# Start charging
+		battery_percentage=$(get_battery_percentage)
+		battery_pre=$battery_percentage
+		i18n_log charge_start "$setting" "$battery_percentage"
+		enable_charging # also disables discharging
 
 	change_magsafe_led_color "orange" # LED orange for charging
 
@@ -1413,10 +1276,10 @@ if [[ "$action" == "charge" ]]; then
 	#while [[ "$battery_percentage" -lt "$setting" ]]; do
 	while (( $(echo "$(get_accurate_battery_percentage) < $setting"|bc -l) )); do
 
-		if [[ $battery_percentage -ne $battery_pre ]]; then # print only when there is change
-			log "Battery at $battery_percentage% (target $setting%)"
-			battery_pre=$battery_percentage
-		fi
+			if [[ $battery_percentage -ne $battery_pre ]]; then # print only when there is change
+				i18n_log charge_progress "$battery_percentage" "$setting"
+				battery_pre=$battery_percentage
+			fi
 		
 		if [[ "$battery_percentage" -ge "$((setting - 3))" ]]; then
 			if [[ $cnt_error -gt 36 ]]; then
@@ -1448,25 +1311,17 @@ if [[ "$action" == "charge" ]]; then
 	sleep 5
 	change_magsafe_led_color "auto"
 	
-	if ! $charge_error; then
-		if $is_TW; then
-			log "電池已充電至 $battery_percentage%"
-		else
-			log "Charging completed at $battery_percentage%"
-		fi
+		if ! $charge_error; then
+			i18n_log charge_completed "$battery_percentage"
 
 		if [[ $battery_percentage -ge $(get_maintain_percentage) ]] && [[ "$(calibrate_is_running)" == "0" ]] && [[ "$original_maintain_status" == "active" ]]; then # if charge level is higher than maintain percentage, recover maintain won't cause discharge
 			$battery_binary maintain recover
 		fi
 		exit 0
-	else
-		if $is_TW; then
-			log "錯誤: 電池充電異常"
 		else
-			log "Error: battery charge abnormal"
-		fi
-		if [[ "$(calibrate_is_running)" == "0" ]] && [[ "$original_maintain_status" == "active" ]]; then # if discharge level is higher than maintain percentage, recover maintain won't cause charge
-			$battery_binary maintain recover
+			i18n_log charge_abnormal
+			if [[ "$(calibrate_is_running)" == "0" ]] && [[ "$original_maintain_status" == "active" ]]; then # if discharge level is higher than maintain percentage, recover maintain won't cause charge
+				$battery_binary maintain recover
 		fi
 		exit 1
 	fi
@@ -1488,18 +1343,18 @@ if [[ "$action" == "discharge" ]]; then
 	done
 
 	if ! valid_percentage "$setting"; then
-		if [[ "$setting" == "stop" ]]; then
-			exit 0
-		else
-			log "Error: $setting is not a valid setting for battery discharge. Please use a number between 0 and 100"
+			if [[ "$setting" == "stop" ]]; then
+				exit 0
+			else
+				i18n_log discharge_invalid_setting "$setting"
+				exit 1
+			fi
+		fi
+
+		if [[ $(lid_closed) == "Yes" ]]; then
+			i18n_log discharge_lid_open_required
 			exit 1
 		fi
-	fi
-
-	if [[ $(lid_closed) == "Yes" ]]; then
-		log "Error: macbook lid must be open before discharge"
-		exit 1
-	fi
 
 	# kill running charge processes
 	pids=$(pgrep -f battery)
@@ -1513,11 +1368,11 @@ if [[ "$action" == "discharge" ]]; then
 	original_maintain_status=$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $2}')
 	$battery_binary maintain suspend
 
-	# Start discharging
-	battery_percentage=$(get_battery_percentage)
-	battery_pre=$battery_percentage
-	log "Discharging to $setting% from $battery_percentage%"
-	enable_discharging
+		# Start discharging
+		battery_percentage=$(get_battery_percentage)
+		battery_pre=$battery_percentage
+		i18n_log discharge_start "$setting" "$battery_percentage"
+		enable_discharging
 
 	change_magsafe_led_color "none" # LED none for discharging
 
@@ -1527,10 +1382,10 @@ if [[ "$action" == "discharge" ]]; then
 	#while [[ "$battery_percentage" -gt "$setting" ]]; do
 	while (( $(echo "$(get_accurate_battery_percentage) > $setting"|bc -l) )); do
 
-		if [[ $battery_percentage -ne $battery_pre ]]; then # print only when there is change
-			log "Battery at $battery_percentage% (target $setting%)"
-			battery_pre=$battery_percentage
-		fi
+			if [[ $battery_percentage -ne $battery_pre ]]; then # print only when there is change
+				i18n_log discharge_progress "$battery_percentage" "$setting"
+				battery_pre=$battery_percentage
+			fi
 		caffeinate -is sleep 60 &
 		wait $!
 		battery_percentage=$(get_battery_percentage)
@@ -1551,25 +1406,17 @@ if [[ "$action" == "discharge" ]]; then
 	sleep 5
 	change_magsafe_led_color "auto"
 	
-	if ! $discharge_error; then
-		if $is_TW; then
-			log "電池已放電至 $battery_percentage%"
-		else
-			log "Discharging completed at $battery_percentage%"
-		fi
+		if ! $discharge_error; then
+			i18n_log discharge_completed "$battery_percentage"
 
 		if [[ $battery_percentage -ge $(get_maintain_percentage) ]] && [[ "$(calibrate_is_running)" == "0" ]] && [[ "$original_maintain_status" == "active" ]]; then # if discharge level is higher than maintain percentage, recover maintain won't cause charge
 			$battery_binary maintain recover
 		fi
 		exit 0
-	else
-		if $is_TW; then
-			log "錯誤: 電池放電異常"
 		else
-			log "Error: battery discharge abnormal"
-		fi
-		if [[ "$(calibrate_is_running)" == "0" ]] && [[ "$original_maintain_status" == "active" ]]; then # if discharge level is higher than maintain percentage, recover maintain won't cause charge
-			$battery_binary maintain recover
+			i18n_log discharge_abnormal
+			if [[ "$(calibrate_is_running)" == "0" ]] && [[ "$original_maintain_status" == "active" ]]; then # if discharge level is higher than maintain percentage, recover maintain won't cause charge
+				$battery_binary maintain recover
 		fi
 		exit 1
 	fi
@@ -1588,55 +1435,55 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 		# Before doing anything, log out environment details as a debugging trail
 		log "Debug trail. User: $USER, config folder: $configfolder, logfile: $logfile, file called with 1: $1, 2: $2"
 
-		maintain_percentage=$(read_config maintain_percentage)
-		if [[ $maintain_percentage ]]; then
-			log "Recovering maintenance percentage $maintain_percentage"
-			setting=$(echo $maintain_percentage | awk '{print $1}')
-			subsetting=$(echo $maintain_percentage | awk '{print $2}')
-		else
-			log "No setting to recover, exiting"
-			exit 0
+			maintain_percentage=$(read_config maintain_percentage)
+			if [[ $maintain_percentage ]]; then
+				i18n_log maintain_recovering_percentage "$maintain_percentage"
+				setting=$(echo $maintain_percentage | awk '{print $1}')
+				subsetting=$(echo $maintain_percentage | awk '{print $2}')
+			else
+				i18n_log maintain_no_setting_to_recover
+				exit 0
+			fi
 		fi
-	fi
 
-	if ! valid_percentage "$setting"; then
-		log "Error: $setting is not a valid setting for battery maintain. Please use a number between 0 and 100"
-		exit 1
-	fi
+		if ! valid_percentage "$setting"; then
+			i18n_log maintain_invalid_setting "$setting"
+			exit 1
+		fi
 
 	if ! valid_percentage "$subsetting"; then
 		lower_limit=$((setting-5))
 		if [ $lower_limit -lt 0 ]; then
 			lower_limit=0
 		fi
-	else
-		if [ $setting -le $subsetting ]; then
-			log "Error: sailing target $subsetting larger than or equal to maintain level $setting is not allowed"
-			exit
+		else
+			if [ $setting -le $subsetting ]; then
+				i18n_log maintain_invalid_sailing_target "$subsetting" "$setting"
+				exit
+			fi
+			lower_limit=$subsetting
 		fi
-		lower_limit=$subsetting
-	fi
 
-	log "Starting battery maintenance at $setting% with sailing to $lower_limit% $thirdsetting"
+		i18n_log maintain_start "$setting" "$lower_limit" "$thirdsetting"
 
 	# Check if the user requested that the battery maintenance first discharge to the desired level
-	if [[ "$subsetting" == "--force-discharge" ]] || [[ "$thirdsetting" == "--force-discharge" ]]; then
-		if [[ $(lid_closed) == "Yes" ]]; then
-			log "Error: macbook lid must be open before discharge"
-			exit 1
+		if [[ "$subsetting" == "--force-discharge" ]] || [[ "$thirdsetting" == "--force-discharge" ]]; then
+			if [[ $(lid_closed) == "Yes" ]]; then
+				i18n_log maintain_lid_open_required
+				exit 1
+			fi
+			# Before we start maintaining the battery level, first discharge to the target level
+			i18n_log maintain_trigger_force_discharge "$setting"
+			$battery_binary discharge "$setting"
+			i18n_log maintain_force_discharge_done
+		else
+			i18n_log maintain_force_discharge_skipped
 		fi
-		# Before we start maintaining the battery level, first discharge to the target level
-		log "Triggering discharge to $setting before enabling charging limiter"
-		$battery_binary discharge "$setting"
-		log "Discharge pre battery maintenance complete, continuing to battery maintenance loop"
-	else
-		log "Not triggering discharge as it is not requested"
-	fi
 
 	# Start charging
 	battery_percentage=$(get_battery_percentage)
 
-	log "Charging to and maintaining at $setting% from $battery_percentage%"
+		i18n_log maintain_charging_and_maintaining "$setting" "$battery_percentage"
 
 	# Store pid of maintenance process
 	echo $$ >$pidfile
@@ -1650,10 +1497,10 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 	daily_log_timeout=$((now + (24*60*60))) # start daily log one day after running this program
 	ac_connection=$(get_charger_connection)
 	pre_ac_connection=$ac_connection
-	sleep_duration=60
-	if ! test -f $daily_log; then
-    	echo "Time Capacity Voltage Temperature Health Cycle" | awk '{printf "%-10s, %9s, %9s, %12s, %9s, %9s\n", $1, $2, $3, $4, $5, $6}' > $daily_log
-	fi
+		sleep_duration=60
+		if ! test -f $daily_log; then
+	    	echo "$(i18n_text daily_log_table_header)" | awk '{printf "%-10s, %9s, %9s, %12s, %9s, %9s\n", $1, $2, $3, $4, $5, $6}' > $daily_log
+		fi
 	check_update_timeout=$((now + (3*24*60*60))) # first check update 3 days later
 	
 	informed_version=$(read_config informed_version)
@@ -1695,11 +1542,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 			if [[ $now_date != $daily_last ]]; then
 				logd "$(get_accurate_battery_percentage)% $(get_voltage)V $(get_battery_temperature)°C $(get_battery_health)% $(get_cycle)" | awk '{printf "%-10s, %9s, %9s, %13s, %9s, %9s\n", $1, $2, $3, $4, $5, $6}' >> $daily_log
 				#if [ "$(date +%d)" == "01" ]; then # monthly notification
-				if $is_TW; then
-					osascript -e 'display notification "'"電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\n健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"'" with title "Battery" sound name "Blow"'
-				else
-					osascript -e 'display notification "'"Battery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\nHealth $(get_battery_health)%, Cycle $(get_cycle)"'" with title "Battery" sound name "Blow"'
-				fi
+					i18n_notify title_battery notify_battery_monthly_summary "$(get_accurate_battery_percentage)" "$(get_voltage)" "$(get_battery_temperature)" "$(get_battery_health)" "$(get_cycle)"
 				#fi
 
 				# SSD log
@@ -1708,10 +1551,10 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 				firmware_support=$(echo $ssd_result | awk '{print $2}')
 				smartinfo=$(echo $ssd_result | awk '{print $3, $4, $5, $6, $7, $8, $9, $10, $11}')
 				if [[ $has_smartctl == true ]]; then
-					if [[ $firmware_support == true ]]; then # run SSD log only when firmware support
-						if ! test -f $ssd_log; then
-							echo "Date Result Data_Read Data_Written Used Power_Cycles Power_Hours Unsafe_Shutdowns Temperature Error" | awk '{printf "%-10s, %6s, %11s, %12s, %5s, %12s, %11s, %16s, %11s, %5s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}' > $ssd_log
-						fi
+						if [[ $firmware_support == true ]]; then # run SSD log only when firmware support
+							if ! test -f $ssd_log; then
+								echo "$(i18n_text ssd_log_table_header)" | awk '{printf "%-10s, %6s, %11s, %12s, %5s, %12s, %11s, %16s, %11s, %5s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}' > $ssd_log
+							fi
 						logd "$smartinfo" | awk '{printf "%-10s, %6s, %11s, %12s, %5s, %12s, %11s, %16s, %12s, %5s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}' >> $ssd_log
 					fi
 				fi
@@ -1727,21 +1570,13 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 				# remind if tomorrow is calibration date
 				if [[ $tomorrow_day -eq $schedule_day ]] && [[ $diff_sec -lt $((48*60*60)) ]]; then
 					schedule_time="$(echo `date -j -f "%s" $schedule_sec "+%Y/%m/%d %H:%M"`)"
-					if $is_TW; then
-						osascript -e 'display notification "'"提醒您，明天 ($schedule_time) 將進行電池校正"'" with title "Battery" sound name "Blow"'
-					else
-						osascript -e 'display notification "'"Remind you, tomorrow ($schedule_time) is battery calibration day."'" with title "Battery" sound name "Blow"'
-					fi
+						i18n_notify title_battery notify_calibration_tomorrow "$schedule_time"
 				fi
 
 				# remind if today is calibration date
 				if [[ $now_day -eq $schedule_day ]] && [[ $diff_sec -lt $((24*60*60)) ]]; then
 					schedule_time="$(echo `date -j -f "%s" $schedule_sec "+%Y/%m/%d %H:%M"`)"
-					if $is_TW; then
-						osascript -e 'display notification "'"提醒您，今天 ($schedule_time) 將進行電池校正"'" with title "Battery" sound name "Blow"'
-					else
-						osascript -e 'display notification "'"Remind you, today ($schedule_time) is battery calibration day."'" with title "Battery" sound name "Blow"'
-					fi
+						i18n_notify title_battery notify_calibration_today "$schedule_time"
 				fi
 			fi
 		fi
@@ -1760,11 +1595,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 			new_version=$(echo ${new_version/"BATTERY_CLI_VERSION="} | tr -d \")
 			
 			if [[ -z $updated ]] && [[ $new_version ]]; then
-				if $is_TW; then
-					osascript -e 'display notification "'"有新版$new_version, 請在 Terminal 下輸入 \n\\\"battery update\\\" 更新"'" with title "BatteryOptimizer" sound name "Blow"'
-				else
-					osascript -e 'display notification "'"New version $new_version available \nUpdate with command \\\"battery update\\\""'" with title "BatteryOptimizer" sound name "Blow"'
-				fi
+					i18n_notify title_battery_optimizer notify_update_available "$new_version"
 				informed_version=$new_version
 				write_config informed_version $informed_version
 			fi
@@ -1774,7 +1605,7 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 		# Turn off AlDente if it is running to avoid conflict
 		aldente_is_running=$(pgrep -f aldente)
 		if [[ $aldente_is_running ]]; then
-			log "AlDente is running. Turn it off"
+			i18n_log aldente_conflict_detected
 			osascript -e 'quit app "aldente"'
 		fi
 
@@ -1786,13 +1617,13 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 			smc_charging_status=$(get_smc_charging_status)
 			if [[ "$battery_percentage" -ge "$setting" ]] && [[ "$smc_charging_status" == "enabled" ]]; then
 
-				log "Stop charge above $setting"
+				i18n_log maintain_stop_charge_above "$setting"
 				disable_charging
 				sleep_duration=60
 
 			elif [[ "$battery_percentage" -lt "$lower_limit" ]] && [[ "$smc_charging_status" == "disabled" ]]; then
 
-				log "Charge below $lower_limit"
+				i18n_log maintain_start_charge_below "$lower_limit"
 				enable_charging
 				sleep_duration=5 # reduce monitoring period to 5 seconds during charging
 			fi
@@ -1808,11 +1639,11 @@ if [[ "$action" == "maintain_synchronous" ]]; then
 
 			# check if calibrate is running to decide if resume
 			if [[ "$(calibrate_is_running)" == "0" ]]; then # if not running
-				if [[ "$ac_connection" == "1" ]] && [[ "$pre_ac_connection" == "0" ]]; then # resume maintain to active when AC adapter is reconnected
-					maintain_status="active"
-					log "Battery maintain is recovered because AC adapter is reconnected"
-					osascript -e 'display notification "Battery maintain is recovered" with title "Battery" sound name "Blow"'
-				fi
+					if [[ "$ac_connection" == "1" ]] && [[ "$pre_ac_connection" == "0" ]]; then # resume maintain to active when AC adapter is reconnected
+						maintain_status="active"
+						i18n_log maintain_recovered_ac_reconnected
+						i18n_notify title_battery maintain_recovered
+					fi
 			fi
 			pre_ac_connection=$ac_connection
 		fi
@@ -1844,7 +1675,7 @@ if [[ "$action" == "maintain" ]]; then
 				sleep 1
 
 				# waiting for ack from $pid
-				logn "Recover in 5 secs, wait ."
+					i18n_logn maintain_recover_wait
 				ack_received=0
 				trap confirm_SIG SIGUSR1
 				kill -s USR1 $pid # inform running battery process to suspend
@@ -1853,20 +1684,20 @@ if [[ "$action" == "maintain" ]]; then
 					sleep 1
 				done
 				if [ "$ack_received" == "1" ]; then
-					logLF "Battery maintain is recovered"
-					if [ "$notify" == "1" ]; then
-						osascript -e 'display notification "Battery maintain is recovered" with title "Battery" sound name "Blow"'
-					fi
+						i18n_logLF maintain_recovered
+						if [ "$notify" == "1" ]; then
+							i18n_notify title_battery maintain_recovered
+						fi
 					exit 0
 				else
-					logLF "Error: Battery maintain recover failed"
-					if [ "$notify" == "1" ]; then
-						osascript -e 'display notification "Error: Battery maintain recover failed" with title "Battery" sound name "Blow"'
-					fi
+						i18n_logLF maintain_recover_failed
+						if [ "$notify" == "1" ]; then
+							i18n_notify title_battery maintain_recover_failed
+						fi
 					exit 1
 				fi
 			else
-				log "Battery maintain is already running"
+					i18n_log maintain_already_running
 			fi
 			exit 0
 		fi
@@ -1874,7 +1705,7 @@ if [[ "$action" == "maintain" ]]; then
 
 	if [[ "$setting" == "suspend" ]]; then
 		if [[ "$(maintain_is_running)" == "0" ]]; then # maintain is not running
-			log "Battery maintain is not running"
+				i18n_log maintain_not_running
 			exit 0
 		else
 			maintain_status=$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $2}')
@@ -1888,7 +1719,7 @@ if [[ "$action" == "maintain" ]]; then
 				sleep 1
 
 				# waiting for ack from $pid
-				logn "Suspend in 5 secs, wait ."
+					i18n_logn maintain_suspend_wait
 				ack_received=0
 				trap confirm_SIG SIGUSR1
 				kill -s USR1 $pid # inform running battery process to suspend
@@ -1897,22 +1728,22 @@ if [[ "$action" == "maintain" ]]; then
 					sleep 1
 				done
 				if [ "$ack_received" == "1" ]; then
-					logLF "Battery maintain is suspended"
-					if [ "$notify" == "1" ]; then
-						osascript -e 'display notification "Battery maintain is suspended" with title "Battery" sound name "Blow"'
-					fi
+						i18n_logLF maintain_suspended
+						if [ "$notify" == "1" ]; then
+							i18n_notify title_battery maintain_suspended
+						fi
 					exit 0
 				else
-					logLF "Error: Battery maintain suspend failed"
-					if [ "$notify" == "1" ]; then
-						osascript -e 'display notification "Error: Battery maintain suspend failed" with title "Battery" sound name "Blow"'
-					fi
+						i18n_logLF maintain_suspend_failed
+						if [ "$notify" == "1" ]; then
+							i18n_notify title_battery maintain_suspend_failed
+						fi
 					exit 1
 				fi
 			else
-				if [ "$notify" == "1" ]; then
-					osascript -e 'display notification "Battery maintain is suspended" with title "Battery" sound name "Blow"'
-				fi
+					if [ "$notify" == "1" ]; then
+						i18n_notify title_battery maintain_suspended
+					fi
 				exit 0
 			fi
 		fi
@@ -1940,17 +1771,17 @@ if [[ "$action" == "maintain" ]]; then
 		pid=$(cat "$calibrate_pidfile" 2>/dev/null)
 		kill $pid &>/dev/null
 		rm $calibrate_pidfile 2>/dev/null
-		log "🚨 Calibration process have been stopped"
+			i18n_log maintain_calibration_process_stopped
 	fi
 	
 	# Check if setting is value between 0 and 100
 	if ! valid_percentage "$setting"; then
 		# log "Called with $setting $action"
 		# If non 0-100 setting is not a special keyword, exit with an error.
-		if ! { [[ "$setting" == "stop" ]] || [[ "$setting" == "recover" ]]; }; then
-			log "Error: $setting is not a valid setting for battery maintain. Please use a number between 0 and 100, or an action keyword like 'stop' or 'recover'."
-			exit 1
-		fi
+			if ! { [[ "$setting" == "stop" ]] || [[ "$setting" == "recover" ]]; }; then
+				i18n_log maintain_invalid_setting_with_keywords "$setting"
+				exit 1
+			fi
 	fi
 
 	# Start maintenance script
@@ -1982,15 +1813,15 @@ if [[ "$action" == "maintain" ]]; then
 		if [[ $(get_battery_percentage) -gt $setting ]]; then # if current battery percentage is higher than maintain percentage
 			if ! [[ $(ps aux | grep $PPID) =~ "setup.sh" ]] && ! [[ $(ps aux | grep $PPID) =~ "update.sh" ]]; then 
 				# Ask user if discharging right now unless this action is invoked by setup.sh
-				if $is_TW; then
-					answer="$(osascript -e 'display dialog "'"你要現在就放電到 $setting% 嗎?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
-				else
-					answer="$(osascript -e 'display dialog "'"Do you want to discharge battery to $setting% now?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
-				fi
-				if [[ "$answer" == "Yes" ]] || [ -z $answer ]; then
-					log "Start discharging to $setting%"
-					$battery_binary discharge $setting 
-					$battery_binary maintain recover
+				dialog_yes=$(i18n_text dialog_button_yes)
+				dialog_no=$(i18n_text dialog_button_no)
+				dialog_title=$(i18n_text title_battery_optimizer_mac)
+				dialog_msg=$(i18n_format maintain_prompt_discharge_now "$setting")
+				answer="$(osascript -e 'display dialog "'"$dialog_msg"'" buttons {"'"$dialog_yes"'", "'"$dialog_no"'"} default button 1 giving up after 10 with icon note with title "'"$dialog_title"'"' -e 'button returned of result')"
+					if [[ "$answer" == "$dialog_yes" ]] || [ -z $answer ]; then
+						i18n_log maintain_start_discharge_now "$setting"
+						$battery_binary discharge $setting 
+						$battery_binary maintain recover
 				fi
 			fi
 		fi
@@ -2010,7 +1841,7 @@ if [[ "$action" == "calibrate" ]]; then
 		now=`date +%s`
 		calibrate_next=$(read_config calibrate_next)
 		if (( $((now - $calibrate_next)) < -30 || $((now - $calibrate_next)) > 30 )); then # if difference with scheduled calibrate time is within +-30 seconds
-			log "Skip this calibration"
+			i18n_log calibrate_skip_run
 			exit 0
 		fi
 	fi
@@ -2022,7 +1853,7 @@ if [[ "$action" == "calibrate" ]]; then
 	fi
 
 	if [[ "$setting" == "stop" ]]; then
-		log "Killing running calibration daemon" >> $logfile
+		i18n_log calibrate_stop_running >> $logfile
 		exit 0
 	fi
 
@@ -2049,7 +1880,7 @@ if [[ "$action" == "calibrate" ]]; then
 	done
 
 	if ! test -f $calibrate_log; then
-		echo "Time Completed Health_before Health_after Duration/Error" | awk '{printf "%-16s, %9s, %13s, %12s, %-s\n", $1, $2, $3, $4, $5}' > $calibrate_log
+		echo "$(i18n_text calibrate_log_table_header)" | awk '{printf "%-16s, %9s, %13s, %12s, %-s\n", $1, $2, $3, $4, $5}' > $calibrate_log
 	fi
 
 	calibrate_time=`date -j -f "%s" $(date +%s) "+%Y/%m/%d %H:%M"`
@@ -2057,15 +1888,11 @@ if [[ "$action" == "calibrate" ]]; then
 
 	# abort calibration if battery maintain is not running
 	if [ "$(maintain_is_running)" == "0" ]; then
-		if $is_TW; then
-			osascript -e 'display notification "校正前必須先執行 battery maintain" with title "電池校正錯誤" sound name "Blow"'
-		else
-			osascript -e 'display notification "Battery maintain need to run before calibration" with title "Battery Calibration Error" sound name "Blow"'
-		fi
-		log "Calibration Error: Battery maintain need to run before calibration"
+		i18n_notify title_calibration_error calibrate_require_maintain_before
+		i18n_log calibrate_error_require_maintain_before_log
 
 		print_calibrate_log $calibrate_time No $health_before %
-		echo "Battery maintain need to run before calibration" >> $calibrate_log
+		i18n_echo calibrate_require_maintain_before >> $calibrate_log
 
 		exit 1
 	fi
@@ -2073,13 +1900,9 @@ if [[ "$action" == "calibrate" ]]; then
 	# if lid is closed or AC is not connected, notify the user and wait until lid is open with AC or 1 day timeout
 	if [[ $(lid_closed) == "Yes" ]] || [[ $(get_charger_connection) == "0" ]]; then
 		ha_webhook "open_lid_remind"
-		if $is_TW; then
-			osascript -e 'display notification "準備進行電池校正, 您打開筆電上蓋並接上電源後將立刻開始" with title "電池校正" sound name "Blow"'
-		else
-			osascript -e 'display notification "Battery calibration will start immediately after you open macbook lid and connect AC power" with title "Battery Calibration" sound name "Blow"'
-		fi
+		i18n_notify title_calibration calibrate_wait_open_lid_ac_notify
 		
-		log "Calibration: Please open macbook lid and connect AC to start calibration"
+		i18n_log calibrate_wait_open_lid_ac_log
 		now=$(date +%s)
 		lid_open_timeout=$(($now + 24*60*60))
 		while [[ $(date +%s)  -lt $lid_open_timeout ]]; do
@@ -2094,27 +1917,19 @@ if [[ "$action" == "calibrate" ]]; then
 	if [[ $(lid_closed) == "Yes" ]] || [[ $(get_charger_connection) == "0" ]]; then # lid is still closed, terminate the calibration
 		ha_webhook "err_lid_closed"
 		if [[ $(lid_closed) == "Yes" ]]; then
-			if $is_TW; then
-				osascript -e 'display notification "筆電上蓋沒打開" with title "電池校正錯誤" sound name "Blow"'
-			else
-				osascript -e 'display notification "Macbook lid is not open!" with title "Battery Calibration Error" sound name "Blow"'
-			fi
-			log "Calibration Error: Macbook lid is not open!"
+			i18n_notify title_calibration_error calibrate_lid_not_open
+			i18n_log calibrate_error_lid_not_open_log
 
 			print_calibrate_log $calibrate_time No $health_before %
-			echo "Macbook lid is not open!" >> $calibrate_log
+			i18n_echo calibrate_lid_not_open >> $calibrate_log
 			
 		fi
 		if [[ $(get_charger_connection) == "0" ]]; then
-			if $is_TW; then
-				osascript -e 'display notification "電源沒接" with title "電池校正錯誤" sound name "Blow"'
-			else
-				osascript -e 'display notification "No AC power!" with title "Battery Calibration Error" sound name "Blow"'
-			fi
-			log "Calibration Error: Macbook has no AC power!"
+			i18n_notify title_calibration_error calibrate_no_ac_power
+			i18n_log calibrate_error_no_ac_power_log
 
 			print_calibrate_log $calibrate_time No $health_before %
-			echo "Macbook has no AC power!" >> $calibrate_log
+			i18n_echo calibrate_no_ac_power_logfile >> $calibrate_log
 		fi
 		exit 1
 	fi
@@ -2140,12 +1955,8 @@ if [[ "$action" == "calibrate" ]]; then
 
 	if [ "$method" == "1" ]; then
 		ha_webhook "start" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health) # inform HA calibration has started
-		if $is_TW; then
-			osascript -e 'display notification "校正開始! \n開始放電至15%" with title "電池校正" sound name "Blow"'
-		else
-			osascript -e 'display notification "Calibration has started! \nStart discharging to 15%" with title "Battery Calibration" sound name "Blow"'
-		fi
-		log  "Calibration: Calibration has started! Start discharging to 15%"
+		i18n_notify title_calibration calibrate_start_discharge_15_notify
+		i18n_log calibrate_start_discharge_15_log
 
 		# Suspend the maintaining
 		$battery_binary maintain suspend
@@ -2157,15 +1968,11 @@ if [[ "$action" == "calibrate" ]]; then
 		wait $!
 		if [[ $? != 0 ]]; then
 			ha_webhook "err_discharge15"
-			if $is_TW; then
-				osascript -e 'display notification "未成功放電至15%" with title "電池校正錯誤" sound name "Blow"'
-			else
-				osascript -e 'display notification "Discharge to 15% fail" with title "Battery Calibration Error" sound name "Blow"'
-			fi
-			log "Calibration Error: Discharge to 15% fail"
+			i18n_notify title_calibration_error calibrate_fail_discharge_15
+			i18n_log calibrate_error_discharge_15_log
 
 			print_calibrate_log $calibrate_time No $health_before %
-			echo "Discharge to 15% fail" >> $calibrate_log
+			i18n_echo calibrate_fail_discharge_15 >> $calibrate_log
 
 			rm $calibrate_pidfile 2>/dev/null
 			$battery_binary maintain recover # Recover old maintain status
@@ -2174,13 +1981,9 @@ if [[ "$action" == "calibrate" ]]; then
 		pid_child=""
 		
 		ha_webhook "discharge15_end" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
-		if $is_TW; then
-			osascript -e 'display notification "已放電至15% \n開始充電到100%" with title "電池校正" sound name "Blow"'
-		else
-			osascript -e 'display notification "Calibration has discharged to 15% \nStart charging to 100%" with title "Battery Calibration" sound name "Blow"'
-		fi
-		log "Calibration: Calibration has discharged to 15%. Start charging to 100%"
-		log "Battery health $(get_battery_health)%, $(get_voltage)V, $(get_battery_temperature)°C"
+		i18n_notify title_calibration calibrate_done_discharge_15_charge_100_notify
+		i18n_log calibrate_done_discharge_15_charge_100_log
+		i18n_log calibrate_health_snapshot_log "$(get_battery_health)" "$(get_voltage)" "$(get_battery_temperature)"
 
 		# Enable battery charging to 100%
 		ha_webhook "charge100_start" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
@@ -2189,15 +1992,11 @@ if [[ "$action" == "calibrate" ]]; then
 		wait $!
 		if [[ $? != 0 ]]; then
 			ha_webhook "err_charge100"
-			if $is_TW; then
-				osascript -e 'display notification "未成功充電至100%" with title "電池校正錯誤" sound name "Blow"'
-			else
-				osascript -e 'display notification "Charge to 100% fail" with title "Battery Calibration Error" sound name "Blow"'
-			fi
-			log "Calibration Error: Charge to 100% fail"
+			i18n_notify title_calibration_error calibrate_fail_charge_100
+			i18n_log calibrate_error_charge_100_log
 
 			print_calibrate_log $calibrate_time No $health_before %
-			echo "Charge to 100% fail" >> $calibrate_log
+			i18n_echo calibrate_fail_charge_100 >> $calibrate_log
 
 			rm $calibrate_pidfile 2>/dev/null
 			$battery_binary maintain recover # Recover old maintain status
@@ -2206,27 +2005,19 @@ if [[ "$action" == "calibrate" ]]; then
 		pid_child=""
 
 		ha_webhook "charge100_end" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
-		if $is_TW; then
-			osascript -e 'display notification "已充電至100% \n靜候一小時" with title "電池校正" sound name "Blow"'
-		else
-			osascript -e 'display notification "Calibration has charged to 100% \nWaiting for one hour" with title "Battery Calibration" sound name "Blow"'
-		fi
-		log "Calibration: Calibration has charged to 100%. Waiting for one hour"
-		log "Battery health $(get_battery_health)%, $(get_voltage)V, $(get_battery_temperature)°C"
+		i18n_notify title_calibration calibrate_done_charge_100_wait_1h_notify
+		i18n_log calibrate_done_charge_100_wait_1h_log
+		i18n_log calibrate_health_snapshot_log "$(get_battery_health)" "$(get_voltage)" "$(get_battery_temperature)"
 
 		# Wait before discharging to target level
 		change_magsafe_led_color "green"
 		sleep 3600 &
 		wait $!
 		ha_webhook "wait_1hr_done" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
-		if $is_TW; then
-			osascript -e 'display notification "'"電池已維持在 100% 一小時 \n開始放電至 $setting%"'" with title "電池校正" sound name "Blow"'
-		else
-			osascript -e 'display notification "'"Battery has been maintained at 100% for one hour \nStart discharging to $setting%"'" with title "Battery Calibration" sound name "Blow"'
-		fi
-		log "Calibration: Battery has been maintained at 100% for one hour"
-		log "Calibration: Start discharging to maintain percentage"
-		log "Battery health $(get_battery_health)%, $(get_voltage)V, $(get_battery_temperature)°C"
+		i18n_notify title_calibration calibrate_done_wait_1h_discharge_target_notify "$setting"
+		i18n_log calibrate_done_wait_1h_log
+		i18n_log calibrate_start_discharge_target_log
+		i18n_log calibrate_health_snapshot_log "$(get_battery_health)" "$(get_voltage)" "$(get_battery_temperature)"
 
 		# Discharge battery to maintain percentage%
 		$battery_binary discharge $setting &
@@ -2234,15 +2025,11 @@ if [[ "$action" == "calibrate" ]]; then
 		wait $!
 		if [[ $? != 0 ]]; then
 			ha_webhook "err_discharge_target"
-			if $is_TW; then
-				osascript -e 'display notification "'"未成功放電至 $setting%"'" with title "電池校正錯誤" sound name "Blow"'
-			else
-				osascript -e 'display notification "'"Discharge to $setting% fail"'" with title "Battery Calibration Error" sound name "Blow"'
-			fi
-			log "Calibration Error: Discharge to $setting% fail"
+			i18n_notify title_calibration_error calibrate_fail_discharge_target "$setting"
+			i18n_log calibrate_error_discharge_target_log "$setting"
 
 			print_calibrate_log $calibrate_time No $health_before %
-			echo "Discharge to $setting% fail" >> $calibrate_log
+			i18n_echo calibrate_fail_discharge_target "$setting" >> $calibrate_log
 
 			rm $calibrate_pidfile 2>/dev/null
 			$battery_binary maintain recover # Recover old maintain status
@@ -2251,12 +2038,8 @@ if [[ "$action" == "calibrate" ]]; then
 		pid_child=""
 	else
 		ha_webhook "start" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health) # inform HA calibration has started
-		if $is_TW; then
-			osascript -e 'display notification "校正開始！ \n準備充電至 100%" with title "電池校正" sound name "Blow"'
-		else
-			osascript -e 'display notification "Calibration has started! \nStart charging to 100%" with title "Battery Calibration" sound name "Blow"'
-		fi
-		log  "Calibration: Calibration has started! Start charging to 100%"
+		i18n_notify title_calibration calibrate_start_charge_100_notify
+		i18n_log calibrate_start_charge_100_log
 
 		# Suspend the maintaining
 		$battery_binary maintain suspend
@@ -2267,15 +2050,11 @@ if [[ "$action" == "calibrate" ]]; then
 		wait $!
 		if [[ $? != 0 ]]; then
 			ha_webhook "err_charge100"
-			if $is_TW; then
-				osascript -e 'display notification "未成功充電至100%" with title "電池校正錯誤" sound name "Blow"'
-			else
-				osascript -e 'display notification "Charge to 100% fail" with title "Battery Calibration Error" sound name "Blow"'
-			fi
-			log "Calibration Error: Charge to 100% fail"
+			i18n_notify title_calibration_error calibrate_fail_charge_100
+			i18n_log calibrate_error_charge_100_log
 
 			print_calibrate_log $calibrate_time No $health_before %
-			echo "Charge to 100% fail" >> $calibrate_log
+			i18n_echo calibrate_fail_charge_100 >> $calibrate_log
 
 			rm $calibrate_pidfile 2>/dev/null
 			$battery_binary maintain recover # Recover old maintain status
@@ -2284,13 +2063,9 @@ if [[ "$action" == "calibrate" ]]; then
 		pid_child=""
 
 		ha_webhook "charge100_end" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
-		if $is_TW; then
-			osascript -e 'display notification "已充電至 100% \n靜候一小時" with title "電池校正" sound name "Blow"'
-		else
-			osascript -e 'display notification "Calibration has charged to 100% \nWaiting for one hour" with title "Battery Calibration" sound name "Blow"'
-		fi
-		log "Calibration: Calibration has charged to 100%. Waiting for one hour"
-		log "Battery health $(get_battery_health)%, $(get_voltage)V, $(get_battery_temperature)°C"
+		i18n_notify title_calibration calibrate_done_charge_100_wait_1h_notify
+		i18n_log calibrate_done_charge_100_wait_1h_log
+		i18n_log calibrate_health_snapshot_log "$(get_battery_health)" "$(get_voltage)" "$(get_battery_temperature)"
 
 		# Wait before discharging to 15%
 		change_magsafe_led_color "green"
@@ -2298,14 +2073,10 @@ if [[ "$action" == "calibrate" ]]; then
 		wait $!
 		ha_webhook "wait_1hr_done" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
 		
-		if $is_TW; then
-			osascript -e 'display notification "電池已維持在 100% 一小時 \n開始放電至 15%" with title "電池校正" sound name "Blow"'
-		else
-			osascript -e 'display notification "Battery has been maintained at 100% for one hour \nStart discharging to 15%" with title "Battery Calibration" sound name "Blow"'
-		fi
-		log "Calibration: Battery has been maintained at 100% for one hour"
-		log "Calibration: Start discharging to 15%"
-		log "Battery health $(get_battery_health)%, $(get_voltage)V, $(get_battery_temperature)°C"
+		i18n_notify title_calibration calibrate_done_wait_1h_discharge_15_notify
+		i18n_log calibrate_done_wait_1h_log
+		i18n_log calibrate_start_discharge_15_phase_log
+		i18n_log calibrate_health_snapshot_log "$(get_battery_health)" "$(get_voltage)" "$(get_battery_temperature)"
 
 		# Discharge battery to 15%
 		ha_webhook "discharge15_start" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
@@ -2314,12 +2085,8 @@ if [[ "$action" == "calibrate" ]]; then
 		wait $!
 		if [[ $? != 0 ]]; then
 			ha_webhook "err_discharge15"
-			if $is_TW; then
-				osascript -e 'display notification "未成功放電至 15%" with title "電池校正錯誤" sound name "Blow"'
-			else
-				osascript -e 'display notification "Discharge to 15% fail" with title "Battery Calibration Error" sound name "Blow"'
-			fi
-			log "Calibration Error: Discharge to 15% fail"
+			i18n_notify title_calibration_error calibrate_fail_discharge_15
+			i18n_log calibrate_error_discharge_15_log
 			rm $calibrate_pidfile 2>/dev/null
 			$battery_binary maintain recover # Recover old maintain status
 			exit 1
@@ -2327,14 +2094,10 @@ if [[ "$action" == "calibrate" ]]; then
 		pid_child=""
 
 		ha_webhook "discharge15_end" $(get_accurate_battery_percentage) $(get_voltage) $(get_battery_health)
-		if $is_TW; then
-			osascript -e 'display notification "'"已放電至 15% \n開始充電至 $setting%"'" with title "電池校正" sound name "Blow"'
-		else
-			osascript -e 'display notification "'"Calibration has discharged to 15% \nStart charging to $setting%"'" with title "Battery Calibration" sound name "Blow"'
-		fi
-		log "Calibration: Calibration has discharged to 15%"
-		log "Calibration: Start charging to maintain percentage"
-		log "Battery health $(get_battery_health)%, $(get_voltage)V, $(get_battery_temperature)°C"
+		i18n_notify title_calibration calibrate_done_discharge_15_charge_target_notify "$setting"
+		i18n_log calibrate_done_discharge_15_log
+		i18n_log calibrate_start_charge_target_log
+		i18n_log calibrate_health_snapshot_log "$(get_battery_health)" "$(get_voltage)" "$(get_battery_temperature)"
 		
 		# Charge battery to maintain percentage%
 		$battery_binary charge $setting &
@@ -2342,12 +2105,8 @@ if [[ "$action" == "calibrate" ]]; then
 		wait $!
 		if [[ $? != 0 ]]; then
 			ha_webhook "err_charge_target"
-			if $is_TW; then
-				osascript -e 'display notification "'"未成功充電至 $setting%"'" with title "電池校正錯誤" sound name "Blow"'
-			else
-				osascript -e 'display notification "'"Charge to $setting% fail"'" with title "Battery Calibration Error" sound name "Blow"'
-			fi
-			log "Calibration Error: Charge to $setting% fail"
+			i18n_notify title_calibration_error calibrate_fail_charge_target "$setting"
+			i18n_log calibrate_error_charge_target_log "$setting"
 			rm $calibrate_pidfile 2>/dev/null
 			$battery_binary maintain recover # Recover old maintain status
 			exit 1
@@ -2359,29 +2118,27 @@ if [[ "$action" == "calibrate" ]]; then
 
 	end_t=`date +%s`
 	diff=$((end_t-$start_t))
-	
-	if $is_TW; then
-		n_days=$(echo $((diff/(24*60*60)))  | awk '{if ( $1 > 0) print $1 " 天 "}')
-		n_hours=$(echo $(((diff/(60*60)) % 24)) | awk '{print $1 " 小時"}')
-		n_minutes=$(echo $(((diff/60) % 60)) | awk '{print $1 " 分"}')
-		n_seconds=$(echo $((diff % 60)) | awk '{print $1 " 秒"}')
-		osascript -e 'display notification "'"校正完成, 共花 $n_days$n_hours $n_minutes\n電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\n健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"'" with title "電池校正" sound name "Blow"'
-		log "校正完成, 共花 $n_days$n_hours $n_minutes $n_seconds."
-		log "電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C"
-		log "健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"	
+
+	n_days_count=$((diff/(24*60*60)))
+	n_hours_count=$(((diff/(60*60)) % 24))
+	n_minutes_count=$(((diff/60) % 60))
+	n_seconds_count=$((diff % 60))
+	if [[ $n_days_count -gt 0 ]]; then
+		n_days=$(i18n_format duration_days_part "$n_days_count")
 	else
-		n_days=$(echo $((diff/(24*60*60)))  | awk '{if ( $1 > 0) print $1 " day "}')
-		n_hours=$(echo $(((diff/(60*60)) % 24)) | awk '{print $1 " hour"}')
-		n_minutes=$(echo $(((diff/60) % 60)) | awk '{print $1 " min"}')
-		n_seconds=$(echo $((diff % 60)) | awk '{print $1 " sec"}')
-		osascript -e 'display notification "'"Calibration completed in $n_days$n_hours $n_minutes.\nBattery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C\nHealth $(get_battery_health)%, Cycle $(get_cycle)"'" with title "Battery Calibration" sound name "Blow"'
-		log "Calibration completed in $n_days$n_hours $n_minutes $n_seconds."
-		log "Battery $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C"
-		log "Health $(get_battery_health)%, Cycle $(get_cycle)"	
+		n_days=""
 	fi
+	n_hours=$(i18n_format duration_hours_part "$n_hours_count")
+	n_minutes=$(i18n_format duration_minutes_part "$n_minutes_count")
+	n_seconds=$(i18n_format duration_seconds_part "$n_seconds_count")
+
+	i18n_notify title_calibration calibrate_completed_notify "$n_days" "$n_hours" "$n_minutes" "$(get_accurate_battery_percentage)" "$(get_voltage)" "$(get_battery_temperature)" "$(get_battery_health)" "$(get_cycle)"
+	i18n_log calibrate_completed_log "$n_days" "$n_hours" "$n_minutes" "$n_seconds"
+	i18n_log calibrate_completed_battery_log "$(get_accurate_battery_percentage)" "$(get_voltage)" "$(get_battery_temperature)"
+	i18n_log calibrate_completed_health_log "$(get_battery_health)" "$(get_cycle)"
 	
 	print_calibrate_log $calibrate_time Yes $health_before $(get_battery_health)%
-	echo "$n_days$n_hours $n_minutes $n_second" >> $calibrate_log
+	echo "$n_days$n_hours $n_minutes $n_seconds" >> $calibrate_log
 
 	rm $calibrate_pidfile 2>/dev/null
 	$battery_binary maintain recover # Recover old maintain status
@@ -2392,28 +2149,19 @@ fi
 if [[ "$action" == "status" ]]; then
 
 	echo
-	if $is_TW; then
-		case $(get_charging_status) in
-			"0")
-				log "電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, 暫停充電";;
-			"1")
-				log "電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, 充電中";;
-			"2")
-				log "電池目前 $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, 放電中";;
-		esac
+	status_percent=$(get_accurate_battery_percentage)
+	status_voltage=$(get_voltage)
+	status_temp=$(get_battery_temperature)
+	case $(get_charging_status) in
+		"0")
+			i18n_log status_battery_no_charging "$status_percent" "$status_voltage" "$status_temp";;
+		"1")
+			i18n_log status_battery_charging "$status_percent" "$status_voltage" "$status_temp";;
+		"2")
+			i18n_log status_battery_discharging "$status_percent" "$status_voltage" "$status_temp";;
+	esac
 
-		log "電池健康度 $(get_battery_health)%, 循環次數 $(get_cycle)"
-	else
-		case $(get_charging_status) in
-			"0")
-				log "Battery at $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, no charging";;
-			"1")
-				log "Battery at $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, charging";;
-			"2")
-				log "Battery at $(get_accurate_battery_percentage)%, $(get_voltage)V, $(get_battery_temperature)°C, discharging";;
-		esac
-		log "Battery health $(get_battery_health)%, Cycle $(get_cycle)"
-	fi
+	i18n_log status_health_cycle "$(get_battery_health)" "$(get_cycle)"
 
 	if [[ "$(maintain_is_running)" == "1" ]]; then
 		maintain_percentage=$(read_config maintain_percentage)
@@ -2426,40 +2174,20 @@ if [[ "$action" == "status" ]]; then
 					if ! valid_percentage "$lower_limit"; then
 						lower_limit=$((upper_limit-5))
 					fi
-					if $is_TW; then
-						maintain_level=$(echo "$upper_limit"% 滑行至 "$lower_limit"%)
-					else
-						maintain_level=$(echo "$upper_limit"% with sailing to "$lower_limit"%)
+						maintain_level=$(i18n_format status_maintain_level_sailing "$upper_limit" "$lower_limit")
 					fi
 				fi
-			fi
-			if $is_TW; then
-				log "您的電池最佳化維持在 $maintain_level"
-			else
-				log "Your battery is currently being maintained at $maintain_level"
-			fi
-		else
-			if $is_TW; then
-				if [[ "$(calibrate_is_running)" == "1" ]]; then
-					log "校正進行中，電池最佳化已暫停"
-				else
-					log "電池最佳化已暫停"
-				fi
+				i18n_log status_maintain_active "$maintain_level"
 			else
 				if [[ "$(calibrate_is_running)" == "1" ]]; then
-					log "Calibration ongoing, battery maintain is suspended"
+					i18n_log status_maintain_suspended_calibrating
 				else
-					log "Battery maintain is suspended" 
+					i18n_log status_maintain_suspended
 				fi
 			fi
-		fi
-	else
-		if $is_TW; then
-			log "電池最佳化已經停止運作"
 		else
-			log "Battery maintain is not running"
+			i18n_log status_maintain_not_running
 		fi
-	fi
 	
 	show_schedule
 
@@ -2572,15 +2300,10 @@ if [[ "$action" == "schedule" ]]; then
 
 	if [ $2 ]; then
 		if [ $2 == "disable" ]; then
-			if [[ $(read_config calibrate_schedule) ]]; then
-				if $is_TW; then
-					log "電池自動校正時程已暫停"
+				if [[ $(read_config calibrate_schedule) ]]; then
+					i18n_log schedule_disabled
 					echo
-				else
-					log "Schedule disabled"
-					echo
-				fi
-				log "Disabling schedule at gui/$(id -u $USER)/com.battery_schedule.app" >> $logfile
+					log "Disabling schedule at gui/$(id -u $USER)/com.battery_schedule.app" >> $logfile
 				launchctl disable "gui/$(id -u $USER)/com.battery_schedule.app"
 				launchctl unload "$schedule_path" 2> /dev/null
 			fi
@@ -2619,27 +2342,27 @@ if [[ "$action" == "schedule" ]]; then
 
 	if [[ $weekday_loc ]]; then
 		weekday=$(echo $@ | awk '{print $"'"$((weekday_loc+1))"'"}');
-		valid_weekday $weekday || { log "Error: weekday must be in [0..6]"; exit 1;}
+			valid_weekday $weekday || { i18n_log schedule_invalid_weekday; exit 1;}
 	fi
 
 	if [[ $month_period_loc ]]; then
 		month_period=$(echo $@ | awk '{print $"'"$((month_period_loc+1))"'"}');
-		valid_month_period $month_period || { log "Error: month_period must be in [1..3]"; exit 1;}
+			valid_month_period $month_period || { i18n_log schedule_invalid_month_period; exit 1;}
 	fi
 
 	if [[ $week_period_loc ]]; then
 		week_period=$(echo $@ | awk '{print $"'"$((week_period_loc+1))"'"}');
-		valid_week_period $week_period || { log "Error: week_period must be in [1..12]"; exit 1;}
+			valid_week_period $week_period || { i18n_log schedule_invalid_week_period; exit 1;}
 	fi
 
 	if [[ $hour_loc ]]; then
 		hour=$(echo $@ | awk '{print $"'"$((hour_loc+1))"'"}');
-		valid_hour $hour || { log "Error: hour must be in [0..23]"; exit 1;}
+			valid_hour $hour || { i18n_log schedule_invalid_hour; exit 1;}
 	fi
 
 	if [[ $minute_loc ]]; then
 		minute=$(echo $@ | awk '{print $"'"$((minute_loc+1))"'"}');
-		valid_minute $minute || { log "Error: minute must be in [0..59]"; exit 1;}
+			valid_minute $minute || { i18n_log schedule_invalid_minute; exit 1;}
 	fi
 	
 	if [[ $day_loc ]]; then
@@ -2650,7 +2373,7 @@ if [[ "$action" == "schedule" ]]; then
 				n_days=$(($n_days+1))
 			else
 				if [[ $value -eq 29 ]] || [[ $value -eq 30 ]] || [[ $value -eq 31 ]]; then
-					log "Error: day must be in [1..28]"
+						i18n_log schedule_invalid_day
 					exit 1
 				fi
 				break
@@ -2903,16 +2626,16 @@ if [[ "$action" == "logs" ]]; then
 
 	amount="${2:-100}"
 
-	echo -e "👾 Battery CLI logs:\n"
+	echo -e "$(i18n_format logs_cli_heading)\n"
 	tail -n $amount $logfile
 
-	echo -e "\n🖥️	Battery GUI logs:\n"
+	echo -e "\n$(i18n_format logs_gui_heading)\n"
 	tail -n $amount "$configfolder/gui.log"
 
-	echo -e "\n📁 Config folder details:\n"
+	echo -e "\n$(i18n_format logs_config_heading)\n"
 	ls -lah $configfolder
 
-	echo -e "\n⚙️	Battery data:\n"
+	echo -e "\n$(i18n_format logs_data_heading)\n"
 	$battery_binary status
 	$battery_binary | grep -E "v\d.*"
 
@@ -2924,7 +2647,7 @@ fi
 if [[ "$action" == "dailylog" ]]; then
 
 	echo
-	echo -e "Daily log ($daily_log)\n"
+	echo -e "$(i18n_format dailylog_heading "$daily_log")\n"
 	echo "$(cat $daily_log 2>/dev/null)"
 	echo
 
@@ -2936,7 +2659,7 @@ if [[ "$action" == "ssdlog" ]]; then
 
 	if test -f $ssd_log; then
 		echo
-		echo -e "SSD daily log ($ssd_log)\n"
+		echo -e "$(i18n_format ssdlog_heading "$ssd_log")\n"
 		echo "$(cat $ssd_log 2>/dev/null)"
 		echo
 	fi
@@ -2948,7 +2671,7 @@ fi
 if [[ "$action" == "calibratelog" ]]; then
 
 	echo
-	echo -e "Calibrate log ($calibrate_log)\n"
+	echo -e "$(i18n_format calibratelog_heading "$calibrate_log")\n"
 	echo "$(cat $calibrate_log 2>/dev/null)"
 	echo
 
@@ -2962,12 +2685,14 @@ if [[ "$action" == "changelog" ]]; then
 	if $is_TW; then
 		changelog=$(get_changelog CHANGELOG_TW)
 		battery_new_version=$(get_version CHANGELOG_TW)
-		osascript -e 'display dialog "'"$battery_new_version 更新內容如下\n\n$changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
 	else
 		changelog=$(get_changelog CHANGELOG)
 		battery_new_version=$(get_version CHANGELOG)
-		osascript -e 'display dialog "'"$battery_new_version changes inlude\n\n$changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
 	fi
+	dialog_msg=$(i18n_format update_dialog_changelog "$battery_new_version" "$changelog")
+	dialog_ok=$(i18n_text dialog_button_ok)
+	dialog_title=$(i18n_text title_battery_optimizer_mac)
+	osascript -e 'display dialog "'"$dialog_msg"'" buttons {"'"$button_empty"'", "'"$dialog_ok"'"} default button 2 with icon note with title "'"$dialog_title"'"' >> /dev/null
 	exit 0
 fi
 
@@ -2981,14 +2706,36 @@ fi
 
 # Set language
 if [[ "$action"  == "language" ]]; then
-	if [[ "$2" == "tw" ]]; then
-		write_config language $2
-		log "顯示語言改為繁體中文"
-	elif [[ "$2" == "us" ]]; then
-		write_config language $2
-		log "Change language to English"
+	requested_language="$2"
+	normalized_language=$(normalize_language_code "$requested_language")
+
+	if [[ -z "$requested_language" ]] || [[ "$requested_language" == "list" ]]; then
+		if [[ "$CLI_LANG" == "tw" ]]; then
+			log "$(i18n_format language_current_tw)"
+		elif [[ "$CLI_LANG" == "cn" ]]; then
+			log "$(i18n_format language_current_cn)"
+		else
+			log "$(i18n_format language_current_us)"
+		fi
+		echo "$(i18n_text language_list_header)"
+		echo "$(i18n_text language_list_tw)"
+		echo "$(i18n_text language_list_cn)"
+		echo "$(i18n_text language_list_us)"
+	elif [[ "$normalized_language" == "tw" ]]; then
+		write_config language tw
+		log "$(i18n_format language_changed_tw)"
+	elif [[ "$normalized_language" == "cn" ]]; then
+		write_config language cn
+		log "$(i18n_format language_changed_cn)"
+	elif [[ "$normalized_language" == "us" ]]; then
+		write_config language us
+		log "$(i18n_format language_changed_us)"
 	else
-		log "Specified language is not recognized. Only [tw, us] are allowed"
+		log "$(i18n_format language_invalid)"
+		echo "$(i18n_text language_list_header)"
+		echo "$(i18n_text language_list_tw)"
+		echo "$(i18n_text language_list_cn)"
+		echo "$(i18n_text language_list_us)"
 	fi
 	exit 0
 fi
@@ -2999,14 +2746,14 @@ if [[ "$action"  == "ssd" ]]; then
 	has_smartctl=$(echo $ssd_result | awk '{print $1}')
 	firmware_support=$(echo $ssd_result | awk '{print $2}')
 	smartinfo=$(echo $ssd_result | awk '{print $3, $4, $5, $6, $7, $8, $9, $10, $11}')
-	if [[ $has_smartctl == true ]]; then
-		if [[ $firmware_support == true ]]; then # run SSD log only when firmware support
-			echo "Date Result Data_Read Data_Written Used Power_Cycles Power_Hours Unsafe_Shutdowns Temperature Error" | awk '{printf "%-10s, %6s, %11s, %12s, %5s, %12s, %11s, %16s, %11s, %5s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}'
+		if [[ $has_smartctl == true ]]; then
+			if [[ $firmware_support == true ]]; then # run SSD log only when firmware support
+				echo "$(i18n_text ssd_log_table_header)" | awk '{printf "%-10s, %6s, %11s, %12s, %5s, %12s, %11s, %16s, %11s, %5s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}'
 			logd "$smartinfo" | awk '{printf "%-10s, %6s, %11s, %12s, %5s, %12s, %11s, %16s, %12s, %5s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10}'
 		else
-			echo "Your SMART firmware is not supported."
+				i18n_echo ssd_firmware_not_supported
+			fi
+		else
+			i18n_echo ssd_tool_not_installed
 		fi
-	else
-		echo 'SMART monitor tool is not available in your Mac. You may run "brew install smartmontools" to get it.'
-	fi
 fi

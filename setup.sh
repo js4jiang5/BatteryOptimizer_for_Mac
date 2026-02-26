@@ -112,6 +112,11 @@ sudo chown -R $calling_user $configfolder
 
 # Run battery maintain with default percentage 80
 echo "[ 7 ] Set default battery maintain percentage to 80%, can be changed afterwards"
+# Install CLI i18n catalog files for the installed /usr/local/bin/battery script
+mkdir -p "$configfolder/i18n"
+cp -Rf "$batteryfolder/i18n/." "$configfolder/i18n/"
+sudo chown -R "$calling_user" "$configfolder/i18n"
+
 # Setup configuration file
 version=$(echo $(battery version))
 touch $config_file
