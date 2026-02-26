@@ -44,8 +44,8 @@
 
 ```bash
 brew install MoonBoi9001/tap/apple-juice
-sudo battery visudo $USER
-battery maintain longevity
+sudo apple-juice visudo $USER
+apple-juice maintain longevity
 ```
 
 <br>
@@ -81,7 +81,7 @@ Three commands. Set it and forget it. Configure [macOS settings](#%EF%B8%8F-setu
 
 ```bash
 brew install MoonBoi9001/tap/apple-juice
-sudo battery visudo $USER
+sudo apple-juice visudo $USER
 ```
 
 **Or curl:**
@@ -93,14 +93,14 @@ curl -s https://raw.githubusercontent.com/MoonBoi9001/apple-juice/main/setup.sh 
 **Then run:**
 
 ```bash
-battery maintain longevity    # recommended
+apple-juice maintain longevity    # recommended
 ```
 
 Or pick your own level:
 
 ```bash
-battery maintain 80           # stay at 80%
-battery maintain 80 50        # stay at 80%, sail to 50%
+apple-juice maintain 80           # stay at 80%
+apple-juice maintain 80 50        # stay at 80%, sail to 50%
 ```
 
 <br>
@@ -120,14 +120,14 @@ battery maintain 80 50        # stay at 80%, sail to 50%
 
 | Command | Description |
 |:---|:---|
-| `battery maintain longevity` | **Recommended.** Optimized for max lifespan |
-| `battery maintain 80` | Keep at 80%, sail to 75% |
-| `battery maintain 80 50` | Keep at 80%, sail to 50% |
-| `battery maintain suspend` | Temporarily charge to 100% |
-| `battery maintain recover` | Resume after suspend |
-| `battery maintain stop` | Disable completely |
-| `battery charge 90` | Charge to specific level |
-| `battery discharge 50` | Discharge to specific level |
+| `apple-juice maintain longevity` | **Recommended.** Optimized for max lifespan |
+| `apple-juice maintain 80` | Keep at 80%, sail to 75% |
+| `apple-juice maintain 80 50` | Keep at 80%, sail to 50% |
+| `apple-juice maintain suspend` | Temporarily charge to 100% |
+| `apple-juice maintain recover` | Resume after suspend |
+| `apple-juice maintain stop` | Disable completely |
+| `apple-juice charge 90` | Charge to specific level |
+| `apple-juice discharge 50` | Discharge to specific level |
 
 </details>
 
@@ -138,11 +138,11 @@ battery maintain 80 50        # stay at 80%, sail to 50%
 
 | Command | Description |
 |:---|:---|
-| `battery calibrate` | Full calibration cycle |
-| `battery calibrate stop` | Stop calibration |
-| `battery balance` | Manual cell balancing |
-| `battery schedule` | Configure scheduled calibration |
-| `battery schedule disable` | Disable scheduled calibration |
+| `apple-juice calibrate` | Full calibration cycle |
+| `apple-juice calibrate stop` | Stop calibration |
+| `apple-juice balance` | Manual cell balancing |
+| `apple-juice schedule` | Configure scheduled calibration |
+| `apple-juice schedule disable` | Disable scheduled calibration |
 
 </details>
 
@@ -153,12 +153,12 @@ battery maintain 80 50        # stay at 80%, sail to 50%
 
 | Command | Description |
 |:---|:---|
-| `battery status` | Health, temp, cycle count |
-| `battery dailylog` | View daily battery log |
-| `battery calibratelog` | View calibration history |
-| `battery logs` | View CLI logs |
-| `battery ssd` | SSD health status |
-| `battery ssdlog` | SSD daily log |
+| `apple-juice status` | Health, temp, cycle count |
+| `apple-juice dailylog` | View daily battery log |
+| `apple-juice calibratelog` | View calibration history |
+| `apple-juice logs` | View CLI logs |
+| `apple-juice ssd` | SSD health status |
+| `apple-juice ssdlog` | SSD daily log |
 
 </details>
 
@@ -169,12 +169,12 @@ battery maintain 80 50        # stay at 80%, sail to 50%
 
 | Command | Description |
 |:---|:---|
-| `battery update` | Update to latest version |
-| `battery version` | Show current version |
-| `battery changelog` | View latest changelog |
-| `battery reinstall` | Reinstall from scratch |
-| `battery uninstall` | Remove completely |
-| `battery language tw/us` | Change language |
+| `apple-juice update` | Update to latest version |
+| `apple-juice version` | Show current version |
+| `apple-juice changelog` | View latest changelog |
+| `apple-juice reinstall` | Reinstall from scratch |
+| `apple-juice uninstall` | Remove completely |
+| `apple-juice language tw/us` | Change language |
 
 </details>
 
