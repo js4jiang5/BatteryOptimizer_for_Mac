@@ -1,5 +1,19 @@
 #!/bin/bash
 
+function read_config() { # read $val of $name in config_file
+	name=$1
+	val=
+	if test -f $config_file; then
+		while read -r "line" || [[ -n "$line" ]]; do
+			if [[ "$line" =~  "$name = " ]]; then
+				val=${line#*'= '}
+				break
+			fi
+		done < $config_file
+	fi
+	echo $val
+}
+
 function write_config() { # write $val to $name in config_file
 	name=$1
 	val=$2
@@ -8,6 +22,7 @@ function write_config() { # write $val to $name in config_file
 		name_loc=$(echo "$config" | grep -n "$name" | cut -d: -f1)
 		if [[ $name_loc ]]; then
 			sed -i '' ''"$name_loc"'s/.*/'"$name"' = '"$val"'/' $config_file
+			#sed -i '' "${name_loc}s@.*@${name} = ${val}@" "$config_file"
 		else # not exist yet
 			echo "$name = $val" >> $config_file
 		fi
@@ -20,22 +35,29 @@ echo '# 👋 Welcome, this is the setup script for the battery CLI tool.'
 echo -e "# Note: this script will ask for your password once or multiple times."
 echo -e "####################################################################\n\n"
 
+PATH=/usr/bin:/bin:/usr/sbin:/sbin
+
 # Set environment variables
 tempfolder=~/.battery-tmp
-binfolder=/usr/local/bin
+binfolder=/usr/local/co.battery-optimizer
 mkdir -p $tempfolder
+function cleanup() { rm -rf "$tempfolder"; }
+trap cleanup EXIT
 
 # Set script value
-calling_user=${1:-"$USER"}
+calling_user=${1:-${SUDO_USER:-$USER}} # give SUDO_USER higher priority
+if [[ "$calling_user" == "root" ]]; then
+	echo "❌ Failed to determine unprivileged username"
+	exit 1
+fi
+echo $calling_user
 configfolder=/Users/$calling_user/.battery
 config_file=$configfolder/config_battery
 pidfile=$configfolder/battery.pid
 logfile=$configfolder/battery.log
+launch_agent_plist=/Users/$calling_user/Library/LaunchAgents/battery.plist
+path_configfile=/etc/paths.d/battery-optimizer
 sleepwatcher_log=$configfolder/sleepwatcher.log
-
-# Ask for sudo once, in most systems this will cache the permissions for a bit
-sudo echo "🔋 Starting battery installation"
-echo -e "[ 1 ] Superuser permissions acquired."
 
 # check CPU type
 if [[ $(sysctl -n machdep.cpu.brand_string) == *"Intel"* ]]; then
@@ -44,14 +66,22 @@ else
     cpu_type="apple"
 fi
 
+# Cleanup original battery and smc binary
+sudo rm -f /usr/local/bin/battery
+sudo rm -f /usr/local/bin/smc
+
+# Ask for sudo once, in most systems this will cache the permissions for a bit
+sudo echo "🔋 Starting battery installation"
+echo "[ 1 ] Superuser permissions acquired."
+
 # Note: github names zips by <reponame>-<branchname>.replace( '/', '-' )
-update_branch="2.0.27"
+echo "[ 2 ] Downloading latest version of battery CLI"
+update_branch="main"
 in_zip_folder_name="BatteryOptimizer_for_MAC-$update_branch"
 batteryfolder="$tempfolder/battery"
-echo "[ 2 ] Downloading latest version of battery CLI"
 rm -rf $batteryfolder
 mkdir -p $batteryfolder
-curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/tags/v$update_branch.zip"
+curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_Mac/archive/refs/heads/$update_branch.zip"
 unzip -qq $batteryfolder/repo.zip -d $batteryfolder
 cp -r $batteryfolder/$in_zip_folder_name/* $batteryfolder
 curl -sSL -o $batteryfolder/dist/notification_permission.scpt "https://github.com/js4jiang5/BatteryOptimizer_for_Mac/raw/refs/heads/main/dist/notification_permission.scpt"
@@ -59,97 +89,95 @@ rm $batteryfolder/repo.zip
 
 # Move built file to bin folder
 echo "[ 3 ] Move smc to executable folder"
-sudo mkdir -p $binfolder
+sudo rm -rf "$binfolder" # start with an empty $binfolder and ensure there is no symlink or file at the path
+sudo install -d -m 755 -o root -g wheel "$binfolder"
 if [[ $cpu_type == "apple" ]]; then
-	sudo cp $batteryfolder/dist/smc $binfolder/smc
+	sudo install -m 755 -o root -g wheel "$batteryfolder/dist/smc" "$binfolder/smc"
 else
-	sudo cp $batteryfolder/dist/smc_intel $binfolder/smc
-fi
-sudo chown $calling_user $binfolder/smc
-sudo chmod 755 $binfolder/smc
-sudo chmod +x $binfolder/smc
-# Check if smc works
-check_smc=$(smc 2>&1)
-if [[ $check_smc =~ " Bad " ]] || [[ $check_smc =~ " bad " ]] ; then # current is not a right version
-	sudo cp $batteryfolder/dist/smc_intel $binfolder/smc
-	sudo chown $USER $binfolder/smc
-	sudo chmod 755 $binfolder/smc
-	sudo chmod +x $binfolder/smc
-	# check again
-	check_smc=$(smc 2>&1)
-	if [[ $check_smc =~ " Bad " ]] || [[ $check_smc =~ " bad " ]] ; then # current is not a right version
-		echo "Error: BatteryOptimizer seems not compatible with your MAC yet"
-		exit
-	fi
+	sudo install -m 755 -o root -g wheel "$batteryfolder/dist/smc_intel" "$binfolder/smc"
 fi
 
-echo "[ 4 ] Writing script to $binfolder/battery for user $calling_user"
-sudo cp $batteryfolder/battery.sh $binfolder/battery
+# Check if smc works
+if [[ "$(smc 2>&1)" =~ [Bb]ad ]]; then 
+    sudo install -m 755 -o root -g wheel "$batteryfolder/dist/smc_intel" "$binfolder/smc"
+    if [[ "$(smc 2>&1)" =~ [Bb]ad ]]; then
+        echo "❌ Error: BatteryOptimizer seems not compatible with your MAC yet"
+        exit 1
+    fi
+fi
+
+echo "[ 4 ] Writing script to $binfolder/battery and set PATH environment"
+sudo install -m 755 -o root -g wheel "$batteryfolder/battery.sh" "$binfolder/battery"
+if ! grep -qF "$binfolder" $path_configfile 2>/dev/null; then
+	printf '%s\n' "$binfolder" | sudo tee "$path_configfile" >/dev/null
+fi
+sudo chown -h root:wheel $path_configfile
+sudo chmod -h 644 $path_configfile
+# Create a symlink for rare shells that do not initialize PATH from /etc/paths.d 
+sudo mkdir -p /usr/local/bin
+sudo ln -sf "$binfolder/battery" /usr/local/bin/battery
+sudo chown -h root:wheel /usr/local/bin/battery
+sudo ln -sf "$binfolder/smc" /usr/local/bin/smc
+sudo chown -h root:wheel /usr/local/bin/smc
 
 echo "[ 5 ] Setting correct file permissions for $calling_user"
-# Set permissions for battery executables
-sudo chown -R $calling_user $binfolder/battery
-sudo chmod 755 $binfolder/battery
-sudo chmod +x $binfolder/battery
-
 # Set permissions for logfiles
 mkdir -p $configfolder
-sudo chown -R $calling_user $configfolder
+sudo chown -hRP $calling_user $configfolder
+sudo chmod -h 755 $configfolder
 
 touch $logfile
 sudo chown $calling_user $logfile
-sudo chmod 755 $logfile
+sudo chmod 644 $logfile
 
 touch $pidfile
 sudo chown $calling_user $pidfile
-sudo chmod 755 $pidfile
+sudo chmod 644 $pidfile
 
-sudo chown $calling_user $binfolder/battery
+touch $config_file
+sudo chown $calling_user $config_file
+sudo chmod 644 $config_file
 
-echo "[ 6 ] Setting up visudo declarations"
-sudo $batteryfolder/battery.sh visudo $USER
-sudo chown -R $calling_user $configfolder
+# Fix permissions for 'create_daemon' action
+echo "[ 6 ] Setup permissions for launch agent"
+sudo chown -h $calling_user "$(dirname "$launch_agent_plist")"
+sudo chmod -h 755 "$(dirname "$launch_agent_plist")"
+sudo chown -hf $calling_user "$launch_agent_plist" 2>/dev/null
+
+echo "[ 7 ] Setting up visudo declarations"
+sudo $binfolder/battery visudo 1>/dev/null
 
 # Run battery maintain with default percentage 80
-echo "[ 7 ] Set default battery maintain percentage to 80%, can be changed afterwards"
+#echo "[ 8 ] Set default battery maintain percentage to 80%, can be changed afterwards"
+
 # Setup configuration file
-version=$(echo $(battery version))
+version=$(echo $($binfolder/battery version))
 touch $config_file
-write_config calibrate_method 1
-write_config calibrate_schedule
-write_config calibrate_next
-write_config informed_version $version
-write_config language
-write_config maintain_percentage
-write_config daily_last
-write_config clamshell_discharge
-write_config webhookid
+if [[ -z $(read_config calibrate_schedule) ]]; then write_config calibrate_method 1; fi
+if [[ -z $(read_config calibrate_schedule) ]]; then write_config calibrate_schedule; fi
+if [[ -z $(read_config calibrate_next) ]]; then write_config calibrate_next; fi
+if [[ -z $(read_config informed_version) ]]; then write_config informed_version $version; fi
+if [[ -z $(read_config language) ]]; then write_config language; fi
+if [[ -z $(read_config maintain_percentage) ]]; then write_config maintain_percentage; fi
+if [[ -z $(read_config daily_last) ]]; then write_config daily_last; fi
+if [[ -z $(read_config webhookid) ]]; then write_config webhookid; fi
 
-$binfolder/battery maintain 80 >/dev/null &
-
-if [[ $(smc -k BCLM -r) == *"no data"* ]] && [[ $(smc -k CHWA -r) != *"no data"* ]]; then # sleepwatcher only required for Apple CPU Macbook when CHWA is available
+user_home="/Users/$calling_user"
+if [[ $($binfolder/smc -k BCLM -r) == *"no data"* ]] && [[ $($binfolder/smc -k CHWA -r) != *"no data"* ]]; then # sleepwatcher only required for Apple CPU Macbook when CHWA is available
 	echo "[ 8 ] Setup for power limit when Macs shutdown"
-	sudo cp $batteryfolder/dist/.reboot $HOME/.reboot
-	sudo cp $batteryfolder/dist/.shutdown $HOME/.shutdown
-	sudo cp $batteryfolder/dist/shutdown.sh $binfolder/shutdown.sh
-	sudo cp $batteryfolder/dist/battery_shutdown.plist $HOME/Library/LaunchAgents/battery_shutdown.plist
-	launchctl enable "gui/$(id -u $USER)/com.battery_shutdown.app"
-	launchctl unload "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
-	launchctl load "$HOME/Library/LaunchAgents/battery_shutdown.plist" 2> /dev/null
-	sudo chown -R $calling_user $HOME/.reboot
-	sudo chmod 755 $HOME/.reboot
-	sudo chmod +x $HOME/.reboot
-	sudo chown -R $calling_user $HOME/.shutdown
-	sudo chmod 755 $HOME/.shutdown
-	sudo chmod +x $HOME/.shutdown
-	sudo chown -R $calling_user $binfolder/shutdown.sh
-	sudo chmod 755 $binfolder/shutdown.sh
-	sudo chmod +x $binfolder/shutdown.sh
+	sudo install -m 755 -o "$calling_user" "$batteryfolder/dist/.reboot" "$user_home/.reboot"
+	sudo install -m 755 -o "$calling_user" "$batteryfolder/dist/.shutdown" "$user_home/.shutdown"
+	sudo install -m 755 -o "$calling_user" "$batteryfolder/dist/shutdown.sh" "$binfolder/shutdown.sh"
+	plist_path="$user_home/Library/LaunchAgents/battery_shutdown.plist"
+	sudo install -m 644 -o "$calling_user" "$batteryfolder/dist/battery_shutdown.plist" "$plist_path"
+	launchctl unload "$plist_path" 2>/dev/null
+	launchctl load "$plist_path"
 
 	# Install homebrew
 	if [[ -z $(which brew 2>&1) ]]; then
 		echo "[ 9 ] Install homebrew"
 		curl -s https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash
+		[[ -f /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
 		if [[ -z $(which brew 2>&1) ]]; then
 			echo "Error: brew installation fail"
 			brew_installed=false
@@ -185,14 +213,8 @@ if [[ $(smc -k BCLM -r) == *"no data"* ]] && [[ $(smc -k CHWA -r) != *"no data"*
 
 	if $sleepwatcher_installed; then
 		echo "[ 11 ] Generate ~/.sleep and ~/.wakeup"
-		sudo cp $batteryfolder/dist/.sleep $HOME/.sleep
-		sudo cp $batteryfolder/dist/.wakeup $HOME/.wakeup
-		sudo chown -R $calling_user $HOME/.sleep
-		sudo chmod 755 $HOME/.sleep
-		sudo chmod +x $HOME/.sleep
-		sudo chown -R $calling_user $HOME/.wakeup
-		sudo chmod 755 $HOME/.wakeup
-		sudo chmod +x $HOME/.wakeup
+		sudo install -m 755 -o "$calling_user" "$batteryfolder/dist/.sleep" "$user_home/.sleep"
+		sudo install -m 755 -o "$calling_user" "$batteryfolder/dist/.wakeup" "$user_home/.wakeup"
 	fi
 fi
 
@@ -229,25 +251,10 @@ notice_tw="安裝完成.
 "
 
 if $is_TW; then
-	#osascript <<- EOF
-	#	display notification "安裝完成" with title "BatteryOptimizer" sound name "Blow"
-	#	delay .5
-	#EOF
 	answer="$(osascript -e 'display dialog "'"$notice_tw \n如果您覺得這個小工具對您有幫助,點擊下方按鈕請我喝杯咖啡吧"'" buttons {"'"$button_empty_tw"'", "完成"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
 else
-	#osascript <<- EOF
-	#	display notification "Installation completed" with title "BatteryOptimizer" sound name "Blow"
-	#	delay .5
-	#EOF
 	answer="$(osascript -e 'display dialog "'"$notice \nIf you feel this tool is helpful, you may click the button below and buy me a coffee."'" buttons {"'"$button_empty"'", "Finish"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
 fi
 if [[ $answer =~ "coffee" ]] || [[ $answer =~ "咖啡" ]]; then
     open https://buymeacoffee.com/js4jiang5
 fi
-
-# Remove tempfiles
-#cd ../..
-#echo "[ Final ] Removing temp folder $tempfolder"
-rm -rf $tempfolder
-
-#echo -e "\n🎉 Battery tool installed. Type \"battery help\" for instructions.\n"

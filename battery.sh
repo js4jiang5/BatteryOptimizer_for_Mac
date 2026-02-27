@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.28"
+BATTERY_CLI_VERSION="v2.0.29"
 BATTERY_VISUDO_VERSION="v1.0.4"
 
 # Path fixes for unexpected environments
@@ -1185,6 +1185,25 @@ function print_calibrate_log() {
 	echo -n "$calibrate_time $completed $health_before $health_after" | awk '{printf "%-10s %-5s, %9s, %13s, %12s, ", $1, $2, $3, $4, $5}' >> $calibrate_log
 }
 
+function ensure_owner() {
+	local owner="$1" group="$2" path="$3"
+	[[ -e $path ]] || { return 1; }
+	local cur_owner=$(stat -f '%Su' "$path")
+	local cur_group=$(stat -f '%Sg' "$path")
+	if [[ $cur_owner != "$owner" || $cur_group != "$group" ]]; then
+		sudo chown -h "${owner}:${group}" "$path"
+	fi
+}
+
+function ensure_owner_mode() {
+	local owner="$1" group="$2" mode="$3" path="$4"
+	ensure_owner "$owner" "$group" "$path" || return
+	local cur_mode=$(stat -f '%Lp' "$path")
+	if [[ $cur_mode != "${mode#0}" ]]; then
+		sudo chmod -h "$mode" "$path"
+	fi
+}
+
 ## ###############
 ## Actions
 ## ###############
@@ -1217,35 +1236,35 @@ else
 	fi
 fi
 
-# Visudo message
+# Update '/etc/sudoers.d/battery' config if needed
 if [[ "$action" == "visudo" ]]; then
 
-	# User to set folder ownership to is $setting if it is defined and $USER otherwise
-	if [[ -z "$setting" ]]; then
-		setting=$USER
-	fi
-
-	# Set visudo tempfile ownership to current user
-	log "Setting visudo file permissions to $setting"
-	sudo chown -R $setting $configfolder
+	# Allocate temp folder
+	tempfolder="$(mktemp -d)"
+	function cleanup() { rm -rf "$tempfolder"; }
+	trap cleanup EXIT
 
 	# Write the visudo file to a tempfile
-	visudo_tmpfile="$configfolder/visudo.tmp"
-	sudo rm $visudo_tmpfile 2>/dev/null
+	visudo_tmpfile="$tempfolder/visudo.tmp"
 	echo -e "$visudoconfig" >$visudo_tmpfile
+
+	# If the visudo folder does not exist, make it
+	if ! test -d "$visudo_folder"; then
+		sudo mkdir -p "$visudo_folder"
+	fi
+	ensure_owner_mode root wheel 755 "$visudo_folder"
 
 	# If the visudo file is the same (no error, exit code 0), set the permissions just
 	if sudo cmp $visudo_file $visudo_tmpfile &>/dev/null; then
 
-		echo "The existing battery visudo file is what it should be for version $BATTERY_CLI_VERSION"
+		echo "☑️  The existing battery visudo file is what it should be for version $BATTERY_CLI_VERSION" >&1
 
 		# Check if file permissions are correct, if not, set them
-		current_visudo_file_permissions=$(stat -f "%Lp" $visudo_file)
-		if [[ "$current_visudo_file_permissions" != "440" ]]; then
-			sudo chmod 440 $visudo_file
-		fi
+		ensure_owner_mode root wheel 440 "$visudo_file"
 
-		sudo rm $visudo_tmpfile 2>/dev/null
+		# Delete tempfolder
+		rm -rf "$tempfolder"
+
 		# exit because no changes are needed
 		exit 0
 
@@ -1254,28 +1273,22 @@ if [[ "$action" == "visudo" ]]; then
 	# Validate that the visudo tempfile is valid
 	if sudo visudo -c -f $visudo_tmpfile &>/dev/null; then
 
-		# If the visudo folder does not exist, make it
-		if ! test -d "$visudo_folder"; then
-			sudo mkdir -p "$visudo_folder"
-		fi
-
 		# Copy the visudo file from tempfile to live location
 		sudo cp $visudo_tmpfile $visudo_file
 
-		# Delete tempfile
-		rm $visudo_tmpfile
-
 		# Set correct permissions on visudo file
-		sudo chmod 440 $visudo_file
+		ensure_owner_mode root wheel 440 "$visudo_file"
 
-		echo "Visudo file updated successfully"
+		# Delete tempfolder
+		rm -rf "$tempfolder"
+
+		echo "✅ Visudo file updated successfully"
 
 	else
-		echo "Error validating visudo file, this should never happen:"
+		echo "❌ Error validating visudo file, this should never happen:" >&2
 		sudo visudo -c -f $visudo_tmpfile
 	fi
 
-	sudo rm $visudo_tmpfile 2>/dev/null
 	exit 0
 fi
 

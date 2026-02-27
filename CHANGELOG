@@ -1,3 +1,9 @@
+v2.0.29
+This update needs to enter password.
+* fix bugs below
+- change the owner of battery and smc binaries to root for security hardening
+- this update needs reinstall, but all data will be intact (daily log/ calibrate log, logs, config)
+
 v2.0.28
 * new features
 - add new command "battery ssd" to show current health status of SSD disk0
