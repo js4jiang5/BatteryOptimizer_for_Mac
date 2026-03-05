@@ -1374,7 +1374,7 @@ fi
 # Update helper
 if [[ "$action" == "update_silent" ]]; then
 
-	assert_running_as_root
+	#assert_running_as_root
 
 	# Check if we have the most recent version
 	# fetch latest battery.sh
@@ -1436,7 +1436,7 @@ fi
 # Update helper for Terminal users
 if [[ "$action" == "update" ]]; then
 	assert_not_running_as_root
-	sudo $battery_binary update_silent
+	$battery_binary update_silent
 	exit 0
 fi
 
