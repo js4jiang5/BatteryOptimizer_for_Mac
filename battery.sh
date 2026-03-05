@@ -35,7 +35,8 @@ daily_log=$configfolder/daily.log
 calibrate_log=$configfolder/calibrate.log
 ssd_log=$configfolder/ssd.log
 github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
-
+battery_binary=$binfolder/battery
+smc_binary="$binfolder/smc"
 ## ###############
 ## Housekeeping
 ## ###############
@@ -159,17 +160,17 @@ visudoconfig="
 ALL ALL = NOPASSWD: $binfolder/battery update_silent
 
 # intended to be placed in $visudo_file on a mac
-Cmnd_Alias      BATTERYOFF = $binfolder/smc -k CH0B -w 02, $binfolder/smc -k CH0C -w 02, $binfolder/smc -k CHTE -w 01000000, $binfolder/smc -k CH0B -r, $binfolder/smc -k CH0C -r, $binfolder/smc -k CHTE -r
-Cmnd_Alias      BATTERYON = $binfolder/smc -k CH0B -w 00, $binfolder/smc -k CH0C -w 00, $binfolder/smc -k CHTE -w 00000000
-Cmnd_Alias      DISCHARGEOFF = $binfolder/smc -k CH0I -w 00, $binfolder/smc -k CH0I -r, $binfolder/smc -k CH0J -w 00, $binfolder/smc -k CH0J -r, $binfolder/smc -k CH0K -w 00, $binfolder/smc -k CH0K -r, $binfolder/smc -k CHIE -w 00, $binfolder/smc -k CHIE -r, $binfolder/smc -d off
-Cmnd_Alias      DISCHARGEON = $binfolder/smc -k CH0I -w 01, $binfolder/smc -k CH0J -w 01, $binfolder/smc -k CH0K -w 01, $binfolder/smc -k CHIE -w 08, $binfolder/smc -d on
-Cmnd_Alias      LEDCONTROL = $binfolder/smc -k ACLC -w 04, $binfolder/smc -k ACLC -w 03, $binfolder/smc -k ACLC -w 02, $binfolder/smc -k ACLC -w 01, $binfolder/smc -k ACLC -w 00, $binfolder/smc -k ACLC -r
-Cmnd_Alias      BATTERYBCLM = $binfolder/smc -k BCLM -w 0a, $binfolder/smc -k BCLM -w 64, $binfolder/smc -k BCLM -r
-Cmnd_Alias      BATTERYCHWA = $binfolder/smc -k CHWA -w 00, $binfolder/smc -k CHWA -w 01, $binfolder/smc -k CHWA -r
-Cmnd_Alias      BATTERYACEN = $binfolder/smc -k ACEN -w 00, $binfolder/smc -k ACEN -w 01, $binfolder/smc -k ACEN -r
-Cmnd_Alias      BATTERYBFCL = $binfolder/smc -k BFCL -w 00, $binfolder/smc -k BFCL -w 5f, $binfolder/smc -k BFCL -r
-Cmnd_Alias      BATTERYCHBI = $binfolder/smc -k CHBI -r
-Cmnd_Alias      BATTERYB0AC = $binfolder/smc -k B0AC -r
+Cmnd_Alias      BATTERYOFF = $smc_binary -k CH0B -w 02, $smc_binary -k CH0C -w 02, $smc_binary -k CHTE -w 01000000, $smc_binary -k CH0B -r, $smc_binary -k CH0C -r, $smc_binary -k CHTE -r
+Cmnd_Alias      BATTERYON = $smc_binary -k CH0B -w 00, $smc_binary -k CH0C -w 00, $smc_binary -k CHTE -w 00000000
+Cmnd_Alias      DISCHARGEOFF = $smc_binary -k CH0I -w 00, $smc_binary -k CH0I -r, $smc_binary -k CH0J -w 00, $smc_binary -k CH0J -r, $smc_binary -k CH0K -w 00, $smc_binary -k CH0K -r, $smc_binary -k CHIE -w 00, $smc_binary -k CHIE -r, $binfolder/smc -d off
+Cmnd_Alias      DISCHARGEON = $smc_binary -k CH0I -w 01, $smc_binary -k CH0J -w 01, $smc_binary -k CH0K -w 01, $smc_binary -k CHIE -w 08, $binfolder/smc -d on
+Cmnd_Alias      LEDCONTROL = $smc_binary -k ACLC -w 04, $smc_binary -k ACLC -w 03, $smc_binary -k ACLC -w 02, $smc_binary -k ACLC -w 01, $smc_binary -k ACLC -w 00, $smc_binary -k ACLC -r
+Cmnd_Alias      BATTERYBCLM = $smc_binary -k BCLM -w 0a, $smc_binary -k BCLM -w 64, $smc_binary -k BCLM -r
+Cmnd_Alias      BATTERYCHWA = $smc_binary -k CHWA -w 00, $smc_binary -k CHWA -w 01, $smc_binary -k CHWA -r
+Cmnd_Alias      BATTERYACEN = $smc_binary -k ACEN -w 00, $smc_binary -k ACEN -w 01, $smc_binary -k ACEN -r
+Cmnd_Alias      BATTERYBFCL = $smc_binary -k BFCL -w 00, $smc_binary -k BFCL -w 5f, $smc_binary -k BFCL -r
+Cmnd_Alias      BATTERYCHBI = $smc_binary -k CHBI -r
+Cmnd_Alias      BATTERYB0AC = $smc_binary -k B0AC -r
 ALL ALL = NOPASSWD: BATTERYOFF
 ALL ALL = NOPASSWD: BATTERYON
 ALL ALL = NOPASSWD: DISCHARGEOFF
@@ -184,30 +185,29 @@ ALL ALL = NOPASSWD: BATTERYB0AC
 "
 
 # Get parameters
-battery_binary=$binfolder/battery
 action=$1
 setting=$2
 subsetting=$3
 thirdsetting=$4
 
-smc() {
-    "$binfolder/smc" "$@"
-}
+#smc() {
+#    "$binfolder/smc" "$@"
+#}
 
 # check the availability of SMC keys
-[[ $(smc -k BCLM -r) =~ "no data" ]] && has_BCLM=false || has_BCLM=true;
-[[ $(smc -k CH0B -r) =~ "no data" ]] && has_CH0B=false || has_CH0B=true;
-[[ $(smc -k CH0C -r) =~ "no data" ]] && has_CH0C=false || has_CH0C=true;
-[[ $(smc -k CH0I -r) =~ "no data" ]] && has_CH0I=false || has_CH0I=true;
-[[ $(smc -k CH0J -r) =~ "no data" || $(smc -k CH0J -r) =~ "Error" ]] && has_CH0J=false || has_CH0J=true;
-[[ $(smc -k CH0K -r) =~ "no data" ]] && has_CH0K=false || has_CH0K=true;
-[[ $(smc -k ACEN -r) =~ "no data" ]] && has_ACEN=false || has_ACEN=true;
-[[ $(smc -k ACLC -r) =~ "no data" ]] && has_ACLC=false || has_ACLC=true;
-[[ $(smc -k CHWA -r) =~ "no data" ]] && has_CHWA=false || has_CHWA=true;
-[[ $(smc -k BFCL -r) =~ "no data" ]] && has_BFCL=false || has_BFCL=true;
-[[ $(smc -k ACFP -r) =~ "no data" ]] && has_ACFP=false || has_ACFP=true;
-[[ $(smc -k CHTE -r) =~ "no data" ]] && has_CHTE=false || has_CHTE=true;
-[[ $(smc -k CHIE -r) =~ "no data" ]] && has_CHIE=false || has_CHIE=true;
+[[ $($smc_binary -k BCLM -r) =~ "no data" ]] && has_BCLM=false || has_BCLM=true;
+[[ $($smc_binary -k CH0B -r) =~ "no data" ]] && has_CH0B=false || has_CH0B=true;
+[[ $($smc_binary -k CH0C -r) =~ "no data" ]] && has_CH0C=false || has_CH0C=true;
+[[ $($smc_binary -k CH0I -r) =~ "no data" ]] && has_CH0I=false || has_CH0I=true;
+[[ $($smc_binary -k CH0J -r) =~ "no data" || $($smc_binary -k CH0J -r) =~ "Error" ]] && has_CH0J=false || has_CH0J=true;
+[[ $($smc_binary -k CH0K -r) =~ "no data" ]] && has_CH0K=false || has_CH0K=true;
+[[ $($smc_binary -k ACEN -r) =~ "no data" ]] && has_ACEN=false || has_ACEN=true;
+[[ $($smc_binary -k ACLC -r) =~ "no data" ]] && has_ACLC=false || has_ACLC=true;
+[[ $($smc_binary -k CHWA -r) =~ "no data" ]] && has_CHWA=false || has_CHWA=true;
+[[ $($smc_binary -k BFCL -r) =~ "no data" ]] && has_BFCL=false || has_BFCL=true;
+[[ $($smc_binary -k ACFP -r) =~ "no data" ]] && has_ACFP=false || has_ACFP=true;
+[[ $($smc_binary -k CHTE -r) =~ "no data" ]] && has_CHTE=false || has_CHTE=true;
+[[ $($smc_binary -k CHIE -r) =~ "no data" ]] && has_CHIE=false || has_CHIE=true;
 
 ## ###############
 ## Helpers
@@ -657,21 +657,21 @@ function change_magsafe_led_color() {
 
 	if [[ "$color" == "green" ]]; then
 		#log "setting LED to green"
-		if $has_ACLC; then sudo smc -k ACLC -w 03; fi
-		if $has_BFCL; then sudo smc -k BFCL -w 00; fi
+		if $has_ACLC; then sudo $smc_binary -k ACLC -w 03; fi
+		if $has_BFCL; then sudo $smc_binary -k BFCL -w 00; fi
 	elif [[ "$color" == "orange" ]]; then
 		#log "setting LED to orange"
-		if $has_ACLC; then sudo smc -k ACLC -w 04; fi
-		if $has_BFCL; then sudo smc -k BFCL -w 5f; fi
+		if $has_ACLC; then sudo $smc_binary -k ACLC -w 04; fi
+		if $has_BFCL; then sudo $smc_binary -k BFCL -w 5f; fi
 	elif [[ "$color" == "none" ]]; then
 		#log "setting LED to none"
-		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
-		if $has_BFCL; then sudo smc -k BFCL -w 5f; fi
+		if $has_ACLC; then sudo $smc_binary -k ACLC -w 01; fi
+		if $has_BFCL; then sudo $smc_binary -k BFCL -w 5f; fi
 	else
 		# Default action: reset. Value 00 is a guess and needs confirmation
 		#log "resetting LED"
-		if $has_ACLC; then sudo smc -k ACLC -w 00; fi
-		if $has_BFCL; then sudo smc -k BFCL -w 00; fi
+		if $has_ACLC; then sudo $smc_binary -k ACLC -w 00; fi
+		if $has_BFCL; then sudo $smc_binary -k BFCL -w 00; fi
 	fi
 }
 
@@ -682,15 +682,15 @@ function enable_discharging() {
 	log "🔽🪫 Enabling battery discharging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0I; then 
-			sudo smc -k CH0I -w 01;
+			sudo $smc_binary -k CH0I -w 01;
 		else
-			if $has_CH0J; then sudo smc -k CH0J -w 01; fi
-			if $has_CHIE; then sudo smc -k CHIE -w 08; fi
+			if $has_CH0J; then sudo $smc_binary -k CH0J -w 01; fi
+			if $has_CHIE; then sudo $smc_binary -k CHIE -w 08; fi
 		fi
-		if $has_ACLC; then sudo smc -k ACLC -w 01; fi
+		if $has_ACLC; then sudo $smc_binary -k ACLC -w 01; fi
 	else
-		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
-		if $has_ACEN; then sudo smc -k ACEN -w 00; fi
+		if $has_BCLM; then sudo $smc_binary -k BCLM -w 0a; fi
+		if $has_ACEN; then sudo $smc_binary -k ACEN -w 00; fi
 	fi
 	sleep 1
 }
@@ -699,13 +699,13 @@ function disable_discharging() {
 	log "🔼🪫 Disabling battery discharging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
 		if $has_CH0I; then 
-			sudo smc -k CH0I -w 00;
+			sudo $smc_binary -k CH0I -w 00;
 		else
-			if $has_CH0J; then sudo smc -k CH0J -w 00; fi
-			if $has_CHIE; then sudo smc -k CHIE -w 00; fi
+			if $has_CH0J; then sudo $smc_binary -k CH0J -w 00; fi
+			if $has_CHIE; then sudo $smc_binary -k CHIE -w 00; fi
 		fi
 	else
-		if $has_ACEN; then sudo smc -k ACEN -w 01; fi
+		if $has_ACEN; then sudo $smc_binary -k ACEN -w 01; fi
 	fi
 	sleep 1
 
@@ -716,8 +716,8 @@ function disable_discharging() {
 
 	#	log "Disabling discharging: No valid maintain percentage set, enabling charging"
 	#	# use direct commands since enable_charging also calls disable_discharging, and causes an eternal loop
-	#	sudo smc -k CH0B -w 00
-	#	sudo smc -k CH0C -w 00
+	#	sudo $smc_binary -k CH0B -w 00
+	#	sudo $smc_binary -k CH0C -w 00
 	#	change_magsafe_led_color "orange"
 
 	#elif [[ "$battery_percentage" -ge "$setting" && "$is_charging" == "enabled" ]]; then
@@ -730,8 +730,8 @@ function disable_discharging() {
 
 	#	log "Disabling discharging: Charge below $setting, enabling charging"
 	#	# use direct commands since enable_charging also calls disable_discharging, and causes an eternal loop
-	#	sudo smc -k CH0B -w 00
-	#	sudo smc -k CH0C -w 00
+	#	sudo $smc_binary -k CH0B -w 00
+	#	sudo $smc_binary -k CH0C -w 00
 	#	change_magsafe_led_color "orange"
 
 	#fi
@@ -744,11 +744,11 @@ function enable_charging() {
 	disable_discharging
 	log "🔌🔋 Enabling battery charging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		if $has_CH0B; then sudo smc -k CH0B -w 00; fi
-		if $has_CH0C; then sudo smc -k CH0C -w 00; fi
-		if $has_CHTE && ! $has_CH0B; then sudo smc -k CHTE -w 00000000; fi
+		if $has_CH0B; then sudo $smc_binary -k CH0B -w 00; fi
+		if $has_CH0C; then sudo $smc_binary -k CH0C -w 00; fi
+		if $has_CHTE && ! $has_CH0B; then sudo $smc_binary -k CHTE -w 00000000; fi
 	else
-		if $has_BCLM; then sudo smc -k BCLM -w 64; fi
+		if $has_BCLM; then sudo $smc_binary -k BCLM -w 64; fi
 	fi
 	sleep 1
 }
@@ -756,11 +756,11 @@ function enable_charging() {
 function disable_charging() {
 	log "🔌🪫 Disabling battery charging"
 	if [[ $(get_cpu_type) == "apple" ]]; then
-		if $has_CH0B; then sudo smc -k CH0B -w 02; fi
-		if $has_CH0C; then sudo smc -k CH0C -w 02; fi
-		if $has_CHTE && ! $has_CH0B; then sudo smc -k CHTE -w 01000000; fi
+		if $has_CH0B; then sudo $smc_binary -k CH0B -w 02; fi
+		if $has_CH0C; then sudo $smc_binary -k CH0C -w 02; fi
+		if $has_CHTE && ! $has_CH0B; then sudo $smc_binary -k CHTE -w 01000000; fi
 	else
-		if $has_BCLM; then sudo smc -k BCLM -w 0a; fi
+		if $has_BCLM; then sudo $smc_binary -k BCLM -w 0a; fi
 	fi
 	sleep 1
 }
@@ -931,7 +931,7 @@ function get_battery_temperature() {
 	else
 		#temperature=$(ioreg -l -n AppleSmartBattery -r | grep "\"Temperature\" =" | awk '{ print $3 }' | tr ',' '.')
 		#temperature=$(echo "scale=1; ($temperature+5)/100" | bc)
-		temperature=$(echo $(smc -k TB0T -r) | awk '{print $3}') # this value is closer to coconutBattery and AlDente
+		temperature=$(echo $($smc_binary -k TB0T -r) | awk '{print $3}') # this value is closer to coconutBattery and AlDente
 		temperature=$(echo "scale=1; ($temperature*1000+50)/1000" | bc)
 	fi
 
@@ -963,7 +963,7 @@ function get_charger_connection() { # 20241013 by JS
 }
 
 function get_cpu_type() {
-	if [[ $(smc -k BCLM -r) == *"no data"* ]]; then
+	if [[ $($smc_binary -k BCLM -r) == *"no data"* ]]; then
 		echo "apple"
 	else
 		echo "intel"
@@ -1206,7 +1206,7 @@ function read_smc() { # read smc decimal value
 
 function read_smc_hex() { # read smc hex value
 	key=$1
-	line=$(echo $(smc -k $key -r))
+	line=$(echo $($smc_binary -k $key -r))
 	if [[ $line =~ "no data" ]]; then
 		echo
 	else
@@ -1699,7 +1699,7 @@ fi
 # Maintain at level
 if [[ "$action" == "maintain_synchronous" ]]; then
 	if [[ $(get_cpu_type) == "apple" ]]; then # reset to default when reboot
-		if $has_CHWA; then sudo smc -k CHWA -w 00; fi
+		if $has_CHWA; then sudo $smc_binary -k CHWA -w 00; fi
 	fi
 
 	# Recover old maintain status if old setting is found

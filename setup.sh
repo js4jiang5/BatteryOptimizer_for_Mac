@@ -108,9 +108,9 @@ else
     cpu_type="apple"
 fi
 
-smc() {
-    "$binfolder/smc" "$@"
-}
+#smc() {
+#    "$binfolder/smc" "$@"
+#}
 
 # Cleanup original battery and smc binary
 safe_rm -f /usr/local/bin/battery
@@ -205,7 +205,7 @@ for key in calibrate_method calibrate_schedule calibrate_next informed_version l
 done
 
 user_home="/Users/$calling_user"
-if [[ $(smc -k BCLM -r) == *"no data"* ]] && [[ $(smc -k CHWA -r) != *"no data"* ]]; then # sleepwatcher only required for Apple CPU Macbook when CHWA is available
+if [[ $($binfolder/smc -k BCLM -r) == *"no data"* ]] && [[ $($binfolder/smc -k CHWA -r) != *"no data"* ]]; then # sleepwatcher only required for Apple CPU Macbook when CHWA is available
 	echo "[ 8 ] Setup for power limit when Macs shutdown"
 	sudo install -m 755 -o "$calling_user" "$batteryfolder/dist/.reboot" "$user_home/.reboot"
 	sudo install -m 755 -o "$calling_user" "$batteryfolder/dist/.shutdown" "$user_home/.shutdown"
