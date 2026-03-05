@@ -1374,7 +1374,7 @@ fi
 # Update helper
 if [[ "$action" == "update_silent" ]]; then
 
-	#assert_running_as_root
+	assert_running_as_root
 
 	# Check if we have the most recent version
 	# fetch latest battery.sh
@@ -1422,7 +1422,7 @@ if [[ "$action" == "update_silent" ]]; then
 		if [[ $answer == "Yes" ]]; then
 			tmp_update=$(mktemp)
 			if curl -sS "$github_link/update.sh" -o "$tmp_update"; then
-				sudo bash "$tmp_update"
+				bash "$tmp_update"
 				safe_rm "$tmp_update"
 			else
 				echo "Error: download fail"
@@ -1436,7 +1436,7 @@ fi
 # Update helper for Terminal users
 if [[ "$action" == "update" ]]; then
 	assert_not_running_as_root
-	$battery_binary update_silent
+	sudo $battery_binary update_silent
 	exit 0
 fi
 
