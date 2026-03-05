@@ -46,8 +46,8 @@ function read_config() { # read $val of $name in config_file
 	local val=""
 	if [[ -f "${config_file:-}" ]]; then
 		while read -r "line" || [[ -n "$line" ]]; do
-			if [[ "$line" == "$name ="* ]]; then
-				val="${line#*'='}"
+			if [[ "$line" =~  "$name = " ]]; then
+				val=${line#*'= '}
 				break
 			fi
 		done < $config_file
