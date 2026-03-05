@@ -88,7 +88,7 @@ function cleanup() { safe_rm -rf "$tempfolder"; }
 trap cleanup EXIT
 
 # Set script value
-calling_user=${1:-${SUDO_USER:-$USER}} # give SUDO_USER higher priority
+calling_user=${SUDO_USER:-$USER} # give SUDO_USER higher priority
 if [[ "$calling_user" == "root" ]]; then
 	echo "❌ Failed to determine unprivileged username"
 	exit 1
