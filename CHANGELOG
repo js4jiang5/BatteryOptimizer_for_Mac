@@ -1,3 +1,14 @@
+v2.0.30
+This update needs to enter password.
+* security enhancement
+- change binary folder to root-owned /usr/local/co.battery-optimizer to prevent malware attacks
+- remove symlink in /usr/local/bin, which is not root-owned in Intel macbooks
+- update visudo for future passwordless update
+- add safe_rm() function to replace rm to avoid catastrophic deletion
+- use set -uo pipefail for better protection
+- offer user the option of keeping dailylog and calibrate record when uninstall
+- update binary path for battery_shutdown.plist
+
 v2.0.29
 This update needs to enter password.
 * fix bugs below

@@ -4,16 +4,21 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.29"
-BATTERY_VISUDO_VERSION="v1.0.4"
+BATTERY_CLI_VERSION="v2.0.30"
+BATTERY_VISUDO_VERSION="v1.0.5"
 
 # Path fixes for unexpected environments
-PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+if [[ $EUID -eq 0 ]]; then
+    # Running as root, do not include user-writable directories in PATH
+    PATH=/usr/bin:/bin:/usr/sbin:/sbin
+else
+    PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+fi
 
 ## ###############
 ## Variables
 ## ###############
-binfolder=/usr/local/bin
+binfolder=/usr/local/co.battery-optimizer
 visudo_folder=/private/etc/sudoers.d
 visudo_file=${visudo_folder}/battery
 configfolder=$HOME/.battery
@@ -22,6 +27,7 @@ pidfile=$configfolder/battery.pid
 logfile=$configfolder/battery.log
 pid_sig=$configfolder/sig.pid
 daemon_path=$HOME/Library/LaunchAgents/battery.plist
+path_configfile=/etc/paths.d/battery-optimizer
 calibrate_pidfile=$configfolder/calibrate.pid
 schedule_path=$HOME/Library/LaunchAgents/battery_schedule.plist
 shutdown_path=$HOME/Library/LaunchAgents/battery_shutdown.plist
@@ -35,7 +41,7 @@ github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MA
 ## ###############
 
 # Create config folder if needed
-mkdir -p $configfolder
+mkdir -p "$configfolder"
 
 # create logfile if needed
 touch $logfile
@@ -148,6 +154,10 @@ Usage:
 # Visudo instructions
 visudoconfig="
 # Visudo settings for the battery utility installed from https://github.com/js4jiang5/BatteryOptimizer_for_MAC
+
+# Allow passwordless update (All battery app executables are owned by root to prevent privilege escalation attacks)
+ALL ALL = NOPASSWD: $binfolder/battery update_silent
+
 # intended to be placed in $visudo_file on a mac
 Cmnd_Alias      BATTERYOFF = $binfolder/smc -k CH0B -w 02, $binfolder/smc -k CH0C -w 02, $binfolder/smc -k CHTE -w 01000000, $binfolder/smc -k CH0B -r, $binfolder/smc -k CH0C -r, $binfolder/smc -k CHTE -r
 Cmnd_Alias      BATTERYON = $binfolder/smc -k CH0B -w 00, $binfolder/smc -k CH0C -w 00, $binfolder/smc -k CHTE -w 00000000
@@ -174,11 +184,15 @@ ALL ALL = NOPASSWD: BATTERYB0AC
 "
 
 # Get parameters
-battery_binary=$0
+battery_binary=$binfolder/battery
 action=$1
 setting=$2
 subsetting=$3
 thirdsetting=$4
+
+smc() {
+    "$binfolder/smc" "$@"
+}
 
 # check the availability of SMC keys
 [[ $(smc -k BCLM -r) =~ "no data" ]] && has_BCLM=false || has_BCLM=true;
@@ -199,13 +213,53 @@ thirdsetting=$4
 ## Helpers
 ## ###############
 
+function safe_rm() {
+    local opts=""
+    if [[ "${1:-}" == -* ]]; then
+        opts="$1"
+        shift # shift left to let $1 become path
+    fi
+
+	if [[ $# -eq 0 ]]; then
+        echo "❌ Error: path or file name not specified" >&2
+        return 1
+    fi
+
+	for target in "$@"; do
+		if [[ -z "${target// /}" ]]; then
+			echo "❌ Error: path is empty, delete stopped" >&2
+			continue
+		fi
+
+		case "$target" in
+			"/"|"/usr"|"/usr/bin"|"/etc"|"/var"|"/Library"|"/System")
+				echo "🚨 Warning: detected danger system path ($target), delete stopped!" >&2
+				continue
+				;;
+		esac
+
+		# check existence before delete
+		if [[ -e "$target" || -L "$target" ]]; then
+			#echo "🗑️ safe deleting $target"
+            # auto detect if sudo is required and add it
+            # if current is not root and not writable, add sudo
+            if [[ $EUID -ne 0 && ! -w "$target" && ! -w "$(dirname "$target")" ]]; then
+                sudo rm ${opts:-} "$target"
+            else
+                rm ${opts:-} "$target"
+            fi
+		#else
+		#	echo "❌ path not exist, skip delete ($target)"
+		fi
+	done
+}
 
 function valid_action() {
     local action=$1
     
     # List of valid actions
     VALID_ACTIONS=("" "visudo" "maintain" "calibrate" "schedule" "charge" "discharge" 
-	"status" "dailylog" "calibratelog" "logs" "language" "update" "version" "reinstall" "uninstall" 
+	"status" "dailylog" "calibratelog" "logs" "language" "update" "update_silent" "version" "reinstall" "uninstall" 
 	"maintain_synchronous" "status_csv" "create_daemon" "disable_daemon" "remove_daemon" "changelog" "ssd" "ssdlog")
     
     VALID_ACTIONS_USER=("" "visudo" "maintain" "calibrate" "schedule" "charge" "discharge" 
@@ -779,6 +833,22 @@ function get_smc_discharging_status() {
 	fi
 }
 
+function assert_not_running_as_root() {
+	if [[ $EUID -eq 0 ]]; then
+		echo " ❌ The following command should not be executed with root privileges:"
+		echo "        battery $action $setting $subsetting"
+		echo "    Please, try running without 'sudo'"
+		exit 1
+	fi
+}
+
+function assert_running_as_root() {
+	if [[ $EUID -ne 0 ]]; then
+		log "❌ battery $action $setting $subsetting: must be executed with root privileges"
+		exit 1
+	fi
+}
+
 ## ###############
 ## Statistics
 ## ###############
@@ -906,12 +976,7 @@ function get_cpu_type() {
 }
 
 function get_parameter() { # get parameter value from configuration file. the format is var=value or var= value or var = value
-	var_loc=$(echo $(echo "$1" | tr " " "\n" | grep -n "$2" | cut -d: -f1) | awk '{print $1}')
-	if [ -z $var_loc ]; then
-		echo
-	else
-		echo $1 | awk '{print $"'"$((var_loc))"'"}' | tr '=' ' ' | awk '{print $2}'
-	fi
+	echo "$1" | grep "^$2=" | cut -d'=' -f2 | tr -d '"' | tr -d "'"
 }
 
 function get_changelog() { # get the latest changelog
@@ -1043,7 +1108,7 @@ function ack_SIG() {
 }
 
 function calibrate_interrupted() {
-	rm $calibrate_pidfile 2>/dev/null
+	safe_rm $calibrate_pidfile 2>/dev/null
 	if [[ "$(maintain_is_running)" == "1" ]] && [[ "$(echo $(cat "$pidfile" 2>/dev/null) | awk '{print $2}')" == "suspended" ]]; then
 		$battery_binary maintain recover
 	fi
@@ -1150,31 +1215,34 @@ function read_smc_hex() { # read smc hex value
 }
 
 function read_config() { # read $val of $name in config_file
-	name=$1
-	val=
-	if test -f $config_file; then
+	local name="${1:-}" 
+	local val=""
+	if [[ -f "${config_file:-}" ]]; then
 		while read -r "line" || [[ -n "$line" ]]; do
-			if [[ "$line" =~  "$name = " ]]; then
-				val=${line#*'= '}
+			if [[ "$line" == "$name ="* ]]; then
+				val="${line#*'='}"
 				break
 			fi
 		done < $config_file
 	fi
-	echo $val
+	echo "${val:-}"
 }
 
-function write_config() { # write $val to $name in config_file
-	name=$1
-	val=$2
-	if test -f $config_file; then
-		config=$(cat $config_file 2>/dev/null)
-		name_loc=$(echo "$config" | grep -n "$name" | cut -d: -f1)
-		if [[ $name_loc ]]; then
-			sed -i '' ''"$name_loc"'s/.*/'"$name"' = '"$val"'/' $config_file
-		else # not exist yet
-			echo "$name = $val" >> $config_file
-		fi
-	fi
+function write_config() {
+    local name="${1:-}" 
+    local val="${2:-}" 
+    local file="${config_file:-}"
+    if [[ ! -f "$file" ]]; then
+        echo "$name = $val" >> "$file"
+        return
+    fi
+    local name_loc
+    name_loc=$(grep -n "^$name =" "$file" | cut -d: -f1 | head -n 1)
+    if [[ -n "$name_loc" ]]; then
+        sed -i '' "${name_loc}s@.*@${name} = ${val}@" "$file"
+    else # not exist yest
+        echo "$name = $val" >> "$file"
+    fi
 }
 
 function print_calibrate_log() {
@@ -1241,7 +1309,7 @@ if [[ "$action" == "visudo" ]]; then
 
 	# Allocate temp folder
 	tempfolder="$(mktemp -d)"
-	function cleanup() { rm -rf "$tempfolder"; }
+	function cleanup() { safe_rm -rf "$tempfolder"; }
 	trap cleanup EXIT
 
 	# Write the visudo file to a tempfile
@@ -1263,7 +1331,7 @@ if [[ "$action" == "visudo" ]]; then
 		ensure_owner_mode root wheel 440 "$visudo_file"
 
 		# Delete tempfolder
-		rm -rf "$tempfolder"
+		safe_rm -rf "$tempfolder"
 
 		# exit because no changes are needed
 		exit 0
@@ -1280,7 +1348,7 @@ if [[ "$action" == "visudo" ]]; then
 		ensure_owner_mode root wheel 440 "$visudo_file"
 
 		# Delete tempfolder
-		rm -rf "$tempfolder"
+		safe_rm -rf "$tempfolder"
 
 		echo "✅ Visudo file updated successfully"
 
@@ -1304,7 +1372,9 @@ if [[ "$action" == "reinstall" ]]; then
 fi
 
 # Update helper
-if [[ "$action" == "update" ]]; then
+if [[ "$action" == "update_silent" ]]; then
+
+	assert_running_as_root
 
 	# Check if we have the most recent version
 	# fetch latest battery.sh
@@ -1314,66 +1384,103 @@ if [[ "$action" == "update" ]]; then
 	else
 		github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
 	fi
-	battery_new=$(echo $(curl -sSL "$github_link/battery.sh"))
-	battery_new_version=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")
-		
-	if [[ $battery_new == "404: Not Found" ]]; then
+	battery_new=$(curl -sSL "$github_link/battery.sh")
+	battery_new_version=$(get_parameter "$battery_new" "BATTERY_CLI_VERSION")
+	
+	if [[ -z $battery_new_version ]]; then
 		log "Error: the specified update file is not available"
 		exit 1
 	fi
 
-	visudo_new_version=$(echo $(get_parameter "$battery_new" "BATTERY_VISUDO_VERSION") | tr -d \")
+	visudo_new_version=$(get_parameter "$battery_new" "BATTERY_VISUDO_VERSION")
 	if [[ $battery_new_version == $BATTERY_CLI_VERSION ]] && [[ $visudo_new_version == $BATTERY_VISUDO_VERSION ]] && [[ "$setting" != "force" ]]; then
 		if $is_TW; then
-			osascript -e 'display dialog "'"$BATTERY_CLI_VERSION 已是最新版，不需要更新"'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+			osascript -e 'display dialog "'"$BATTERY_CLI_VERSION 已是最新版，不需要更新"'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "BatteryOptimizer for Mac"' >> /dev/null
 		else
-			osascript -e 'display dialog "'"Your version $BATTERY_CLI_VERSION is already the latest. No need to update."'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+			osascript -e 'display dialog "'"Your version $BATTERY_CLI_VERSION is already the latest. No need to update."'" buttons {"OK"} default button 1 giving up after 60 with icon note with title "BatteryOptimizer for Mac"' >> /dev/null
 		fi		
 	else
 		button_empty="                                                                                                                                                    "
 		if $is_TW; then
 			changelog=$(get_changelog CHANGELOG_TW)
 			battery_new_version=$(get_version CHANGELOG_TW)
-			osascript -e 'display dialog "'"$battery_new_version 更新內容如下\n\n$changelog"'" buttons {"'"$button_empty"'", "繼續"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+			osascript -e 'display dialog "'"$battery_new_version 更新內容如下\n\n$changelog"'" buttons {"'"$button_empty"'", "繼續"} default button 2 with icon note with title "BatteryOptimizer for Mac"' >> /dev/null
 		else
 			changelog=$(get_changelog CHANGELOG)
 			battery_new_version=$(get_version CHANGELOG)
-			osascript -e 'display dialog "'"$battery_new_version changes include\n\n$changelog"'" buttons {"'"$button_empty"'", "Continue"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+			osascript -e 'display dialog "'"$battery_new_version changes include\n\n$changelog"'" buttons {"'"$button_empty"'", "Continue"} default button 2 with icon note with title "BatteryOptimizer for Mac"' >> /dev/null
 		fi
 		if $is_TW; then
-			answer="$(osascript -e 'display dialog "'"你現在要更新到$battery_new_version 嗎?"'" buttons {"立即更新", "跳過此版本"} default button 1 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+			answer="$(osascript -e 'display dialog "'"你現在要更新到$battery_new_version 嗎?"'" buttons {"立即更新", "跳過此版本"} default button 1 with icon note with title "BatteryOptimizer for Mac"' -e 'button returned of result')"
 			if [[ $answer == "立即更新" ]]; then
 				answer="Yes"
 			fi	
 		else
-			answer="$(osascript -e 'display dialog "'"Do you want to update to version $battery_new_version now?"'" buttons {"Yes", "No"} default button 1 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+			answer="$(osascript -e 'display dialog "'"Do you want to update to version $battery_new_version now?"'" buttons {"Yes", "No"} default button 1 with icon note with title "BatteryOptimizer for Mac"' -e 'button returned of result')"
 		fi
 		
 		if [[ $answer == "Yes" ]]; then
-			curl -sS "$github_link/update.sh" | bash
+			tmp_update=$(mktemp)
+			if curl -sS "$github_link/update.sh" -o "$tmp_update"; then
+				sudo bash "$tmp_update"
+				safe_rm "$tmp_update"
+			else
+				echo "Error: download fail"
+				exit 1
+			fi
 		fi
 	fi
+	exit 0
+fi
+
+# Update helper for Terminal users
+if [[ "$action" == "update" ]]; then
+	assert_not_running_as_root
+	sudo $battery_binary update_silent
 	exit 0
 fi
 
 # Uninstall helper
 if [[ "$action" == "uninstall" ]]; then
 
-	if [[ ! "$setting" == "silent" ]]; then
-		echo "This will enable charging, and remove the smc tool and battery script"
-		echo "Press any key to continue"
-		read
+	if $is_TW; then
+		answer="$(osascript -e 'display dialog "'"你要保留電池日誌與校正記錄嗎?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for Mac"' -e 'button returned of result')"
+	else
+		answer="$(osascript -e 'display dialog "'"Do you want to keep dailylog and calibrate record?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for Mac"' -e 'button returned of result')"
+	fi
+
+	if [[ "$answer" == "Yes" ]] || [ -z $answer ]; then
+		mkdir -p "$HOME/Downloads"
+		[[ -f "$daily_log" ]] && cp -f "$daily_log" "$HOME/Downloads/daily.log"
+		[[ -f "$calibrate_log" ]] && cp -f "$calibrate_log" "$HOME/Downloads/calibrate.log"
 	fi
 	enable_charging
 	disable_discharging
 	$battery_binary remove_daemon
 	$battery_binary schedule disable
-	rm $schedule_path 2>/dev/null
-	rm $shutdown_path 2>/dev/null
-	sudo rm -v "$binfolder/smc" "$binfolder/battery" $visudo_file "$binfolder/shutdown.sh"
-	sudo rm -v -r "$configfolder"
-	sudo rm -rf $HOME/.sleep $HOME/.wakeup $HOME/.shutdown $HOME/.reboot 
-	pkill -9 -f "/usr/local/bin/battery.*"
+	safe_rm $schedule_path 2>/dev/null
+	safe_rm $shutdown_path 2>/dev/null
+	safe_rm -fv /usr/local/bin/battery
+	safe_rm -fv /usr/local/bin/smc
+	safe_rm -fv "$binfolder/smc" "$binfolder/battery" $visudo_file "$binfolder/shutdown.sh"
+	safe_rm -frv "$configfolder"
+	safe_rm -fv "$path_configfile"
+	safe_rm -rf $HOME/.sleep $HOME/.wakeup $HOME/.shutdown $HOME/.reboot 
+	pkill -9 -f "/usr/local/bin/battery|/usr/local/co\.battery-optimizer/battery"
+	empty="                                                                              "
+	if [[ "$answer" == "Yes" ]] || [ -z $answer ]; then
+		if $is_TW; then
+			answer="$(osascript -e 'display dialog "'"已解除安裝\n電池日誌與校正記錄存放於 ~/Downloads\n感謝您使用 BatteryOptimizer for Mac, 再見!"'" buttons {"'"$empty"'", "'"Goodbye!"'"} default button 2 with icon note with title "BatteryOptimizer for Mac"' -e 'button returned of result')"
+		else
+			answer="$(osascript -e 'display dialog "'"Uninstall complete!\nDailylog and calibrate record saved in ~/Downloads\nThank you for using BatteryOptimizer for Mac, Goodbye!"'" buttons {"'"$empty"'", "'"Goodbye!"'"} default button 2 with icon note with title "BatteryOptimizer for Mac"' -e 'button returned of result')"
+		fi
+	else
+		if $is_TW; then
+			answer="$(osascript -e 'display dialog "'"已解除安裝\n感謝您使用 BatteryOptimizer for Mac, 再見!"'" buttons {"'"$empty"'", "'"Goodbye!"'"} default button 2 with icon note with title "BatteryOptimizer for Mac"' -e 'button returned of result')"
+		else
+			answer="$(osascript -e 'display dialog "'"Uninstall complete!\nThank you for using BatteryOptimizer for Mac, Goodbye!"'" buttons {"'"$empty"'", "'"Goodbye!"'"} default button 2 with icon note with title "BatteryOptimizer for Mac"' -e 'button returned of result')"
+		fi
+	fi
 	exit 0
 fi
 
@@ -1940,7 +2047,7 @@ if [[ "$action" == "maintain" ]]; then
 
 	if [[ "$setting" == "stop" ]]; then
 		log "Killing running maintain daemons & enabling charging as default state" >> $logfile
-		rm $pidfile 2>/dev/null
+		safe_rm $pidfile 2>/dev/null
 		$battery_binary disable_daemon
 		$battery_binary schedule disable
 		enable_charging
@@ -1952,7 +2059,7 @@ if [[ "$action" == "maintain" ]]; then
 	if test -f "$calibrate_pidfile"; then
 		pid=$(cat "$calibrate_pidfile" 2>/dev/null)
 		kill $pid &>/dev/null
-		rm $calibrate_pidfile 2>/dev/null
+		safe_rm $calibrate_pidfile 2>/dev/null
 		log "🚨 Calibration process have been stopped"
 	fi
 	
@@ -1996,9 +2103,9 @@ if [[ "$action" == "maintain" ]]; then
 			if ! [[ $(ps aux | grep $PPID) =~ "setup.sh" ]] && ! [[ $(ps aux | grep $PPID) =~ "update.sh" ]]; then 
 				# Ask user if discharging right now unless this action is invoked by setup.sh
 				if $is_TW; then
-					answer="$(osascript -e 'display dialog "'"你要現在就放電到 $setting% 嗎?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+					answer="$(osascript -e 'display dialog "'"你要現在就放電到 $setting% 嗎?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for Mac"' -e 'button returned of result')"
 				else
-					answer="$(osascript -e 'display dialog "'"Do you want to discharge battery to $setting% now?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
+					answer="$(osascript -e 'display dialog "'"Do you want to discharge battery to $setting% now?"'" buttons {"Yes", "No"} default button 1 giving up after 10 with icon note with title "BatteryOptimizer for Mac"' -e 'button returned of result')"
 				fi
 				if [[ "$answer" == "Yes" ]] || [ -z $answer ]; then
 					log "Start discharging to $setting%"
@@ -2180,7 +2287,7 @@ if [[ "$action" == "calibrate" ]]; then
 			print_calibrate_log $calibrate_time No $health_before %
 			echo "Discharge to 15% fail" >> $calibrate_log
 
-			rm $calibrate_pidfile 2>/dev/null
+			safe_rm $calibrate_pidfile 2>/dev/null
 			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
@@ -2212,7 +2319,7 @@ if [[ "$action" == "calibrate" ]]; then
 			print_calibrate_log $calibrate_time No $health_before %
 			echo "Charge to 100% fail" >> $calibrate_log
 
-			rm $calibrate_pidfile 2>/dev/null
+			safe_rm $calibrate_pidfile 2>/dev/null
 			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
@@ -2257,7 +2364,7 @@ if [[ "$action" == "calibrate" ]]; then
 			print_calibrate_log $calibrate_time No $health_before %
 			echo "Discharge to $setting% fail" >> $calibrate_log
 
-			rm $calibrate_pidfile 2>/dev/null
+			safe_rm $calibrate_pidfile 2>/dev/null
 			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
@@ -2290,7 +2397,7 @@ if [[ "$action" == "calibrate" ]]; then
 			print_calibrate_log $calibrate_time No $health_before %
 			echo "Charge to 100% fail" >> $calibrate_log
 
-			rm $calibrate_pidfile 2>/dev/null
+			safe_rm $calibrate_pidfile 2>/dev/null
 			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
@@ -2333,7 +2440,7 @@ if [[ "$action" == "calibrate" ]]; then
 				osascript -e 'display notification "Discharge to 15% fail" with title "Battery Calibration Error" sound name "Blow"'
 			fi
 			log "Calibration Error: Discharge to 15% fail"
-			rm $calibrate_pidfile 2>/dev/null
+			safe_rm $calibrate_pidfile 2>/dev/null
 			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
@@ -2361,7 +2468,7 @@ if [[ "$action" == "calibrate" ]]; then
 				osascript -e 'display notification "'"Charge to $setting% fail"'" with title "Battery Calibration Error" sound name "Blow"'
 			fi
 			log "Calibration Error: Charge to $setting% fail"
-			rm $calibrate_pidfile 2>/dev/null
+			safe_rm $calibrate_pidfile 2>/dev/null
 			$battery_binary maintain recover # Recover old maintain status
 			exit 1
 		fi
@@ -2396,7 +2503,7 @@ if [[ "$action" == "calibrate" ]]; then
 	print_calibrate_log $calibrate_time Yes $health_before $(get_battery_health)%
 	echo "$n_days$n_hours $n_minutes $n_second" >> $calibrate_log
 
-	rm $calibrate_pidfile 2>/dev/null
+	safe_rm $calibrate_pidfile 2>/dev/null
 	$battery_binary maintain recover # Recover old maintain status
 	exit 0
 fi
@@ -2559,7 +2666,7 @@ fi
 # Remove daemon
 if [[ "$action" == "remove_daemon" ]]; then
 
-	rm $daemon_path 2>/dev/null
+	safe_rm $daemon_path 2>/dev/null
 	exit 0
 
 fi
@@ -2975,11 +3082,11 @@ if [[ "$action" == "changelog" ]]; then
 	if $is_TW; then
 		changelog=$(get_changelog CHANGELOG_TW)
 		battery_new_version=$(get_version CHANGELOG_TW)
-		osascript -e 'display dialog "'"$battery_new_version 更新內容如下\n\n$changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+		osascript -e 'display dialog "'"$battery_new_version 更新內容如下\n\n$changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "BatteryOptimizer for Mac"' >> /dev/null
 	else
 		changelog=$(get_changelog CHANGELOG)
 		battery_new_version=$(get_version CHANGELOG)
-		osascript -e 'display dialog "'"$battery_new_version changes inlude\n\n$changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "BatteryOptimizer for MAC"' >> /dev/null
+		osascript -e 'display dialog "'"$battery_new_version changes inlude\n\n$changelog"'" buttons {"'"$button_empty"'", "OK"} default button 2 with icon note with title "BatteryOptimizer for Mac"' >> /dev/null
 	fi
 	exit 0
 fi

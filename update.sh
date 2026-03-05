@@ -1,11 +1,44 @@
-#!/bin/bash
+#!/bin/bash -uo pipefail
 
-function valid_day() {
-	if ! [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" -lt 1 ]] || [[ "$1" -gt 28 ]]; then
-		return 1
-	else
-		return 0
-	fi
+function safe_rm() {
+    local opts=""
+    if [[ "${1:-}" == -* ]]; then
+        opts="$1"
+        shift # shift left to let $1 become path
+    fi
+
+	if [[ $# -eq 0 ]]; then
+        echo "❌ Error: path or file name not specified" >&2
+        return 1
+    fi
+
+	for target in "$@"; do
+		if [[ -z "${target// /}" ]]; then
+			echo "❌ Error: path is empty, delete stopped" >&2
+			continue
+		fi
+
+		case "$target" in
+			"/"|"/usr"|"/usr/bin"|"/etc"|"/var"|"/Library"|"/System")
+				echo "🚨 Warning: detected danger system path ($target), delete stopped!" >&2
+				continue
+				;;
+		esac
+
+		# check existence before delete
+		if [[ -e "$target" || -L "$target" ]]; then
+			#echo "🗑️ safe deleting $target"
+            # auto detect if sudo is required and add it
+            # if current is not root and not writable, add sudo
+            if [[ $EUID -ne 0 && ! -w "$target" && ! -w "$(dirname "$target")" ]]; then
+                sudo rm ${opts:-} "$target"
+            else
+                rm ${opts:-} "$target"
+            fi
+		#else
+		#	echo "❌ path not exist, skip delete ($target)"
+		fi
+	done
 }
 
 function format00() {
@@ -28,40 +61,38 @@ function version_number { # get number part of version for comparison
 }
 
 function get_parameter() { # get parameter value from configuration file. the format is var=value or var= value or var = value
-    var_loc=$(echo $(echo "$1" | tr " " "\n" | grep -n "$2" | cut -d: -f1) | awk '{print $1}')
-    if [ -z $var_loc ]; then
-        echo
-    else
-        echo $1 | awk '{print $"'"$((var_loc))"'"}' | tr '=' ' ' | awk '{print $2}'
-    fi
+ 	echo "$1" | grep "^$2=" | cut -d'=' -f2 | tr -d '"' | tr -d "'"
 }
 
 function read_config() { # read $val of $name in config_file
-	name=$1
-	val=
-	if test -f $config_file; then
+	local name="${1:-}" 
+	local val=""
+	if [[ -f "${config_file:-}" ]]; then
 		while read -r "line" || [[ -n "$line" ]]; do
-			if [[ "$line" =~  "$name = " ]]; then
-				val=${line#*'= '}
+			if [[ "$line" == "$name ="* ]]; then
+				val="${line#*'='}"
 				break
 			fi
 		done < $config_file
 	fi
-	echo $val
+	echo "${val:-}"
 }
 
-function write_config() { # write $val to $name in config_file
-	name=$1
-	val=$2
-	if test -f $config_file; then
-		config=$(cat $config_file 2>/dev/null)
-		name_loc=$(echo "$config" | grep -n "$name" | cut -d: -f1)
-		if [[ $name_loc ]]; then
-			sed -i '' ''"$name_loc"'s/.*/'"$name"' = '"$val"'/' $config_file
-		else # not exist yet
-			echo "$name = $val" >> $config_file
-		fi
-	fi
+function write_config() {
+    local name="${1:-}" 
+    local val="${2:-}" 
+    local file="${config_file:-}"
+    if [[ ! -f "$file" ]]; then
+        echo "$name = $val" >> "$file"
+        return
+    fi
+    local name_loc
+    name_loc=$(grep -n "^$name =" "$file" | cut -d: -f1 | head -n 1)
+    if [[ -n "$name_loc" ]]; then
+        sed -i '' "${name_loc}s@.*@${name} = ${val}@" "$file"
+    else # not exist yest
+        echo "$name = $val" >> "$file"
+    fi
 }
 
 # Force-set path to include sbin
@@ -71,18 +102,61 @@ PATH=/usr/bin:/bin:/usr/sbin:/sbin
 trap 'exit 130' INT
 
 # Set environment variables
-tempfolder=~/.battery-tmp
 binfolder=/usr/local/co.battery-optimizer
 configfolder=$HOME/.battery
 config_file=$configfolder/config_battery
-batteryfolder="$tempfolder/battery"
-language_file=$configfolder/language.code
-github_link="https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_MAC/main"
-mkdir -p $batteryfolder
 
+echo -e "🔋 Starting battery update\n"
+
+battery_local=$(cat $binfolder/battery 2>/dev/null)
+battery_version_local=$(get_parameter "$battery_local" "BATTERY_CLI_VERSION")
+visudo_version_local=$(get_parameter "$battery_local" "BATTERY_VISUDO_VERSION")
+
+# Trigger reinstall for Terminal users to update from version v2.0.29 or earlier.
+if [[ 10#$(version_number $battery_version_local) -lt 10#$(version_number "v2.0.30") ]]; then
+	echo -e "💡 This battery update requires a full reinstall for security hardening...\n"
+	curl -sS "https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_Mac/main/setup.sh" | bash
+	$binfolder/battery maintain recover
+	exit 0
+fi
+
+# Write battery function as executable
+echo "[ 1 ] Downloading latest battery version"
+tmp_battery=$(mktemp)
+if ! curl -fsSL "https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_Mac/main/battery.sh" -o "$tmp_battery"; then
+    echo "❌ Error: download fail"
+    safe_rm -f "$tmp_battery"
+    exit 1
+fi
+#safe_rm -f $tmp_battery; tmp_battery=$HOME/.battery-tmp/battery/battery.sh # this is for testing before upload
+
+echo "[ 2 ] Writing script to $binfolder/battery"
+sudo install -m 755 -o root -g wheel "$tmp_battery" "$binfolder/battery"
+
+battery_new=$(cat $binfolder/battery 2>/dev/null)
+battery_version_new=$(get_parameter "$battery_new" "BATTERY_CLI_VERSION")
+visudo_version_new=$(get_parameter "$battery_new" "BATTERY_VISUDO_VERSION")
+
+echo "[ 3 ] Setting up visudo declarations"
+if [[ $visudo_version_new != $visudo_version_local ]]; then
+	sudo $binfolder/battery visudo 1>/dev/null
+fi
+
+echo -e "\n🎉 Battery tool updated.\n"
+
+# Restart battery maintain process
+echo -e "Restarting battery maintain.\n"
+write_config "informed_version" "$battery_version_new"
+
+pkill -9 -f "$binfolder/battery.*"
+$binfolder/battery maintain recover
+
+empty="                                                                    "
+button_empty="${empty} Buy me a coffee ☕ ${empty}😀"
+button_empty_tw="${empty} 請我喝杯咖啡 ☕ ${empty}😀"
 lang=$(defaults read -g AppleLocale)
-if test -f $language_file; then
-	language=$(cat "$language_file" 2>/dev/null)
+language=$(read_config language)
+if [[ $language ]]; then
 	if [[ "$language" == "tw" ]]; then
 		is_TW=true
 	else
@@ -95,89 +169,6 @@ else
 		is_TW=false
 	fi
 fi
-
-echo -e "🔋 Starting battery update\n"
-
-battery_local=$(echo $(cat $binfolder/battery 2>/dev/null))
-battery_version_local=$(echo $(get_parameter "$battery_local" "BATTERY_CLI_VERSION") | tr -d \")
-visudo_version_local=$(echo $(get_parameter "$battery_local" "BATTERY_VISUDO_VERSION") | tr -d \")
-
-# Trigger reinstall for Terminal users to update from version v2.0.28 or earlier.
-if [[ 10#$(version_number $battery_version_local) -lt 10#$(version_number "v2.0.29") ]]; then
-	echo -e "💡 This battery update requires a full reinstall for security hardening...\n"
-	curl -sS "https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_Mac/main/setup.sh" | bash
-	$binfolder/battery maintain recover
-	exit 0
-fi
-
-# Write battery function as executable
-echo "[ 1 ] Downloading latest battery version"
-update_branch="main"
-in_zip_folder_name="BatteryOptimizer_for_MAC-$update_branch"
-batteryfolder="$tempfolder/battery"
-rm -rf $batteryfolder
-mkdir -p $batteryfolder
-curl -sSL -o $batteryfolder/repo.zip "https://github.com/js4jiang5/BatteryOptimizer_for_MAC/archive/refs/heads/$update_branch.zip"
-unzip -qq $batteryfolder/repo.zip -d $batteryfolder
-cp -r $batteryfolder/$in_zip_folder_name/* $batteryfolder
-rm $batteryfolder/repo.zip
-
-# update smc for intel macbook if version is less than v2.0.14
-if [[ 10#$(version_number $battery_version_local) -lt 10#$(version_number "v2.0.14") ]]; then
-	if [[ $(sysctl -n machdep.cpu.brand_string) == *"Intel"* ]]; then # check CPU type
-		sudo mkdir -p $binfolder
-		sudo cp $batteryfolder/dist/smc_intel $binfolder/smc
-		sudo chown $USER $binfolder/smc
-		sudo chmod 755 $binfolder/smc
-		sudo chmod +x $binfolder/smc
-	fi
-fi
-
-echo "[ 2 ] Writing script to $binfolder/battery"
-cp $batteryfolder/battery.sh $binfolder/battery
-chown $USER $binfolder/battery
-chmod 755 $binfolder/battery
-chmod u+x $binfolder/battery
-
-battery_new=$(echo $(cat $binfolder/battery 2>/dev/null))
-battery_version_new=$(echo $(get_parameter "$battery_new" "BATTERY_CLI_VERSION") | tr -d \")
-visudo_version_new=$(echo $(get_parameter "$battery_new" "BATTERY_VISUDO_VERSION") | tr -d \")
-
-echo "[ 3 ] Setting up visudo declarations"
-if [[ $visudo_version_new != $visudo_version_local ]]; then
-	sudo $binfolder/battery visudo $USER
-fi
-
-echo "[ 4 ] Setting up battery configuration"
-if ! test -f $config_file; then # config file not exist
-	touch $config_file
-fi
-if [[ -z $(read_config calibrate_method) ]]; then write_config calibrate_method "$(cat $configfolder/calibrate_method 2>/dev/null)"; rm -rf $configfolder/calibrate_method; fi
-if [[ -z $(read_config calibrate_schedule) ]]; then write_config calibrate_schedule "$(cat $configfolder/calibrate_schedule 2>/dev/null)"; rm -rf $configfolder/calibrate_schedule; fi
-if [[ -z $(read_config informed_version) ]]; then write_config informed_version "$(cat $configfolder/informed.version 2>/dev/null)"; rm -rf $configfolder/informed.version; fi
-if [[ -z $(read_config language) ]]; then write_config language "$(cat $configfolder/language.code 2>/dev/null)"; rm -rf $configfolder/language.code; fi
-if [[ -z $(read_config maintain_percentage) ]]; then write_config maintain_percentage "$(cat $configfolder/maintain.percentage 2>/dev/null)"; rm -rf $configfolder/maintain.percentage; fi
-if [[ -z $(read_config webhookid) ]]; then write_config webhookid "$(cat $configfolder/ha_webhook.id 2>/dev/null)"; rm -rf $configfolder/ha_webhook.id; fi
-if test -f $configfolder/sig; then rm -rf $configfolder/sig; fi
-if test -f $configfolder/state; then rm -rf $configfolder/state; fi
-
-# Remove tempfiles
-cd
-rm -rf $tempfolder
-echo "[ Final ] Removed temporary folder"
-
-echo -e "\n🎉 Battery tool updated.\n"
-
-# Restart battery maintain process
-echo -e "Restarting battery maintain.\n"
-write_config informed_version "$battery_version_new"
-
-pkill -9 -f "$binfolder/battery.*"
-battery maintain recover
-
-empty="                                                                    "
-button_empty="${empty} Buy me a coffee ☕ ${empty}😀"
-button_empty_tw="${empty} 請我喝杯咖啡 ☕ ${empty}😀"
 if $is_TW; then
 	answer="$(osascript -e 'display dialog "'"已更新至 $battery_version_new \n\n如果您覺得這個小工具對您有幫助,點擊下方按鈕請我喝杯咖啡吧"'" buttons {"'"$button_empty_tw"'", "完成"} default button 2 with icon note with title "BatteryOptimizer for MAC"' -e 'button returned of result')"
 else

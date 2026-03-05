@@ -1,3 +1,14 @@
+v2.0.30
+此次更新需要輸入密碼
+* 安全性加強
+- 更改執行檔目錄為 root 所有的 /usr/local/co.battery-optimizer 以防止惡意軟體攻擊
+- 移除在 /usr/local/bin 底下的 symlink. 此目錄在 Intel macbooks 非 root 所有
+- 更新 visudo 未來更新不用再輸入密碼
+- 用 safe_rm() 取代 rm 以避免發生災難性的誤刪
+- 使用 set -uo pipefail 提供更好的保護
+- 解除安裝時提供使用者保留電池日誌與校正記錄的選項
+- 更新 battery_shutdown.plist 內的執行路徑
+
 v2.0.29
 此次更新需要輸入密碼
 * 修正問題

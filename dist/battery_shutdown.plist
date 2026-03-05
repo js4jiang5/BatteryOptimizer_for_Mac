@@ -7,7 +7,7 @@
 		<string>com.battery_shutdown.app</string>
 		<key>ProgramArguments</key>
 		<array>
-			<string>/usr/local/bin/shutdown.sh</string>
+			<string>/usr/local/co.battery-optimizer/shutdown.sh</string>
 		</array>
 		<key>RunAtLoad</key>
 		<true/>
