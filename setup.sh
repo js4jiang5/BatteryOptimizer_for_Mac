@@ -261,7 +261,7 @@ if [[ $($binfolder/smc -k BCLM -r) == *"no data"* ]] && [[ $($binfolder/smc -k C
 	fi
 fi
 
-sudo -u "$calling_user" launchctl asuser $uid "$binfolder/battery" maintain 80
+#sudo -u "$calling_user" launchctl asuser $uid "$binfolder/battery" maintain 80
 lang=$(sudo -u "$calling_user" launchctl asuser $uid defaults read -g AppleLocale)
 if [[ $lang =~ "zh_TW" ]]; then
 	is_TW=true
