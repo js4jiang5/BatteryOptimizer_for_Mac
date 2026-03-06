@@ -89,6 +89,7 @@ trap cleanup EXIT
 
 # Set script value
 calling_user=${SUDO_USER:-$USER} # give SUDO_USER higher priority
+uid=$(id -u $calling_user)
 if [[ "$calling_user" == "root" ]]; then
 	echo "❌ Failed to determine unprivileged username"
 	exit 1
@@ -260,7 +261,7 @@ if [[ $($binfolder/smc -k BCLM -r) == *"no data"* ]] && [[ $($binfolder/smc -k C
 	fi
 fi
 
-lang=$(defaults read -g AppleLocale)
+sudo -u "$calling_user" launchctl asuser $uid "$binfolder/battery" maintain recover
 if [[ $lang =~ "zh_TW" ]]; then
 	is_TW=true
 else

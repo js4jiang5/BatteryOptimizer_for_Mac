@@ -149,12 +149,15 @@ echo -e "Restarting battery maintain.\n"
 write_config "informed_version" "$battery_version_new"
 
 pkill -9 -f "$binfolder/battery.*"
-$binfolder/battery maintain recover
+
+calling_user=${SUDO_USER:-$USER}
+uid=$(id -u $calling_user)
+sudo -u "$calling_user" launchctl asuser $uid "$binfolder/battery" maintain recover
 
 empty="                                                                    "
 button_empty="${empty} Buy me a coffee ☕ ${empty}😀"
 button_empty_tw="${empty} 請我喝杯咖啡 ☕ ${empty}😀"
-lang=$(defaults read -g AppleLocale)
+lang=$(sudo -u "$calling_user" launchctl asuser $uid defaults read -g AppleLocale)
 language=$(read_config language)
 if [[ $language ]]; then
 	if [[ "$language" == "tw" ]]; then
