@@ -12,7 +12,7 @@ if [[ $EUID -eq 0 ]]; then
     # Running as root, do not include user-writable directories in PATH
     PATH=/usr/bin:/bin:/usr/sbin:/sbin
 else
-    PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+    PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/co.battery-optimizer
 fi
 
 ## ###############
