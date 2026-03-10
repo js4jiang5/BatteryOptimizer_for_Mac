@@ -41,23 +41,12 @@ function safe_rm() {
 	done
 }
 
-function format00() {
-	value=$1
-	if [ $value -lt 10 ]; then
-		value=0$(echo $value | tr -d '0')
-		if [ "$value" == "0" ]; then
-			value="00"
-		fi
-	fi
-	echo $value
-}
-
 function version_number { # get number part of version for comparison
-	version=$1
-	version="v${version#*v}" # remove any words before v
-	num=$(echo $version | tr '.' ' '| tr 'v' ' ')
-	v1=$(echo $num | awk '{print $1}'); v2=$(echo $num | awk '{print $2}'); v3=$(echo $num | awk '{print $3}');
-	echo $(format00 $v1)$(format00 $v2)$(format00 $v3)
+    local v=${1#*v}        # remove v
+    local IFS='.'          # setup . as separation
+    read -r v1 v2 v3 <<< "$v"
+    # use printf to add 0 with default value 0
+    printf "%02d%02d%02d" "${v1:-0}" "${v2:-0}" "${v3:-0}"
 }
 
 function get_parameter() { # get parameter value from configuration file. the format is var=value or var= value or var = value
@@ -118,7 +107,7 @@ battery_version_local=$(get_parameter "$battery_local" "BATTERY_CLI_VERSION")
 visudo_version_local=$(get_parameter "$battery_local" "BATTERY_VISUDO_VERSION")
 
 # Trigger reinstall for Terminal users to update from version v2.0.29 or earlier.
-if [[ 10#$(version_number $battery_version_local) -lt 10#$(version_number "v2.0.30") ]] || [[ ! -f "$binfolder/battery" ]]; then
+if [[ $(version_number $battery_version_local) -lt $(version_number "v2.0.30") ]] || [[ ! -f "$binfolder/battery" ]]; then
 	echo -e "💡 This battery update requires a full reinstall for security hardening...\n"
 	curl -sS "https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_Mac/main/setup.sh" | bash
 	$binfolder/battery maintain recover
