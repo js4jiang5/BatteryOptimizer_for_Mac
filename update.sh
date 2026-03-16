@@ -107,7 +107,7 @@ battery_version_local=$(get_parameter "$battery_local" "BATTERY_CLI_VERSION")
 visudo_version_local=$(get_parameter "$battery_local" "BATTERY_VISUDO_VERSION")
 
 # Trigger reinstall for Terminal users to update from version v2.0.29 or earlier.
-if [[ $(version_number $battery_version_local) -lt $(version_number "v2.0.30") ]] || [[ ! -f "$binfolder/battery" ]]; then
+if [[ 10#$(version_number $battery_version_local) -lt 10#$(version_number "v2.0.30") ]] || [[ ! -f "$binfolder/battery" ]]; then
 	echo -e "💡 This battery update requires a full reinstall for security hardening...\n"
 	curl -sS "https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_Mac/main/setup.sh" | bash
 	$binfolder/battery maintain recover
