@@ -120,8 +120,8 @@ fi
 echo "[ 1 ] Downloading latest battery version"
 tmp_battery=$(mktemp)
 echo $tmp_battery
-#function cleanup() {safe_rm -f "$tmp_battery"}
-#trap cleanup EXIT
+function cleanup() { safe_rm -f "$tmp_battery"; }
+trap cleanup EXIT
 
 if ! curl -fsSL "https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_Mac/main/battery.sh" -o "$tmp_battery"; then
     echo "❌ Error: download fail"
