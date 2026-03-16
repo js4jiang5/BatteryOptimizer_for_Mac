@@ -4,7 +4,7 @@
 ## Update management
 ## variables are used by this binary as well at the update script
 ## ###############
-BATTERY_CLI_VERSION="v2.0.30"
+BATTERY_CLI_VERSION="v2.0.31"
 BATTERY_VISUDO_VERSION="v1.0.5"
 
 # Path fixes for unexpected environments
@@ -214,11 +214,13 @@ thirdsetting=$4
 ## ###############
 
 function safe_rm() {
-    local opts=""
-    if [[ "${1:-}" == -* ]]; then
-        opts="$1"
-        shift # shift left to let $1 become path
-    fi
+    local opts=()
+    
+    # collect all flags start with -
+    while [[ "${1:-}" == -* ]]; do
+        opts+=("$1")
+        shift
+    done
 
 	if [[ $# -eq 0 ]]; then
         echo "❌ Error: path or file name not specified" >&2
@@ -242,11 +244,11 @@ function safe_rm() {
 		if [[ -e "$target" || -L "$target" ]]; then
 			#echo "🗑️ safe deleting $target"
             # auto detect if sudo is required and add it
-            # if current is not root and not writable, add sudo
-            if [[ $EUID -ne 0 && ! -w "$target" && ! -w "$(dirname "$target")" ]]; then
-                sudo rm ${opts:-} "$target"
+            # if current is not root or not writable, add sudo
+            if [[ $EUID -ne 0 ]] && [[ ! -w "$target" || ! -w "$(dirname "$target")" ]]; then
+                sudo rm "${opts[@]}" "$target"
             else
-                rm ${opts:-} "$target"
+                rm "${opts[@]}" "$target"
             fi
 		#else
 		#	echo "❌ path not exist, skip delete ($target)"
@@ -1460,12 +1462,13 @@ if [[ "$action" == "uninstall" ]]; then
 	$battery_binary schedule disable
 	safe_rm $schedule_path 2>/dev/null
 	safe_rm $shutdown_path 2>/dev/null
-	safe_rm -fv /usr/local/bin/battery
-	safe_rm -fv /usr/local/bin/smc
-	safe_rm -fv "$binfolder/smc" "$binfolder/battery" $visudo_file "$binfolder/shutdown.sh"
-	safe_rm -frv "$configfolder"
+	safe_rm -fv /usr/local/bin/battery 2>/dev/null
+	safe_rm -fv /usr/local/bin/smc 2>/dev/null
+	safe_rm -fv "$binfolder/smc" "$binfolder/battery" $visudo_file
+	safe_rm -fv "$binfolder/shutdown.sh" 2>/dev/null
+	safe_rm -frv "$configfolder" 
 	safe_rm -fv "$path_configfile"
-	safe_rm -rf $HOME/.sleep $HOME/.wakeup $HOME/.shutdown $HOME/.reboot 
+	safe_rm -rf $HOME/.sleep $HOME/.wakeup $HOME/.shutdown $HOME/.reboot 2>/dev/null
 	pkill -9 -f "/usr/local/bin/battery|/usr/local/co\.battery-optimizer/battery"
 	empty="                                                                              "
 	if [[ "$answer" == "Yes" ]] || [ -z $answer ]; then

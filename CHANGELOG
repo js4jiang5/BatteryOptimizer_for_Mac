@@ -1,3 +1,8 @@
+v2.0.31
+* fix bugs below
+- fix the misjudgment of safe_rm() on whether sudo is required for file removal
+- fix the problem that safe_rm() treat the flag as path when two or more flags are used for rm
+
 v2.0.30
 This update needs to enter password.
 * security enhancement

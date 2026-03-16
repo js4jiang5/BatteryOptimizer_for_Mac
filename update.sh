@@ -1,11 +1,13 @@
 #!/bin/bash -uo pipefail
 
 function safe_rm() {
-    local opts=""
-    if [[ "${1:-}" == -* ]]; then
-        opts="$1"
-        shift # shift left to let $1 become path
-    fi
+    local opts=()
+    
+    # collect all flags start with -
+    while [[ "${1:-}" == -* ]]; do
+        opts+=("$1")
+        shift
+    done
 
 	if [[ $# -eq 0 ]]; then
         echo "❌ Error: path or file name not specified" >&2
@@ -29,11 +31,11 @@ function safe_rm() {
 		if [[ -e "$target" || -L "$target" ]]; then
 			#echo "🗑️ safe deleting $target"
             # auto detect if sudo is required and add it
-            # if current is not root and not writable, add sudo
-            if [[ $EUID -ne 0 && ! -w "$target" && ! -w "$(dirname "$target")" ]]; then
-                sudo rm ${opts:-} "$target"
+            # if current is not root or not writable, add sudo
+            if [[ $EUID -ne 0 ]] && [[ ! -w "$target" || ! -w "$(dirname "$target")" ]]; then
+                sudo rm "${opts[@]}" "$target"
             else
-                rm ${opts:-} "$target"
+                rm "${opts[@]}" "$target"
             fi
 		#else
 		#	echo "❌ path not exist, skip delete ($target)"
@@ -117,6 +119,10 @@ fi
 # Write battery function as executable
 echo "[ 1 ] Downloading latest battery version"
 tmp_battery=$(mktemp)
+echo $tmp_battery
+function cleanup() {safe_rm -f "$tmp_battery";}
+trap cleanup EXIT
+
 if ! curl -fsSL "https://raw.githubusercontent.com/js4jiang5/BatteryOptimizer_for_Mac/main/battery.sh" -o "$tmp_battery"; then
     echo "❌ Error: download fail"
     safe_rm -f "$tmp_battery"
@@ -126,6 +132,8 @@ fi
 
 echo "[ 2 ] Writing script to $binfolder/battery"
 sudo install -m 755 -o root -g wheel "$tmp_battery" "$binfolder/battery"
+
+safe_rm -f "$tmp_battery"
 
 battery_new=$(cat $binfolder/battery 2>/dev/null)
 battery_version_new=$(get_parameter "$battery_new" "BATTERY_CLI_VERSION")

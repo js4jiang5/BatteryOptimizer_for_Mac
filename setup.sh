@@ -1,11 +1,13 @@
 #!/bin/bash -uo pipefail
 
 function safe_rm() {
-    local opts=""
-    if [[ "${1:-}" == -* ]]; then
-        opts="$1"
-        shift # shift left to let $1 become path
-    fi
+    local opts=()
+    
+    # collect all flags start with -
+    while [[ "${1:-}" == -* ]]; do
+        opts+=("$1")
+        shift
+    done
 
 	if [[ $# -eq 0 ]]; then
         echo "❌ Error: path or file name not specified" >&2
@@ -29,11 +31,11 @@ function safe_rm() {
 		if [[ -e "$target" || -L "$target" ]]; then
 			#echo "🗑️ safe deleting $target"
             # auto detect if sudo is required and add it
-            # if current is not root and not writable, add sudo
-            if [[ $EUID -ne 0 && ! -w "$target" && ! -w "$(dirname "$target")" ]]; then
-                sudo rm ${opts:-} "$target"
+            # if current is not root or not writable, add sudo
+            if [[ $EUID -ne 0 ]] && [[ ! -w "$target" || ! -w "$(dirname "$target")" ]]; then
+                sudo rm "${opts[@]}" "$target"
             else
-                rm ${opts:-} "$target"
+                rm "${opts[@]}" "$target"
             fi
 		#else
 		#	echo "❌ path not exist, skip delete ($target)"
