@@ -1,3 +1,21 @@
+# 🚀 Legacy Project Notice: Transition to BattOpt #
+
+This project, *BatteryOptimizer_for_Mac*, is now in **maintenance mode**. For a modern, high-performance battery management experience, I strongly recommend switching to the new **[BattOpt](https://github.com/js4jiang5/BattOpt)**.
+
+**BattOpt** is a complete evolution with significant advantages:
+* **High Efficiency:** Core logic rewritten in **C++** for near-zero resource impact and maximum longevity.
+* **Login-free & Bootcamp Support:** Starts at the system level without requiring user login. It even maintains protection in **Bootcamp (Windows)** mode after a warm reboot.
+* **Event-Trigger Framework:** No more constant polling; the system reacts instantly to power and state changes.
+* **GUI & CLI Interfaces:** Enjoy a modern SwiftUI dashboard or full control via the command line.
+* **Broad Compatibility:** Support for legacy macOS versions dating back to **macOS 10.12 (Sierra)**, covering both Intel and Apple Silicon Macs.
+* **Clamshell Mode Support:** Full protection even when your MacBook is closed and connected to an external monitor.
+* **Zone Awareness:** Intelligent charging thresholds based on your current location detected by WiFi SSID and Router MAC address.
+* **Heat Protection:** Advanced thermal monitoring to prevent battery degradation during heavy workloads.
+
+Going forward, *BatteryOptimizer_for_Mac* will receive only **minimum support** (critical security updates). All new features and optimizations will be exclusive to **BattOpt**.
+
+---
+
 # BatteryOptimizer_for_Mac
 
 [BatteryOptimizer_for_Mac](https://github.com/js4jiang5/BatteryOptimizer_for_Mac) is a fork of [Battery APP v1.2.7](https://github.com/actuallymentor/battery), with new features, enhancements, bug fixes, and removal of confusing or useless commands as follows

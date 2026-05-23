@@ -1,3 +1,19 @@
+# 🚀 舊版本維護通知：請遷移至 BattOpt #
+
+本專案 (BatteryOptimizer_for_Mac) 現已進入維護模式。為了獲得更現代、高性能的電池管理體驗，我強烈建議您切換至全新的 **[BattOpt](https://github.com/js4jiang5/BattOpt)**.
+
+**BattOpt** 是完全進化的版本，具備以下核心優勢：
+* **卓越效率:** 核心邏輯採用 **C++** 重寫，實現近乎零的資源佔用並延長軟體壽命。
+* **無需登入與支援 Bootcamp：** 於系統層級自動啟動，無需使用者登入即可運作；甚至在熱重啟至 **Bootcamp (Windows)** 後仍能維持電池保護。
+* **事件驅動架構 (Event-Trigger):** 捨棄傳統的定時輪詢，系統能即時對電源與狀態變化做出反應。
+* **圖形與命令列介面:** 提供現代化的 SwiftUI 控制面板，同時支援完整的終端機指令操作。
+* **廣泛的相容性:** 支援回溯至 **macOS 10.12 (Sierra)** 的舊款系統，完整覆蓋 Intel 與 Apple Silicon (M1/M2/M3) 機型。
+* **闔蓋模式 (Clamshell) 支援:** 即使在外接螢幕並闔上筆電時，依然提供完整的電池保護。
+* **區域感知 (Zone Awareness):** 透過 WiFi SSID 與路由器 MAC 位址偵測目前的位置，並據以智慧切換充電閾值。
+* **過熱保護:** 先進的溫度監控，防止在高負載運作時造成的電池衰解。
+
+未來，*BatteryOptimizer_for_Mac* 將僅提供 **最低限度的維護** （如關鍵安全性更新）。所有的新功能開發與優化都將僅在 **BattOpt** 上進行。
+
 # BatteryOptimizer_for_Mac
 
 [BatteryOptimizer_for_Mac](https://github.com/js4jiang5/BatteryOptimizer_for_Mac) 是 [Battery APP v1.2.7](https://github.com/actuallymentor/battery) 的一個分支, 但加入新功能、增強功能、錯誤修復以及刪除令人困惑或無用的命令，如下所示

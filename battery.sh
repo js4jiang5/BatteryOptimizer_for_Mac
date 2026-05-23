@@ -1394,6 +1394,8 @@ if [[ "$action" == "update_silent" ]]; then
 		exit 1
 	fi
 
+	calling_user=${SUDO_USER:-$USER}
+	uid=$(id -u $calling_user)
 	visudo_new_version=$(get_parameter "$battery_new" "BATTERY_VISUDO_VERSION")
 	if [[ $battery_new_version == $BATTERY_CLI_VERSION ]] && [[ $visudo_new_version == $BATTERY_VISUDO_VERSION ]] && [[ "$setting" != "force" ]]; then
 		if $is_TW; then
@@ -1406,11 +1408,11 @@ if [[ "$action" == "update_silent" ]]; then
 		if $is_TW; then
 			changelog=$(get_changelog CHANGELOG_TW)
 			battery_new_version=$(get_version CHANGELOG_TW)
-			osascript -e 'display dialog "'"$battery_new_version 更新內容如下\n\n$changelog"'" buttons {"'"$button_empty"'", "繼續"} default button 2 with icon note with title "BatteryOptimizer for Mac"' >> /dev/null
+			sudo -u "$calling_user" launchctl asuser $uid osascript -e 'display dialog "'"$battery_new_version 更新內容如下\n\n$changelog"'" buttons {"'"$button_empty"'", "繼續"} default button 2 with icon note with title "BatteryOptimizer for Mac"' >> /dev/null
 		else
 			changelog=$(get_changelog CHANGELOG)
 			battery_new_version=$(get_version CHANGELOG)
-			osascript -e 'display dialog "'"$battery_new_version changes include\n\n$changelog"'" buttons {"'"$button_empty"'", "Continue"} default button 2 with icon note with title "BatteryOptimizer for Mac"' >> /dev/null
+			sudo -u "$calling_user" launchctl asuser $uid osascript -e 'display dialog "'"$battery_new_version changes include\n\n$changelog"'" buttons {"'"$button_empty"'", "Continue"} default button 2 with icon note with title "BatteryOptimizer for Mac"' >> /dev/null
 		fi
 		if $is_TW; then
 			answer="$(osascript -e 'display dialog "'"你現在要更新到$battery_new_version 嗎?"'" buttons {"立即更新", "跳過此版本"} default button 1 with icon note with title "BatteryOptimizer for Mac"' -e 'button returned of result')"
