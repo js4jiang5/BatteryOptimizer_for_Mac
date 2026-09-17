@@ -11,6 +11,7 @@ This project, *BatteryOptimizer_for_Mac*, is now in **maintenance mode**. For a 
 * **Clamshell Mode Support:** Full protection even when your MacBook is closed and connected to an external monitor.
 * **Zone Awareness:** Intelligent charging thresholds based on your current location detected by WiFi SSID and Router MAC address.
 * **Heat Protection:** Advanced thermal monitoring to prevent battery degradation during heavy workloads.
+* **macOS 27 Support:** The only battery management tool fully supporting macOS 27 Golden Gate.
 
 Going forward, *BatteryOptimizer_for_Mac* will receive only **minimum support** (critical security updates). All new features and optimizations will be exclusive to **BattOpt**.
 
